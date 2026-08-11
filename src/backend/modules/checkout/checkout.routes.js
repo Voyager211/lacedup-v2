@@ -3,6 +3,7 @@ const router = express.Router();
 const checkoutController = require('./checkout.controller');
 const addressController = require('../addresses/address.controller');
 const couponController = require('../coupons/coupon.controller');
+const { couponRateLimit } = require('../../common/middlewares/rate-limiting.middleware');
 
 const requireAuth = (req, res, next) => {
   if (req.isAuthenticated()) {
@@ -40,7 +41,7 @@ router.get('/validate-checkout-stock', requireAuthAPI, checkoutController.valida
 router.get('/api/addresses', requireAuthAPI, addressController.getAddresses);
 
 // ========== COUPON ==========
-router.post('/apply-coupon', requireAuthAPI, couponController.applyCoupon);
+router.post('/apply-coupon', couponRateLimit, requireAuthAPI, couponController.applyCoupon);
 router.post('/remove-coupon', requireAuthAPI, couponController.removeCoupon);
 
 // ========== ORDER PLACEMENT ==========

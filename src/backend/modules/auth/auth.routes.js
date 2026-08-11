@@ -3,35 +3,40 @@ const passport = require('passport');
 const authController = require('./auth.controller');
 const nocache = require('../../common/middlewares/nocache.middleware')
 const { preventBackNavigation, preventOtpBackNavigation } = require('../../common/middlewares/prevent-back-navigation.middleware');
-const { isGuest } = require('../../common/middlewares/auth.middleware'); 
+const { isGuest } = require('../../common/middlewares/auth.middleware');
+const {
+  authLimiter,
+  otpLimiter,
+  passwordResetLimiter
+} = require('../../common/middlewares/rate-limiting.middleware'); 
 
 const router = express.Router();
 
 // === Signup ===
 router.get('/signup', isGuest, preventBackNavigation, authController.getSignup);
-router.post('/signup', isGuest, authController.postSignup);
+router.post('/signup', authLimiter, isGuest, authController.postSignup);
 
 // === OTP Verification ===
 router.get('/verify-otp', isGuest, preventOtpBackNavigation, authController.getOtpPage);
-router.post('/verify-otp', isGuest, authController.postOtpVerification);
-router.post('/resend-otp', isGuest, authController.resendOtp);
+router.post('/verify-otp', otpLimiter, isGuest, authController.postOtpVerification);
+router.post('/resend-otp', otpLimiter, isGuest, authController.resendOtp);
 
 
 
 // === Login ===
 router.get('/login', isGuest, preventBackNavigation, authController.getLogin);
-router.post('/login', isGuest, authController.postLogin);
+router.post('/login', authLimiter, isGuest, authController.postLogin);
 
 // === Forgot Password Flow ===
 router.get('/forgot-password', isGuest, preventBackNavigation, authController.getForgotPassword);
-router.post('/forgot-password', isGuest, authController.sendResetOtp);
+router.post('/forgot-password', passwordResetLimiter, isGuest, authController.sendResetOtp);
 
 router.get('/reset-otp', isGuest, preventOtpBackNavigation, authController.getResetOtpPage);
-router.post('/reset-otp', isGuest, authController.verifyResetOtp);
-router.post('/resend-reset-otp', isGuest, authController.resendResetOtp);
+router.post('/reset-otp', otpLimiter, isGuest, authController.verifyResetOtp);
+router.post('/resend-reset-otp', otpLimiter, isGuest, authController.resendResetOtp);
 
 router.get('/reset-password', isGuest, preventOtpBackNavigation, authController.getResetPasswordPage);
-router.post('/reset-password', isGuest, authController.resetPassword);
+router.post('/reset-password', passwordResetLimiter, isGuest, authController.resetPassword);
 
 
 

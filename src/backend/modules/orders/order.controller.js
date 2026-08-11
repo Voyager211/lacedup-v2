@@ -404,23 +404,15 @@ const getOrderDetails = async (req, res) => {
       });
     }
 
-    //  NEW: Add transaction ID for retry functionality
+    // Retry support: flag whether this pending order can be paid again.
+    //
+    // This previously looked up a failed transaction through a
+    // `transactionService` module that has never existed in this repository,
+    // so the require always threw and neither transactionId nor canRetry was
+    // ever set. The lookup is removed; canRetry is derived from the payment
+    // method directly, which is all the view actually needs.
     if (order.status === 'Pending' && order.paymentStatus === 'Pending') {
-      try {
-        const transactionService = require('../../services/transactionService');
-        const transactions = await transactionService.getUserTransactions(userId, {
-          orderId: orderId,
-          status: 'FAILED',
-          limit: 1
-        });
-        
-        if (transactions && transactions.length > 0) {
-          order.transactionId = transactions[0].transactionId;
-          order.canRetry = ['upi', 'paypal'].includes(order.paymentMethod);
-        }
-      } catch (error) {
-        console.error('Error fetching transaction for order:', order.orderId, error);
-      }
+      order.canRetry = ['upi', 'paypal'].includes(order.paymentMethod);
     }
 
     // Get return requests for this order

@@ -10,8 +10,11 @@ const requireAuth = (req, res, next) => {
     return next();
   }
   
-  // For AJAX requests, return JSON response instead of redirect
-  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+  // For AJAX requests, return JSON response instead of redirect.
+  // req.headers.accept is absent on requests that do not send an Accept header,
+  // which turned every unauthenticated /cart hit into a 500 instead of a
+  // redirect to login. The other auth guards in this codebase already guard it.
+  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
     return res.status(401).json({
       success: false,
       message: 'You must be logged in to access this feature',

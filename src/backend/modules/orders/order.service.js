@@ -229,46 +229,29 @@ const updateOrderStatus = async (orderId, newStatus, notes = '') => {
 
     await order.save();
 
-    //  NEW: COD Transaction Creation - Only when COD order is delivered
-    if (newStatus === ORDER_STATUS.DELIVERED && 
-        order.paymentMethod === 'cod' && 
+    //  COD completion - record the payment against the order history.
+    //
+    // This previously called a `transactionService` module that has never
+    // existed in this repository, so the require always threw and the catch
+    // below swallowed it: no transaction was ever created and no history entry
+    // was ever written. The dead call is removed; the history entry it was
+    // meant to produce is now written directly.
+    if (newStatus === ORDER_STATUS.DELIVERED &&
+        order.paymentMethod === 'cod' &&
         order.paymentStatus === PAYMENT_STATUS.COMPLETED) {
-      
+
       try {
-        console.log(` Creating COD completion transaction for delivered order ${orderId}`);
-        
-        const transactionService = require('./transactionService');
-        const codTransactionResult = await transactionService.createCODCompletionTransaction({
-          userId: order.user._id,
-          orderId: orderId,
-          amount: order.totalAmount,
-          itemDetails: order.items.map(item => ({
-            productId: item.productId,
-            size: item.size,
-            quantity: item.quantity,
-            price: item.price,
-            totalPrice: item.totalPrice
-          }))
+        order.statusHistory.push({
+          status: newStatus,
+          updatedAt: new Date(),
+          notes: 'COD payment completed on delivery'
         });
 
-        if (codTransactionResult.success) {
-          console.log(` COD completion transaction created: ${codTransactionResult.transactionId}`);
-          
-          // Add transaction reference to order status history
-          order.statusHistory.push({
-            status: newStatus,
-            updatedAt: new Date(),
-            notes: `COD payment completed. Transaction ID: ${codTransactionResult.transactionId}`
-          });
-          
-          await order.save(); // Save again with transaction reference
-        } else {
-          console.warn(' Failed to create COD completion transaction:', codTransactionResult.error);
-        }
-        
+        await order.save();
+
       } catch (codTxError) {
-        console.error(' Error creating COD completion transaction:', codTxError.message);
-        // Don't throw - allow order status update to succeed even if transaction creation fails
+        console.error(' Error recording COD completion:', codTxError.message);
+        // Don't throw - allow order status update to succeed even if this fails
       }
     }
 
@@ -1955,32 +1938,10 @@ const completeCODPaymentWithTransaction = async (orderId, deliveredBy = 'admin')
       return { success: false, message: 'Order not in delivered status' };
     }
 
-    //  Create COD completion transaction using enhanced transaction service
-    let codTransactionId = null;
-    try {
-      const transactionService = require('./transactionService');
-      const codTransactionResult = await transactionService.createCODCompletionTransaction({
-        userId: order.user._id,
-        orderId: orderId,
-        amount: order.totalAmount,
-        itemDetails: order.items.map(item => ({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          price: item.price,
-          totalPrice: item.totalPrice
-        }))
-      });
-
-      if (codTransactionResult.success) {
-        codTransactionId = codTransactionResult.transactionId;
-        console.log(` COD completion transaction created: ${codTransactionId}`);
-      } else {
-        console.warn(' Failed to create COD completion transaction:', codTransactionResult.error);
-      }
-    } catch (codTxError) {
-      console.warn(' COD transaction creation failed:', codTxError.message);
-    }
+    // Removed: a call to a `transactionService` module that never existed in
+    // this repository. The require always threw and the catch swallowed it, so
+    // codTransactionId was always null and nothing downstream depended on it.
+    const codTransactionId = null;
 
     // Update payment status to completed (cash collected)
     order.paymentStatus = PAYMENT_STATUS.COMPLETED;

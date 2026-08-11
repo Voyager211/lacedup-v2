@@ -14,8 +14,8 @@ const morgan = require('morgan');
 const morganBody = require('morgan-body');
 
 // Middleware imports
-const connectDB = require('./config/db');
 const { PUBLIC_DIR, VIEWS_DIR } = require('./config/paths');
+const { apiLimiter } = require('./common/middlewares/rate-limiting.middleware');
 const isAdmin = require('./common/middlewares/is-admin.middleware');
 const { addUserContext } = require('./common/middlewares/user-context.middleware');
 const checkUserBlocked = require('./common/middlewares/check-user-blocked.middleware');
@@ -51,9 +51,6 @@ const aboutRoutes = require('./modules/content/about.routes');
 const helpRoutes = require('./modules/content/help.routes');
 
 require('./modules/auth/auth.passport')(passport);
-
-// Connect DB
-connectDB();
 
 // View engine
 app.set('view engine', 'ejs');
@@ -118,51 +115,71 @@ morganBody(app, {
   prettify: true
 });
 
+// ---------------------------------------------------------------------------
 // ROUTES
-// User Routes 
-app.use('/help', helpRoutes);
-app.use('/cart', userCartRoutes);
-app.use('/wishlist', userWishlistRoutes);
-app.use('/wallet', userWalletRoutes);
-app.use('/coupons', userCouponRoutes);
-app.use ('/referrals', userReferralRoutes);
-app.use('/checkout', checkoutRoutes);
-app.use('/about', aboutRoutes);
+//
+// Every router is mounted twice: once on its historic path, which the EJS
+// templates still call, and once under /api, which the React client will use.
+// The duplication is deliberate and temporary - the bare mounts are deleted in
+// Phase 5 once the EJS views are gone.
+//
+// Eight routers sat on bare '/', which would collide with React's client-side
+// router; the /api prefix is what removes that collision.
+// ---------------------------------------------------------------------------
+const PREFIXED_ROUTES = [
+  ['/help', helpRoutes],
+  ['/cart', userCartRoutes],
+  ['/wishlist', userWishlistRoutes],
+  ['/wallet', userWalletRoutes],
+  ['/coupons', userCouponRoutes],
+  ['/referrals', userReferralRoutes],
+  ['/checkout', checkoutRoutes],
+  ['/about', aboutRoutes],
 
-// app.use('/transactions', transactionRoutes);
-app.use('/', landingRoutes);
-app.use('/', userAuthRoutes);
-app.use('/', userHomeRoutes);
-app.use('/', userShopRoutes);
-app.use('/', userReviewRoutes);
-app.use('/', userProfileRoutes);
-app.use('/', userAddressRoutes);
-app.use('/', userOrderRoutes);
+  ['/admin', adminAuthRoutes],
+  ['/admin/users', adminUserRoutes],
+  ['/admin/categories', adminCategoryRoutes],
+  ['/admin/brands', adminBrandRoutes],
+  ['/admin/products', adminProductRoutes],
+  ['/admin/orders', adminOrderRoutes],
+  ['/admin/returns', adminReturnRoutes],
+  ['/admin/coupons', adminCouponRoutes],
+  ['/admin/sales-report', adminSalesReportRoutes],
+  ['/admin/dashboard', adminDashboardRoutes]
+];
 
+// Routers that declare their own full paths, so they mount at the root.
+//
+// These are NOT additionally mounted under /api: they already declare their
+// JSON endpoints as '/api/...' internally (47 such routes across addresses,
+// catalog, shop and checkout), so their API surface is at /api/* already.
+// Mounting them again under /api would only produce /api/api/* duplicates.
+const ROOT_ROUTES = [
+  landingRoutes,
+  userAuthRoutes,
+  userHomeRoutes,
+  userShopRoutes,
+  userReviewRoutes,
+  userProfileRoutes,
+  userAddressRoutes,
+  userOrderRoutes
+];
 
+// Broad backstop across the API surface; page routes are left alone.
+app.use('/api', apiLimiter);
 
+for (const [mountPath, router] of PREFIXED_ROUTES) {
+  app.use(mountPath, router);
+  app.use(`/api${mountPath}`, router);
+}
 
+for (const router of ROOT_ROUTES) {
+  app.use('/', router);
+}
 
+// Removed: app.get('coupons/available', ...). It was missing its leading slash
+// so it never matched, and its handler referenced a `userCouponController` that
+// was never imported here - it would have thrown a ReferenceError if it ever
+// had matched. The route is already served by userCouponRoutes.
 
-// Admin Routes
-app.use('/admin', adminAuthRoutes);
-app.use('/admin/users', adminUserRoutes);
-app.use('/admin/categories', adminCategoryRoutes);
-app.use('/admin/brands', adminBrandRoutes);
-app.use('/admin/products', adminProductRoutes);
-app.use('/admin/orders', adminOrderRoutes);
-app.use('/admin/returns', adminReturnRoutes);
-app.use('/admin/coupons', adminCouponRoutes);
-app.use('/admin/sales-report', adminSalesReportRoutes);
-app.use('/admin/dashboard', adminDashboardRoutes);
-
-app.get('coupons/available', (req, res) => {
-    console.log('/coupons/available route HIT!');
-    userCouponController.getAvailableCoupons(req, res);
-});
-
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+module.exports = app;

@@ -1,10 +1,10 @@
 {
   "name": "project-1---lacedup",
   "version": "1.0.0",
-  "main": "src/backend/app.js",
+  "main": "src/backend/server.js",
   "scripts": {
-    "dev": "nodemon src/backend/app.js",
-    "start": "node src/backend/app.js",
+    "dev": "nodemon src/backend/server.js",
+    "start": "node src/backend/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
@@ -27,6 +27,7 @@
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
+    "express-rate-limit": "^8.6.2",
     "express-session": "^1.18.1",
     "express-validator": "^7.2.1",
     "method-override": "^3.0.0",
