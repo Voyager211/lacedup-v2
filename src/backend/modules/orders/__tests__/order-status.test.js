@@ -37,19 +37,8 @@ const createdOrders = [];
 
 
 
-// Database connection
-async function connectDB() {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/lacedup-test', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-    console.log('✅ Connected to test database'.green);
-  } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    process.exit(1);
-  }
-}
+// Database lifecycle - an in-memory mongod, never the real cluster
+const db = require('../../../common/testing/db');
 
 
 
@@ -707,45 +696,35 @@ const phase5Tests = [
 
 
 
-async function runAllTests() {
-  console.log('\n' + '='.repeat(80).cyan);
-  console.log('🚀 ORDER STATUS TEST SUITE'.bold.cyan);
-  console.log('='.repeat(80).cyan);
-  
-  const testResult = new TestResult();
-  
-  try {
-    await connectDB();
-    
-    await runTestSuite('Phase 1: Order-Level Status Updates', phase1Tests, testResult);
-    await runTestSuite('Phase 2: Item-Level Status Updates', phase2Tests, testResult);
-    await runTestSuite('Phase 3: Cancellation Tests', phase3Tests, testResult);
-    await runTestSuite('Phase 4: Return Tests', phase4Tests, testResult);
-    await runTestSuite('Phase 5: Edge Cases', phase5Tests, testResult);
-    
-    testResult.printSummary();
-    
-  } catch (error) {
-    console.error('\n❌ Test suite failed:'.red, error.message);
-  } finally {
-    console.log('\n🧹 Cleaning up test data...'.yellow);
-    await cleanupTestData(createdOrders);
-    console.log('✅ Cleanup complete'.green);
-    
-    await mongoose.connection.close();
-    console.log('✅ Database connection closed'.green);
-    
-    process.exit(testResult.failed > 0 ? 1 : 0);
-  }
+// The suites above are plain { name, fn } records whose fn throws on failure,
+// so Vitest can drive them directly - the assertions are unchanged from the
+// original standalone script, only the runner is different.
+const SUITES = [
+  ['Phase 1: Order-Level Status Updates', phase1Tests],
+  ['Phase 2: Item-Level Status Updates', phase2Tests],
+  ['Phase 3: Cancellation Tests', phase3Tests],
+  ['Phase 4: Return Tests', phase4Tests],
+  ['Phase 5: Edge Cases', phase5Tests]
+];
+
+beforeAll(async () => {
+  await db.connect();
+});
+
+afterAll(async () => {
+  await cleanupTestData(createdOrders);
+  await db.disconnect();
+});
+
+for (const [suiteName, tests] of SUITES) {
+  describe(suiteName, () => {
+    for (const t of tests) {
+      it(t.name, async () => {
+        await t.fn();
+      });
+    }
+  });
 }
 
 
 
-// Run tests if this file is executed directly
-if (require.main === module) {
-  runAllTests();
-}
-
-
-
-module.exports = { runAllTests };

@@ -5,12 +5,9 @@
   "scripts": {
     "dev": "nodemon src/backend/app.js",
     "start": "node src/backend/app.js",
-    "test:orders": "node src/backend/modules/orders/__tests__/order-status.test.js",
-    "test": "jest"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "testTimeout": 30000
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -51,8 +48,11 @@
     "slugify": "^1.6.6"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.1",
-    "jest": "^30.2.0"
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.10"
   }
 }

@@ -1,11 +1,30 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
-//  Initialize Razorpay instance
-const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+/**
+ * The Razorpay client is created on first use rather than at module load.
+ *
+ * Constructing it eagerly meant a missing RAZORPAY_KEY_ID took down the whole
+ * app at boot - and made this module (and everything that imports it, which
+ * includes checkout and orders) impossible to require in a test without live
+ * credentials.
+ */
+let razorpayInstance = null;
+
+const getRazorpayInstance = () => {
+  if (!razorpayInstance) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      throw new Error(
+        'Razorpay is not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET'
+      );
+    }
+    razorpayInstance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+  }
+  return razorpayInstance;
+};
 
 //  Create Razorpay Order
 const createRazorpayOrder = async (orderId, amount) => {
@@ -18,7 +37,7 @@ const createRazorpayOrder = async (orderId, amount) => {
       notes: { orderId }
     };
 
-    const order = await razorpayInstance.orders.create(options);
+    const order = await getRazorpayInstance().orders.create(options);
     return order;
   } catch (error) {
     throw new Error(`Failed to create Razorpay order: ${error.message}`);
@@ -44,18 +63,16 @@ const verifyPaymentSignature = (razorpayOrderId, paymentId, signature) => {
 //  Fetch Payment Details
 const getPaymentDetails = async (paymentId) => {
   try {
-    const payment = await razorpayInstance.payments.fetch(paymentId);
+    const payment = await getRazorpayInstance().payments.fetch(paymentId);
     return payment;
   } catch (error) {
     throw new Error(`Failed to fetch payment: ${error.message}`);
   }
 };
 
-
-
 module.exports = {
-  razorpayInstance,
+  getRazorpayInstance,
   createRazorpayOrder,
   verifyPaymentSignature,
-  getPaymentDetails,
+  getPaymentDetails
 };

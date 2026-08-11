@@ -1,2 +1,5 @@
 .env
 node_modules
+
+# Working document - intentionally untracked
+MIGRATION-PLAN.md

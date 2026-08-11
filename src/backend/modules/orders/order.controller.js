@@ -6,7 +6,6 @@ const User = require('../users/user.model');
 const Return = require('../returns/return.model');
 const orderService = require('./order.service');
 const walletService = require('../wallet/wallet.service');
-const { paypalClient } = require('../payments/paypal.provider');
 const paypal = require('@paypal/checkout-server-sdk');
 const razorpayService = require('../payments/razorpay.provider');
 const getPagination = require('../../common/utils/pagination.util');

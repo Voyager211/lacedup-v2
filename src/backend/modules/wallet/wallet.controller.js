@@ -1,6 +1,6 @@
 const Wallet = require('./wallet.model');
 const walletService = require('./wallet.service');
-const { razorpayInstance } = require('../payments/razorpay.provider');
+const { getRazorpayInstance } = require('../payments/razorpay.provider');
 const crypto = require('crypto');
 
 
@@ -196,7 +196,7 @@ const createRazorpayOrderHandler = async (req, res) => {
       payment_capture: 1
     };
 
-    const razorpayOrder = await razorpayInstance.orders.create(razorpayOrderOptions);
+    const razorpayOrder = await getRazorpayInstance().orders.create(razorpayOrderOptions);
 
     // Update transaction with Razorpay order ID
     await Wallet.findOneAndUpdate(

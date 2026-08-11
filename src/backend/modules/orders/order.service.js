@@ -714,7 +714,7 @@ const cancelItem = async (orderId, itemId, reason = '', notes = '', cancelledBy 
 
           // Process partial refund via PayPal
           const paypal = require('@paypal/checkout-server-sdk');
-          const paypalClient = require('../payments/paypal.provider');
+          const { getPaypalClient } = require('../payments/paypal.provider');
           const request = new paypal.payments.CapturesRefundRequest(captureId);
           request.requestBody({
             amount: {
@@ -723,7 +723,7 @@ const cancelItem = async (orderId, itemId, reason = '', notes = '', cancelledBy 
             }
           });
 
-          const refund = await paypalClient.execute(request);
+          const refund = await getPaypalClient().execute(request);
           console.log(` PayPal partial refund successful for item ${itemId}:`, refund.result.id);
         } else {
           console.warn(` No PayPal captureId found for order ${orderId}, skipping PayPal refund`);
@@ -1700,7 +1700,7 @@ const adminCancelItem = async (orderId, itemId, reason = 'Cancelled by admin', c
 
           // Process partial refund via PayPal
           const paypal = require('@paypal/checkout-server-sdk');
-          const paypalClient = require('../payments/paypal.provider');
+          const { getPaypalClient } = require('../payments/paypal.provider');
           const request = new paypal.payments.CapturesRefundRequest(captureId);
           request.requestBody({
             amount: {
@@ -1709,7 +1709,7 @@ const adminCancelItem = async (orderId, itemId, reason = 'Cancelled by admin', c
             }
           });
 
-          const refund = await paypalClient.execute(request);
+          const refund = await getPaypalClient().execute(request);
           console.log(` Admin PayPal partial refund successful for item ${itemId}:`, refund.result.id);
         } else {
           console.warn(` No PayPal captureId found for order ${orderId}, skipping PayPal refund`);
