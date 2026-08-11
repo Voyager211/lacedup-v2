@@ -16,6 +16,7 @@ import {
   getReturnReasonsArray
 } from '../../common/constants/order.constants';
 
+import type { Types } from 'mongoose';
 import type { IOrder, IOrderItem } from './order.types';
 import type {
   CancellationReason,
@@ -178,7 +179,15 @@ const isFinalStatus = (status: OrderStatus) => {
 
 
 
-const updateOrderStatus = async (orderId: string, newStatus: OrderStatus, notes = '') => {
+const updateOrderStatus = async (
+  orderId: string,
+  newStatus: OrderStatus,
+  notes = '',
+  // The admin controller has always passed a fourth argument here, but the
+  // signature only took three - so it was silently discarded and order-level
+  // status changes recorded no attribution, unlike item-level ones.
+  updatedBy: string | null = null
+) => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
     if (!order) {
@@ -195,7 +204,8 @@ const updateOrderStatus = async (orderId: string, newStatus: OrderStatus, notes 
     order.statusHistory.push({
       status: newStatus,
       updatedAt: new Date(),
-      notes: notes || `Status updated from ${oldStatus} to ${newStatus}`
+      notes: notes || `Status updated from ${oldStatus} to ${newStatus}`,
+      updatedBy: updatedBy ?? undefined
     });
 
     // Update all items to match order status and their payment statuses
@@ -392,7 +402,7 @@ const canCancelOrder = (order: IOrder) => {
  * @param {String} cancelledBy - Who cancelled the order
  * @returns {Object} - Result object
  */
-const cancelOrder = async (orderId: string, reason = '', cancelledBy = null) => {
+const cancelOrder = async (orderId: string, reason = '', cancelledBy: string | Types.ObjectId | null = null) => {
   try {
     const order = await Order.findOne({ orderId: orderId });
 
@@ -635,7 +645,7 @@ const cancellableStatuses: OrderStatus[] = [ORDER_STATUS.PENDING, ORDER_STATUS.P
  * @param {String} cancelledBy - Who cancelled the item
  * @returns {Object} - Result object
  */
-const cancelItem = async (orderId: string, itemId: string, reason = '', notes = '', cancelledBy = null) => {
+const cancelItem = async (orderId: string, itemId: string, reason = '', notes = '', cancelledBy: string | Types.ObjectId | null = null) => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
 
@@ -844,7 +854,7 @@ const returnOrder = async (orderId: string, reason = '') => {
  * @param {String} returnedBy - Who initiated the return
  * @returns {Object} - Result object
  */
-const returnItem = async (orderId: string, itemId: string, reason = '', notes = '', returnedBy = null) => {
+const returnItem = async (orderId: string, itemId: string, reason = '', notes = '', returnedBy: string | Types.ObjectId | null = null) => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
     if (!order) {
@@ -952,7 +962,7 @@ const canReturnItem = (order: IOrder, itemId: string) => {
 
 
 // Create return request for entire order
-const requestOrderReturn = async (orderId: string, reason = '', requestedBy = null) => {
+const requestOrderReturn = async (orderId: string, reason = '', requestedBy: string | Types.ObjectId | null = null) => {
   try {
     const order = await Order.findOne({ orderId: orderId })
       .populate('user')
@@ -1056,7 +1066,7 @@ const requestOrderReturn = async (orderId: string, reason = '', requestedBy = nu
  * @param {String} requestedBy - Who requested the return
  * @returns {Object} - Result object
  */
-const requestItemReturn = async (orderId: string, itemId: string, reason = '', requestedBy = null) => {
+const requestItemReturn = async (orderId: string, itemId: string, reason = '', requestedBy: string | Types.ObjectId | null = null) => {
   try {
     const order = await Order.findOne({ orderId: orderId })
       .populate('user')

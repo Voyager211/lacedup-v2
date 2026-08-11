@@ -1,12 +1,14 @@
+import type { Request, Response } from 'express';
 // User profile controller - handles profile management, email changes, password updates, and photo uploads
-const User = require("./user.model");
-const sendOtp = require("../../common/utils/send-otp.util");
-const bcrypt = require("bcryptjs");
-const Order = require('../orders/order.model');
-const sharp = require("sharp");
-const path = require("path");
-const fs = require("fs");
-const { PROFILE_UPLOADS_DIR } = require("../../config/paths");
+import User from './user.model';
+import sendOtp from '../../common/utils/send-otp.util';
+import bcrypt from 'bcryptjs';
+import Order from '../orders/order.model';
+import Address from '../addresses/address.model';
+import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
+import { PROFILE_UPLOADS_DIR } from '../../config/paths';
 
 // Generate OTP function (since generateOtp utility might not exist)
 const generateOtp = () => {
@@ -14,7 +16,7 @@ const generateOtp = () => {
 };
 
 // Email validation function
-const validateEmailFormat = (email) => {
+const validateEmailFormat = (email: any) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmedEmail = email ? email.trim().toLowerCase() : '';
   
@@ -30,7 +32,7 @@ const validateEmailFormat = (email) => {
 };
 
 // Enhanced name validation function
-const validateProfileName = (name) => {
+const validateProfileName = (name: any) => {
   const trimmedName = name ? name.trim() : '';
   
   if (!trimmedName) {
@@ -69,7 +71,7 @@ const validateProfileName = (name) => {
 };
 
 // Phone validation function
-const validateProfilePhone = (phone) => {
+const validateProfilePhone = (phone: any) => {
   const trimmedPhone = phone ? phone.trim() : '';
   
   if (!trimmedPhone) {
@@ -98,16 +100,16 @@ const validateProfilePhone = (phone) => {
   return { isValid: true, trimmedValue: digitsOnly };
 };
 
-const loadProfile = async (req, res) => {
+const loadProfile = async (req: Request, res: Response) => {
   try {
     // Get userId from session or req.user (Passport.js)
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     
     if (!userId) {
       return res.redirect('/login');
     }
 
-    const user = await User.findById(userId).select('-password').lean();
+    const user: any = await User.findById(userId).select('-password').lean();
 
     if (!user) {
       return res.redirect('/login');
@@ -120,20 +122,20 @@ const loadProfile = async (req, res) => {
       active: 'profile',
       user: user
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading profile:', error);
     res.status(500).send('Server Error');
   }
 };
 
-const loadEditProfile = async (req, res) => {
+const loadEditProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.redirect('/login');
     }
 
-    const user = await User.findById(userId).select('-password').lean();
+    const user: any = await User.findById(userId).select('-password').lean();
 
     if (!user) {
       return res.redirect('/login');
@@ -145,20 +147,20 @@ const loadEditProfile = async (req, res) => {
       active: 'profile',
       user: user
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading edit profile:', error);
     res.status(500).send('Server Error');
   }
 };
 
-const loadChangePassword = async (req, res) => {
+const loadChangePassword = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.redirect('/login');
     }
 
-    const user = await User.findById(userId).select('name email profilePhoto');
+    const user: any = await User.findById(userId).select('name email profilePhoto');
     if (!user) {
       return res.redirect('/login');
     }
@@ -169,7 +171,7 @@ const loadChangePassword = async (req, res) => {
       layout: 'user/layouts/user-layout',
       active: 'profile'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading change password page:', error);
     res.status(500).render('error', { message: 'Error loading change password page' });
   }
@@ -177,27 +179,27 @@ const loadChangePassword = async (req, res) => {
 
 // Note: loadAddresses moved to addressController.js
 // This function is kept for backward compatibility but should use the address controller
-const loadAddresses = async (req, res) => {
+const loadAddresses = async (req: Request, res: Response) => {
   // Redirect to the proper address controller route
   res.redirect('/addresses');
 };
 
  
 
-const loadOrders = async (req, res) => {
+const loadOrders = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.redirect('/login');
     }
 
-    const user = await User.findById(userId).select('name email profilePhoto');
+    const user: any = await User.findById(userId).select('name email profilePhoto');
     if (!user) {
       return res.redirect('/login');
     }
 
     // Get orders for the user with populated product data and address
-    const orders = await Order.find({ user: userId })
+    const orders: any = await Order.find({ user: userId })
       .populate({
         path: 'items.productId',
         select: 'productName mainImage subImages'
@@ -210,17 +212,17 @@ const loadOrders = async (req, res) => {
       .lean();
 
     // Flatten the orders to show individual items instead of grouped orders
-    const orderItems = [];
+    const orderItems: any[] = [];
     
-    orders.forEach(order => {
+    orders.forEach((order: any) => {
       // Get the actual delivery address from the populated address document
       let actualDeliveryAddress = null;
-      if (order.deliveryAddress && order.deliveryAddress.addressId && order.deliveryAddress.addressId.address) {
+      if (order.deliveryAddress && order.deliveryAddress.addressId && (order.deliveryAddress.addressId as any).address) {
         const addressIndex = order.deliveryAddress.addressIndex;
-        actualDeliveryAddress = order.deliveryAddress.addressId.address[addressIndex];
+        actualDeliveryAddress = (order.deliveryAddress.addressId as any).address[addressIndex];
       }
 
-      order.items.forEach(item => {
+      order.items.forEach((item: any) => {
         orderItems.push({
           // Order information
           orderId: order.orderId,
@@ -236,8 +238,8 @@ const loadOrders = async (req, res) => {
           // Item information
           itemId: item._id,
           productId: item.productId,
-          productName: item.productId ? item.productId.productName : 'Product',
-          productImage: item.productId ? item.productId.mainImage : null,
+          productName: item.productId ? (item.productId as any).productName : 'Product',
+          productImage: item.productId ? (item.productId as any).mainImage : null,
           sku: item.sku,
           size: item.size,
           quantity: item.quantity,
@@ -261,7 +263,7 @@ const loadOrders = async (req, res) => {
       orderItems: orderItems || [],
       orders: [] // Keep empty for backward compatibility
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading orders page:', error);
     res.status(500).render('errors/server-error', { 
       message: 'Error loading orders page',
@@ -271,9 +273,9 @@ const loadOrders = async (req, res) => {
 };
 
 // Simple email update function (for inline editing with OTP)
-const updateEmail = async (req, res) => {
+const updateEmail = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -293,7 +295,7 @@ const updateEmail = async (req, res) => {
     }
 
     // Check if email already exists
-    const existingUser = await User.findOne({
+    const existingUser: any = await User.findOne({
       email: emailValidation.trimmedValue,
       _id: { $ne: userId }
     });
@@ -315,7 +317,7 @@ const updateEmail = async (req, res) => {
     }
 
     // Check if the new email is the same as current email
-    if (currentUser.email === emailValidation.trimmedValue) {
+    if (currentUser!.email === emailValidation.trimmedValue) {
       return res.status(400).json({
         success: false,
         message: 'This is already your current email address'
@@ -329,7 +331,7 @@ const updateEmail = async (req, res) => {
     // Store OTP and new email in session
     req.session.emailChangeOtp = {
       otp,
-      currentEmail: currentUser.email,
+      currentEmail: currentUser!.email,
       newEmail: emailValidation.trimmedValue,
       userId: userId,
       expiresAt: Date.now() + 60 * 1000 // 1 minute
@@ -337,16 +339,16 @@ const updateEmail = async (req, res) => {
 
     // Send OTP to current email
     try {
-      await sendOtp({ email: currentUser.email, name: currentUser.name }, otp);
+      await sendOtp({ email: currentUser!.email, name: currentUser!.name }, otp);
       
       res.json({
         success: true,
         requiresOtp: true,
         message: 'OTP sent to your current email address',
-        currentEmail: currentUser.email,
+        currentEmail: currentUser!.email,
         newEmail: emailValidation.trimmedValue
       });
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error('Error sending OTP email:', emailError);
       return res.status(500).json({
         success: false,
@@ -354,12 +356,12 @@ const updateEmail = async (req, res) => {
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error initiating email update:', error);
 
     // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
-      const errors = {};
+      const errors: Record<string, any> = {};
       Object.keys(error.errors).forEach(key => {
         errors[key] = error.errors[key].message;
       });
@@ -378,7 +380,7 @@ const updateEmail = async (req, res) => {
 };
 
 // Verify OTP and complete email update
-const verifyEmailUpdateOtp = async (req, res) => {
+const verifyEmailUpdateOtp = async (req: Request, res: Response) => {
   try {
     const { otp } = req.body;
     const sessionOtp = req.session.emailChangeOtp;
@@ -391,7 +393,7 @@ const verifyEmailUpdateOtp = async (req, res) => {
     }
 
     // Check if OTP expired - but don't clear session, allow resend
-    if (Date.now() > sessionOtp.expiresAt) {
+    if (Date.now() > (sessionOtp.expiresAt ?? 0)) {
       return res.status(400).json({
         success: false,
         message: 'OTP expired. Please use the resend option to get a new code.'
@@ -434,7 +436,7 @@ const verifyEmailUpdateOtp = async (req, res) => {
       user: updatedUser
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error verifying email update OTP:', error);
     res.status(500).json({
       success: false,
@@ -444,7 +446,7 @@ const verifyEmailUpdateOtp = async (req, res) => {
 };
 
 // Resend OTP for email update
-const resendEmailUpdateOtp = async (req, res) => {
+const resendEmailUpdateOtp = async (req: Request, res: Response) => {
   try {
     const sessionOtp = req.session.emailChangeOtp;
 
@@ -468,7 +470,7 @@ const resendEmailUpdateOtp = async (req, res) => {
     };
 
     // Get user for sending email
-    const user = await User.findById(sessionOtp.userId);
+    const user: any = await User.findById(sessionOtp.userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -478,13 +480,13 @@ const resendEmailUpdateOtp = async (req, res) => {
 
     // Send new OTP to current email
     try {
-      await sendOtp({ email: sessionOtp.currentEmail, name: user.name }, newOtp);
+      await sendOtp({ email: sessionOtp.currentEmail ?? '', name: user.name }, newOtp);
       
       res.json({
         success: true,
         message: 'New OTP sent to your current email address'
       });
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error('Error resending OTP email:', emailError);
       return res.status(500).json({
         success: false,
@@ -492,7 +494,7 @@ const resendEmailUpdateOtp = async (req, res) => {
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error resending email update OTP:', error);
     res.status(500).json({
       success: false,
@@ -502,9 +504,9 @@ const resendEmailUpdateOtp = async (req, res) => {
 };
 
 // Update profile data (excluding email) with enhanced validation
-const updateProfileData = async (req, res) => {
+const updateProfileData = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -513,7 +515,7 @@ const updateProfileData = async (req, res) => {
     }
 
     const { fullname, phone } = req.body;
-    const errors = {};
+    const errors: Record<string, any> = {};
 
     // Validate fullname using enhanced validator
     const nameValidation = validateProfileName(fullname);
@@ -524,7 +526,7 @@ const updateProfileData = async (req, res) => {
     // Validate phone using the validator
     const phoneValidation = validateProfilePhone(phone);
     if (!phoneValidation.isValid) {
-      errors[phoneValidation.field] = phoneValidation.error;
+      errors[phoneValidation.field ?? "_"] = phoneValidation.error;
     }
 
     // If there are validation errors, return them
@@ -546,7 +548,7 @@ const updateProfileData = async (req, res) => {
     }
 
     // Update user profile
-    const updateData = {
+    const updateData: Record<string, any> = {
       name: nameValidation.trimmedValue
     };
 
@@ -570,12 +572,12 @@ const updateProfileData = async (req, res) => {
       user: updatedUser
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating profile:', error);
 
     // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
-      const errors = {};
+      const errors: Record<string, any> = {};
       Object.keys(error.errors).forEach(key => {
         errors[key] = error.errors[key].message;
       });
@@ -594,9 +596,9 @@ const updateProfileData = async (req, res) => {
 };
 
 // Verify current email for email change
-const verifyCurrentEmail = async (req, res) => {
+const verifyCurrentEmail = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     const { currentEmail } = req.body;
 
     if (!userId) {
@@ -607,7 +609,7 @@ const verifyCurrentEmail = async (req, res) => {
     }
 
     // Get user
-    const user = await User.findById(userId);
+    const user: any = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -643,7 +645,7 @@ const verifyCurrentEmail = async (req, res) => {
         success: true,
         message: 'OTP sent to your current email address'
       });
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error('Error sending OTP email:', emailError);
       return res.status(500).json({
         success: false,
@@ -651,7 +653,7 @@ const verifyCurrentEmail = async (req, res) => {
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error verifying current email:', error);
     res.status(500).json({
       success: false,
@@ -661,9 +663,9 @@ const verifyCurrentEmail = async (req, res) => {
 };
 
 // Load email change OTP page
-const loadEmailChangeOtp = async (req, res) => {
+const loadEmailChangeOtp = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.redirect('/login');
     }
@@ -674,7 +676,7 @@ const loadEmailChangeOtp = async (req, res) => {
     }
 
     // Get user data
-    const user = await User.findById(userId).select('-password').lean();
+    const user: any = await User.findById(userId).select('-password').lean();
     if (!user) {
       return res.redirect('/login');
     }
@@ -684,16 +686,16 @@ const loadEmailChangeOtp = async (req, res) => {
       layout: 'user/layouts/user-layout',
       active: 'profile',
       user: user,
-      email: req.session.emailChangeOtp.email
+      email: req.session.emailChangeOtp!.email
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading email change OTP page:', error);
     res.status(500).send('Server Error');
   }
 };
 
 // Verify OTP for email change
-const verifyEmailChangeOtp = async (req, res) => {
+const verifyEmailChangeOtp = async (req: Request, res: Response) => {
   try {
     const { otp } = req.body;
     const sessionOtp = req.session.emailChangeOtp;
@@ -706,7 +708,7 @@ const verifyEmailChangeOtp = async (req, res) => {
     }
 
     // Check if OTP expired
-    if (Date.now() > sessionOtp.expiresAt) {
+    if (Date.now() > (sessionOtp.expiresAt ?? 0)) {
       req.session.emailChangeOtp = null;
       return res.status(400).json({
         success: false,
@@ -723,14 +725,14 @@ const verifyEmailChangeOtp = async (req, res) => {
     }
 
     // Mark OTP as verified
-    req.session.emailChangeOtp.verified = true;
+    req.session.emailChangeOtp!.verified = true;
 
     res.json({
       success: true,
       message: 'OTP verified successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error verifying email change OTP:', error);
     res.status(500).json({
       success: false,
@@ -740,7 +742,7 @@ const verifyEmailChangeOtp = async (req, res) => {
 };
 
 // Change email address
-const changeEmail = async (req, res) => {
+const changeEmail = async (req: Request, res: Response) => {
   try {
     const { newEmail } = req.body;
     const sessionOtp = req.session.emailChangeOtp;
@@ -762,7 +764,7 @@ const changeEmail = async (req, res) => {
     }
 
     // Check if new email already exists
-    const existingUser = await User.findOne({
+    const existingUser: any = await User.findOne({
       email: emailValidation.trimmedValue,
       _id: { $ne: sessionOtp.userId }
     });
@@ -800,7 +802,7 @@ const changeEmail = async (req, res) => {
       user: updatedUser
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error changing email:', error);
     res.status(500).json({
       success: false,
@@ -810,9 +812,9 @@ const changeEmail = async (req, res) => {
 };
 
 // Update password function
-const updatePassword = async (req, res) => {
+const updatePassword = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     const { currentPassword, newPassword, confirmPassword } = req.body;
 
     if (!userId) {
@@ -854,7 +856,7 @@ const updatePassword = async (req, res) => {
     }
 
     // Get current user
-    const user = await User.findById(userId);
+    const user: any = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -884,7 +886,7 @@ const updatePassword = async (req, res) => {
       message: 'Password updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating password:', error);
     res.status(500).json({
       success: false,
@@ -894,9 +896,9 @@ const updatePassword = async (req, res) => {
 };
 
 // Upload profile photo
-const uploadProfilePhoto = async (req, res) => {
+const uploadProfilePhoto = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -935,8 +937,8 @@ const uploadProfilePhoto = async (req, res) => {
     const currentUser = await User.findById(userId);
 
     // Delete old profile photo if it exists
-    if (currentUser.profilePhoto) {
-      const oldPhotoPath = path.join(uploadsDir, currentUser.profilePhoto);
+    if (currentUser!.profilePhoto) {
+      const oldPhotoPath = path.join(uploadsDir, currentUser!.profilePhoto);
       if (fs.existsSync(oldPhotoPath)) {
         fs.unlinkSync(oldPhotoPath);
       }
@@ -953,7 +955,7 @@ const uploadProfilePhoto = async (req, res) => {
       filename: filename
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading profile photo:', error);
     res.status(500).json({
       success: false,
@@ -963,9 +965,9 @@ const uploadProfilePhoto = async (req, res) => {
 };
 
 // Delete profile photo
-const deleteProfilePhoto = async (req, res) => {
+const deleteProfilePhoto = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -983,7 +985,7 @@ const deleteProfilePhoto = async (req, res) => {
       });
     }
 
-    if (!currentUser.profilePhoto) {
+    if (!currentUser!.profilePhoto) {
       return res.status(400).json({
         success: false,
         message: 'No profile photo to delete'
@@ -991,7 +993,7 @@ const deleteProfilePhoto = async (req, res) => {
     }
 
     // Delete the physical file
-    const photoPath = path.join(PROFILE_UPLOADS_DIR, currentUser.profilePhoto);
+    const photoPath = path.join(PROFILE_UPLOADS_DIR, currentUser!.profilePhoto);
     if (fs.existsSync(photoPath)) {
       fs.unlinkSync(photoPath);
     }
@@ -1006,7 +1008,7 @@ const deleteProfilePhoto = async (req, res) => {
       message: 'Profile photo deleted successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting profile photo:', error);
     res.status(500).json({
       success: false,
@@ -1016,10 +1018,10 @@ const deleteProfilePhoto = async (req, res) => {
 };
 
 // Logout function
-const logout = async (req, res) => {
+const logout = async (req: Request, res: Response) => {
   try {
     // Check if there's an active session
-    const userId = req.session.userId || req.session.googleUserId || (req.user && req.user._id);
+    const userId = req.session.userId || req.session.googleUserId || (req.user && req.user!._id);
     
     if (!userId) {
       return res.redirect('/login');
@@ -1048,7 +1050,7 @@ const logout = async (req, res) => {
       return res.redirect("/login");
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Logout error", error);
     return res.status(500).json({
       success: false,
@@ -1057,9 +1059,9 @@ const logout = async (req, res) => {
   }
 };
 
-const getAddressesPaginated = async (req, res) => {
+const getAddressesPaginated = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     
     if (!userId) {
       return res.status(401).json({
@@ -1068,7 +1070,7 @@ const getAddressesPaginated = async (req, res) => {
       });
     }
 
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 2; // 2 addresses per page
     const skip = (page - 1) * limit;
 
@@ -1091,7 +1093,7 @@ const getAddressesPaginated = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching paginated addresses:', error);
     res.status(500).json({
       success: false,
@@ -1100,7 +1102,7 @@ const getAddressesPaginated = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   loadProfile,
   loadEditProfile,
   loadChangePassword,

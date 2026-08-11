@@ -1,8 +1,9 @@
-const Order = require('./order.model');
-const User = require('../users/user.model');
-const Product = require('../catalog/product.model');
-const orderService = require('./order.service');
-const {
+import type { Request, Response } from 'express';
+import Order from './order.model';
+import User from '../users/user.model';
+import Product from '../catalog/product.model';
+import * as orderService from './order.service';
+import {
   ORDER_STATUS,
   PAYMENT_STATUS, 
   CANCELLATION_REASONS,
@@ -11,17 +12,17 @@ const {
   getPaymentStatusArray,
   getCancellationReasonsArray,
   getReturnReasonsArray
-} = require('../../common/constants/order.constants');
-const { getPagination } = require('../../common/utils/pagination.util');
+} from '../../common/constants/order.constants';
+import { getPagination } from '../../common/utils/pagination.util';
 
 
-const validateTransitionAndGetOrder = async (orderId, newStatus, isItem = false, itemId = null) => {
-  const order = await Order.findOne({ orderId });
+const validateTransitionAndGetOrder = async (orderId: string, newStatus: any, isItem = false, itemId = null) => {
+  const order: any = await Order.findOne({ orderId });
   if (!order) {
     throw new Error('Order not found');
   }
   
-  let currentStatus;
+  let currentStatus: any;
   if (isItem) {
     const item = order.items.id(itemId);
     if (!item) throw new Error('Item not found');
@@ -39,8 +40,8 @@ const validateTransitionAndGetOrder = async (orderId, newStatus, isItem = false,
   return { order, currentStatus };
 };
 
-const getStatusColor = (status) => {
-  const colorMap = {
+const getStatusColor = (status: any) => {
+  const colorMap: Record<string, any> = {
     'Pending': 'warning',
     'Processing': 'info',
     'Shipped': 'primary',
@@ -55,8 +56,8 @@ const getStatusColor = (status) => {
   return colorMap[status] || 'secondary';
 };
 
-const getPaymentStatusColor = (status) => {
-  const colorMap = {
+const getPaymentStatusColor = (status: any) => {
+  const colorMap: Record<string, any> = {
     'Pending': 'warning',
     'Completed': 'success',
     'Failed': 'danger',
@@ -69,13 +70,13 @@ const getPaymentStatusColor = (status) => {
 };
 
 // Helper function to build aggregation pipeline
-function buildOrderItemsPipeline(filters) {
-  const pipeline = [];
+function buildOrderItemsPipeline(filters: any) {
+  const pipeline: any[] = [];
   
   console.log('🔍 Building pipeline with filters:', filters);
 
   // Step 1: Initial match for order-level filters ONLY (NO SEARCH HERE!)
-  const orderMatch = {};
+  const orderMatch: Record<string, any> = {};
   
   if (filters.paymentMethod) {
     orderMatch.paymentMethod = filters.paymentMethod;
@@ -144,7 +145,7 @@ function buildOrderItemsPipeline(filters) {
         { orderId: { $regex: orderIdSearchTerm, $options: 'i' } }, //  Use cleaned term for orderId
         { 'user.name': { $regex: searchTerm, $options: 'i' } },
         { 'user.email': { $regex: searchTerm, $options: 'i' } },
-        { 'items.productId.productName': { $regex: searchTerm, $options: 'i' } },
+        { '(items.productId as any).productName': { $regex: searchTerm, $options: 'i' } },
         { 'items.sku': { $regex: searchTerm, $options: 'i' } }
       ]
     };
@@ -194,9 +195,9 @@ function buildOrderItemsPipeline(filters) {
       itemId: '$items._id',
       productId: '$items.productId',
       productName: {
-        $ifNull: ['$items.productId.productName', 'Product']
+        $ifNull: ['$(items.productId as any).productName', 'Product']
       },
-      productImage: '$items.productId.mainImage',
+      productImage: '$(items.productId as any).mainImage',
       sku: '$items.sku',
       size: '$items.size',
       quantity: '$items.quantity',
@@ -212,7 +213,7 @@ function buildOrderItemsPipeline(filters) {
   });
 
   // Step 8: Sorting
-  const sortObj = {};
+  const sortObj: Record<string, any> = {};
   sortObj[filters.sortBy === 'createdAt' ? 'orderDate' : filters.sortBy] = 
     filters.sortOrder === 'desc' ? -1 : 1;
   pipeline.push({ $sort: sortObj });
@@ -246,21 +247,21 @@ async function getTodayOrdersCount() {
 }
 
 // Get all orders
-const getAllOrders = async (req, res) => {
+const getAllOrders = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(String(req.query.page)) || 1;
+    const limit = parseInt(String(req.query.limit)) || 10;
 
     // Get filter parameters
-    const status = req.query.status;
-    const paymentMethod = req.query.paymentMethod;
-    const paymentStatus = req.query.paymentStatus;
-    const search = req.query.search;
-    const sortBy = req.query.sortBy || 'createdAt';
+    const status = req.query.status as string | undefined;
+    const paymentMethod = req.query.paymentMethod as string | undefined;
+    const paymentStatus = req.query.paymentStatus as string | undefined;
+    const search = req.query.search as string | undefined;
+    const sortBy = String(req.query.sortBy || 'createdAt');
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
     // Build filter object
-    const filter = {};
+    const filter: Record<string, any> = {};
 
     // Filter by payment method
     if (paymentMethod) {
@@ -292,7 +293,7 @@ const getAllOrders = async (req, res) => {
       ];
 
       // If search might be user info, add user lookup
-      if (isNaN(searchTerm)) {
+      if (isNaN(Number(searchTerm))) {
         // Will search in user after populate
       }
     }
@@ -324,11 +325,11 @@ const getAllOrders = async (req, res) => {
 
     // Process orders to extract specific delivery address
     const processedOrders = orders.map(order => {
-      const orderObj = order.toObject();
+      const orderObj = (order as any).toObject();
       
       if (orderObj.deliveryAddress && orderObj.deliveryAddress.addressId) {
         const addressIndex = orderObj.deliveryAddress.addressIndex;
-        const specificAddress = orderObj.deliveryAddress.addressId.address?.[addressIndex];
+        const specificAddress = (orderObj.deliveryAddress.addressId as any).address?.[addressIndex];
         
         if (specificAddress) {
           orderObj.deliveryAddress = {
@@ -374,7 +375,7 @@ const getAllOrders = async (req, res) => {
       paymentStatuses: getPaymentStatusArray()
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching orders:', error);
     res.status(500).render('admin/orders', {
       title: 'Order Management',
@@ -396,22 +397,22 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-const getFilteredOrders = async (req, res) => {
+const getFilteredOrders = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const status = req.query.status;
-    const paymentMethod = req.query.paymentMethod;
-    const paymentStatus = req.query.paymentStatus;
-    const search = req.query.search;
-    const sortBy = req.query.sortBy || 'createdAt';
+    const page = parseInt(String(req.query.page)) || 1;
+    const limit = parseInt(String(req.query.limit)) || 10;
+    const status = req.query.status as string | undefined;
+    const paymentMethod = req.query.paymentMethod as string | undefined;
+    const paymentStatus = req.query.paymentStatus as string | undefined;
+    const search = req.query.search as string | undefined;
+    const sortBy = String(req.query.sortBy || 'createdAt');
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
     //  BUILD AGGREGATION PIPELINE FOR PROPER SEARCH
-    const pipeline = [];
+    const pipeline: any[] = [];
 
     // Step 1: Initial match for order-level filters
-    const orderMatch = {};
+    const orderMatch: Record<string, any> = {};
     if (paymentMethod) orderMatch.paymentMethod = paymentMethod;
     if (paymentStatus) orderMatch.paymentStatus = paymentStatus;
     if (status) orderMatch['items.status'] = status;
@@ -506,7 +507,7 @@ const getFilteredOrders = async (req, res) => {
     pipeline.push({ $limit: limit });
 
     // Execute aggregation
-    const orders = await Order.aggregate(pipeline);
+    const orders: any = await Order.aggregate(pipeline);
 
     //  Populate product details for items
     await Order.populate(orders, {
@@ -515,7 +516,7 @@ const getFilteredOrders = async (req, res) => {
     });
 
     // Process orders to extract delivery address
-    const processedOrders = orders.map(order => {
+    const processedOrders = orders.map((order: any) => {
       // Reconstruct user object
       if (order.userName) {
         order.user = {
@@ -626,7 +627,7 @@ const getFilteredOrders = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getFilteredOrders:', error);
     res.status(500).json({
       success: false,
@@ -639,16 +640,16 @@ const getFilteredOrders = async (req, res) => {
 
 
 // Get allowed status transitions based on current status
-const getAllowedStatusTransitions = (currentStatus) => {
+const getAllowedStatusTransitions = (currentStatus: any) => {
   return orderService.getValidTransitions(currentStatus);
 };
 
-const getOrderDetails = async (req, res) => {
+const getOrderDetails = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     console.log('🔍 DEBUG: Accessing order details for:', orderId);
 
-    const order = await Order.findOne({ orderId })
+    const order: any = await Order.findOne({ orderId })
       .populate({
         path: 'user',
         select: 'name email phone profilePhoto'
@@ -680,9 +681,9 @@ const getOrderDetails = async (req, res) => {
 
     if (order.deliveryAddress) {
       // Case 1: Address is referenced (addressId exists and was populated)
-      if (order.deliveryAddress.addressId && order.deliveryAddress.addressId.address) {
+      if (order.deliveryAddress.addressId && (order.deliveryAddress.addressId as any).address) {
         const addressIndex = order.deliveryAddress.addressIndex || 0;
-        const specificAddress = order.deliveryAddress.addressId.address[addressIndex];
+        const specificAddress = (order.deliveryAddress.addressId as any).address[addressIndex];
         
         if (specificAddress) {
           console.log(" Using referenced address at index:", addressIndex);
@@ -693,7 +694,7 @@ const getOrderDetails = async (req, res) => {
         }
       }
       // Case 2: Address is embedded directly in the order (common pattern)
-      else if (order.deliveryAddress.name || order.deliveryAddress.city) {
+      else if ((order.deliveryAddress as any).name || (order.deliveryAddress as any).city) {
         console.log(" Using embedded address from order");
         finalDeliveryAddress = order.deliveryAddress;
       }
@@ -702,7 +703,7 @@ const getOrderDetails = async (req, res) => {
         console.log(" AddressId is null, trying to fetch from user addresses");
         try {
           const User = require('../users/user.model');
-          const userWithAddresses = await User.findById(order.user._id).select('address').lean();
+          const userWithAddresses: any = await User.findById(order.user._id).select('address').lean();
           
           if (userWithAddresses && userWithAddresses.address && userWithAddresses.address.length > 0) {
             const addressIndex = order.deliveryAddress.addressIndex || 0;
@@ -713,7 +714,7 @@ const getOrderDetails = async (req, res) => {
               finalDeliveryAddress = userAddress;
             }
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error(" Error fetching user addresses:", err);
         }
       }
@@ -733,12 +734,12 @@ const getOrderDetails = async (req, res) => {
     //  NEW: Pre-calculate valid transitions for each item
     const { getValidTransitions } = require('./order.service');
     
-    order.items = order.items.map(item => {
+    order.items = order.items.map((item: any) => {
       const itemStatus = item.status || 'Pending';
       const itemTransitions = getValidTransitions(itemStatus);
       
       // Filter out restricted transitions for UI (same logic as template)
-      const allowedItemTransitions = itemTransitions.filter(transition => 
+      const allowedItemTransitions = itemTransitions.filter((transition: any) => 
         transition !== itemStatus && 
         !['Cancelled', 'Returned', 'Processing Return'].includes(transition)
       );
@@ -750,10 +751,10 @@ const getOrderDetails = async (req, res) => {
     });
 
     // Create comprehensive status history combining order and item level changes
-    const comprehensiveStatusHistory = [];
+    const comprehensiveStatusHistory: any[] = [];
     
     if (order.statusHistory && order.statusHistory.length > 0) {
-      order.statusHistory.forEach(statusEntry => {
+      order.statusHistory.forEach((statusEntry: any) => {
         comprehensiveStatusHistory.push({
           type: 'order',
           status: statusEntry.status,
@@ -766,10 +767,10 @@ const getOrderDetails = async (req, res) => {
     }
 
     if (order.items && order.items.length > 0) {
-      order.items.forEach(item => {
+      order.items.forEach((item: any) => {
         if (item.statusHistory && item.statusHistory.length > 0) {
-          item.statusHistory.forEach(statusEntry => {
-            const productName = item.productId ? item.productId.productName : 'Product';
+          item.statusHistory.forEach((statusEntry: any) => {
+            const productName = item.productId ? (item.productId as any).productName : 'Product';
             comprehensiveStatusHistory.push({
               type: 'item',
               status: statusEntry.status,
@@ -783,14 +784,14 @@ const getOrderDetails = async (req, res) => {
       });
     }
 
-    comprehensiveStatusHistory.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    comprehensiveStatusHistory.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     order.comprehensiveStatusHistory = comprehensiveStatusHistory;
 
     // Get valid status transitions for current order
     const allValidTransitions = getValidTransitions(order.status);
     
     // Filter out 'Returned' status - only available through return management
-    const validTransitions = allValidTransitions.filter(status => status !== 'Returned');
+    const validTransitions = allValidTransitions.filter((status: any) => status !== 'Returned');
 
     res.render('admin/order-details', {
       title: `Order Details - ${orderId}`,
@@ -807,7 +808,7 @@ const getOrderDetails = async (req, res) => {
       layout: 'admin/layout'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching order details:', error);
     
     res.status(500).render('errors/404', {
@@ -821,11 +822,11 @@ const getOrderDetails = async (req, res) => {
 
 
 
-const getOrderDetailsJSON = async (req, res) => {
+const getOrderDetailsJSON = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
 
-    const order = await Order.findOne({ orderId })
+    const order: any = await Order.findOne({ orderId })
       .populate({
         path: 'user',
         select: 'name email phone profilePhoto'
@@ -848,9 +849,9 @@ const getOrderDetailsJSON = async (req, res) => {
     }
 
     // Extract the specific address from the address array using addressIndex
-    if (order.deliveryAddress && order.deliveryAddress.addressId && order.deliveryAddress.addressId.address) {
+    if (order.deliveryAddress && order.deliveryAddress.addressId && (order.deliveryAddress.addressId as any).address) {
       const addressIndex = order.deliveryAddress.addressIndex;
-      const specificAddress = order.deliveryAddress.addressId.address[addressIndex];
+      const specificAddress = (order.deliveryAddress.addressId as any).address[addressIndex];
       
       if (specificAddress) {
         order.deliveryAddress = {
@@ -875,10 +876,10 @@ const getOrderDetailsJSON = async (req, res) => {
         totalAmount: order.totalAmount,
         user: order.user,
         deliveryAddress: order.deliveryAddress,
-        items: order.items.map(item => ({
+        items: order.items.map((item: any) => ({
           _id: item._id,
           productId: item.productId,
-          productName: item.productId ? item.productId.productName : 'Product',
+          productName: item.productId ? (item.productId as any).productName : 'Product',
           sku: item.sku,
           size: item.size,
           quantity: item.quantity,
@@ -893,7 +894,7 @@ const getOrderDetailsJSON = async (req, res) => {
       validTransitions: validTransitions //  Include valid transitions
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching order details JSON:', error);
     res.status(500).json({
       success: false,
@@ -903,11 +904,11 @@ const getOrderDetailsJSON = async (req, res) => {
 };
 
 // Get allowed status transitions for a specific order
-const getAllowedTransitions = async (req, res) => {
+const getAllowedTransitions = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
 
-    const order = await Order.findOne({ orderId });
+    const order: any = await Order.findOne({ orderId });
     
     if (!order) {
       return res.status(404).json({
@@ -924,7 +925,7 @@ const getAllowedTransitions = async (req, res) => {
       allowedTransitions
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching allowed transitions:', error);
     res.status(500).json({
       success: false,
@@ -934,16 +935,16 @@ const getAllowedTransitions = async (req, res) => {
 };
 
 // updateOrderStatus function with transition validation
-const updateOrderStatus = async (req, res) => {
+const updateOrderStatus = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     const { status, notes, action } = req.body;
 
     // Handle different actions
     if (action === 'cancel') {
       return cancelOrder(req, res);
     } else if (action === 'return') {
-      return returnOrder(req, res);
+      return returnOrderRequest(req, res);
     }
 
     // Get current order to validate transition
@@ -987,9 +988,9 @@ const updateOrderStatus = async (req, res) => {
         paymentMethod: result.order.paymentMethod, //  Helpful for frontend logic
         totalAmount: result.order.totalAmount,
         //  ENHANCED: Complete item information for real-time badge updates
-        items: result.order.items.map(item => ({
+        items: result.order.items.map((item: any) => ({
           _id: item._id,
-          productName: item.productId ? item.productId.productName : 'Product',
+          productName: item.productId ? (item.productId as any).productName : 'Product',
           sku: item.sku,
           size: item.size,
           quantity: item.quantity,
@@ -998,8 +999,8 @@ const updateOrderStatus = async (req, res) => {
           status: item.status,                    //  Updated item status
           paymentStatus: item.paymentStatus,      //  Updated item payment status
           //  Additional info for debugging/logging
-          previousStatus: currentOrder.items.find(ci => ci._id.toString() === item._id.toString())?.status,
-          statusChanged: currentOrder.items.find(ci => ci._id.toString() === item._id.toString())?.status !== item.status
+          previousStatus: currentOrder.items.find(ci => ci._id!.toString() === item._id!.toString())?.status,
+          statusChanged: currentOrder.items.find(ci => ci._id!.toString() === item._id!.toString())?.status !== item.status
         })),
         //  ENHANCED: Status change summary for frontend
         changes: {
@@ -1010,8 +1011,8 @@ const updateOrderStatus = async (req, res) => {
           orderStatusChanged: currentOrder.status !== result.order.status,
           orderPaymentStatusChanged: currentOrder.paymentStatus !== result.order.paymentStatus,
           totalItemsUpdated: result.order.items.length,
-          itemsWithPaymentChanges: result.order.items.filter(item => {
-            const originalItem = currentOrder.items.find(ci => ci._id.toString() === item._id.toString());
+          itemsWithPaymentChanges: result.order.items.filter((item: any) => {
+            const originalItem = currentOrder.items.find(ci => ci._id!.toString() === item._id!.toString());
             return originalItem && originalItem.paymentStatus !== item.paymentStatus;
           }).length
         },
@@ -1021,7 +1022,7 @@ const updateOrderStatus = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating order status:', error);
     res.status(500).json({
       success: false,
@@ -1037,9 +1038,10 @@ const updateOrderStatus = async (req, res) => {
 };
 
 // update item status
-const updateItemStatus = async (req, res) => {
+const updateItemStatus = async (req: Request, res: Response) => {
   try {
-    const { orderId, itemId } = req.params;
+    const orderId = String(req.params.orderId);
+    const itemId = String(req.params.itemId);
     const { status, notes } = req.body;
 
     console.log('🔍 ITEM STATUS UPDATE REQUEST:', {
@@ -1120,9 +1122,9 @@ const updateItemStatus = async (req, res) => {
         paymentMethod: result.order.paymentMethod,
         totalAmount: result.order.totalAmount,
         //  ENHANCED: Complete item information for real-time badge updates
-        items: result.order.items.map(item => ({
+        items: result.order.items.map((item: any) => ({
           _id: item._id,
-          productName: item.productId ? item.productId.productName : 'Product',
+          productName: item.productId ? (item.productId as any).productName : 'Product',
           sku: item.sku,
           size: item.size,
           quantity: item.quantity,
@@ -1131,7 +1133,7 @@ const updateItemStatus = async (req, res) => {
           status: item.status,
           paymentStatus: item.paymentStatus,
           //  Mark which item was updated
-          wasUpdated: item._id.toString() === itemId
+          wasUpdated: item._id!.toString() === itemId
         })),
         //  ENHANCED: Update summary for frontend
         changes: {
@@ -1149,7 +1151,7 @@ const updateItemStatus = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(' Error updating item status:', error);
     res.status(500).json({
       success: false,
@@ -1167,9 +1169,9 @@ const updateItemStatus = async (req, res) => {
 
 
 // Update payment status
-// exports.updatePaymentStatus = async (req, res) => {
+// exports.updatePaymentStatus = async (req: Request, res: Response) => {
 //   try {
-//     const { orderId } = req.params;
+//     const orderId = String(req.params.orderId);
 //     const { paymentStatus } = req.body;
 
 //     const validPaymentStatuses = getPaymentStatusArray();
@@ -1181,7 +1183,7 @@ const updateItemStatus = async (req, res) => {
 //       });
 //     }
 
-//     const order = await Order.findOne({ orderId });
+//     const order: any = await Order.findOne({ orderId });
     
 //     if (!order) {
 //       return res.status(404).json({
@@ -1203,7 +1205,7 @@ const updateItemStatus = async (req, res) => {
 //       }
 //     });
 
-//   } catch (error) {
+//   } catch (error: any) {
 //     console.error('Error updating payment status:', error);
 //     res.status(500).json({
 //       success: false,
@@ -1216,13 +1218,14 @@ const updateItemStatus = async (req, res) => {
 
 
 // Cancel individual item
-const cancelItem = async (req, res) => {
+const cancelItem = async (req: Request, res: Response) => {
   try {
-    const { orderId, itemId } = req.params;
+    const orderId = String(req.params.orderId);
+    const itemId = String(req.params.itemId);
     const { reason } = req.body;
 
     // Verify order exists first
-    const order = await Order.findOne({ orderId });
+    const order: any = await Order.findOne({ orderId });
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -1250,7 +1253,7 @@ const cancelItem = async (req, res) => {
     // Restore stock for cancelled item
     const product = await Product.findById(item.productId);
     if (product) {
-      const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
+      const variant = product.variants.find(v => v._id!.toString() === item.variantId.toString());
       if (variant) {
         variant.stock += item.quantity;
         await product.save();
@@ -1264,7 +1267,7 @@ const cancelItem = async (req, res) => {
         orderId: result.order.orderId,
         status: result.order.status,
         paymentStatus: result.order.paymentStatus,
-        items: result.order.items.map(item => ({
+        items: result.order.items.map((item: any) => ({
           _id: item._id,
           status: item.status,
           paymentStatus: item.paymentStatus
@@ -1272,7 +1275,7 @@ const cancelItem = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error cancelling item:', error);
     res.status(500).json({
       success: false,
@@ -1282,9 +1285,9 @@ const cancelItem = async (req, res) => {
 };
 
 // Cancel entire order using admin function
-const cancelOrder = async (req, res) => {
+const cancelOrder = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     const { reason } = req.body;
 
     // Use admin function (no reason validation required)
@@ -1299,7 +1302,7 @@ const cancelOrder = async (req, res) => {
       if (item.status === ORDER_STATUS.CANCELLED) {
         const product = await Product.findById(item.productId);
         if (product) {
-          const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
+          const variant = product.variants.find(v => v._id!.toString() === item.variantId.toString());
           if (variant) {
             variant.stock += item.quantity;
             await product.save();
@@ -1315,7 +1318,7 @@ const cancelOrder = async (req, res) => {
         orderId: result.order.orderId,
         status: result.order.status,
         paymentStatus: result.order.paymentStatus,
-        items: result.order.items.map(item => ({
+        items: result.order.items.map((item: any) => ({
           _id: item._id,
           status: item.status,
           paymentStatus: item.paymentStatus
@@ -1323,7 +1326,7 @@ const cancelOrder = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error cancelling order:', error);
     res.status(500).json({
       success: false,
@@ -1333,9 +1336,9 @@ const cancelOrder = async (req, res) => {
 };
 
 // Create return request for entire order using admin function
-const returnOrderRequest = async (req, res) => {
+const returnOrderRequest = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     const { reason } = req.body;
 
     //  UPDATED: Use admin return request function (no reason validation required)
@@ -1353,14 +1356,14 @@ const returnOrderRequest = async (req, res) => {
         paymentStatus: result.order.paymentStatus,
         itemsAffected: result.itemsAffected
       },
-      returnRequests: result.returnRequests.map(req => ({
+      returnRequests: result.returnRequests.map((req: any) => ({
         returnId: req.returnId,
         status: req.status,
         reason: req.reason
       }))
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating order return request:', error);
     res.status(500).json({
       success: false,
@@ -1370,9 +1373,10 @@ const returnOrderRequest = async (req, res) => {
 };
 
 // Create return request for individual item using admin function
-const returnItemRequest = async (req, res) => {
+const returnItemRequest = async (req: Request, res: Response) => {
   try {
-    const { orderId, itemId } = req.params;
+    const orderId = String(req.params.orderId);
+    const itemId = String(req.params.itemId);
     const { reason } = req.body;
 
     // Use admin return request function (no reason validation required)
@@ -1397,7 +1401,7 @@ const returnItemRequest = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating item return request:', error);
     res.status(500).json({
       success: false,
@@ -1410,7 +1414,7 @@ const returnItemRequest = async (req, res) => {
 
 
 // Get order statistics for dashboard
-const getOrderStatistics = async (req, res) => {
+const getOrderStatistics = async (req: Request, res: Response) => {
   try {
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -1470,7 +1474,7 @@ const getOrderStatistics = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching order statistics:', error);
     res.status(500).json({
       success: false,
@@ -1482,16 +1486,16 @@ const getOrderStatistics = async (req, res) => {
 
 
 // Export orders data (CSV)
-const exportOrders = async (req, res) => {
+const exportOrders = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, status } = req.query;
     
-    let filterQuery = {};
+    let filterQuery: Record<string, any> = {};
     
     if (startDate && endDate) {
       filterQuery.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte$gte: new Date(String(startDate)),
+        $lte$gte: new Date(String(endDate))
       };
     }
     
@@ -1499,7 +1503,7 @@ const exportOrders = async (req, res) => {
       filterQuery.status = status;
     }
 
-    const orders = await Order.find(filterQuery)
+    const orders: any = await Order.find(filterQuery)
       .populate('user', 'name email')
       .populate('items.productId', 'productName')
       .sort({ createdAt: -1 })
@@ -1521,11 +1525,11 @@ const exportOrders = async (req, res) => {
 
     let csvContent = csvHeaders.join(',') + '\n';
 
-    orders.forEach(order => {
+    orders.forEach((order: any) => {
       const row = [
         order.orderId,
-        order.user?.name || 'N/A',
-        order.user?.email || 'N/A',
+        (order.user as any)?.name || 'N/A',
+        (order.user as any)?.email || 'N/A',
         new Date(order.createdAt).toLocaleDateString(),
         order.status,
         order.paymentMethod,
@@ -1541,7 +1545,7 @@ const exportOrders = async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=orders-export.csv');
     res.send(csvContent);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error exporting orders:', error);
     res.status(500).json({
       success: false,
@@ -1550,7 +1554,7 @@ const exportOrders = async (req, res) => {
   }
 };
 
-const getSystemStatistics = async (req, res) => {
+const getSystemStatistics = async (req: Request, res: Response) => {
   try {
     const [orderStats, todayOrders] = await Promise.all([
       getOrderItemStatistics(),
@@ -1576,7 +1580,7 @@ const getSystemStatistics = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching system statistics:', error);
     res.status(500).json({
       success: false,
@@ -1586,11 +1590,11 @@ const getSystemStatistics = async (req, res) => {
 };
 
 // Fix payment status for cancelled order
-const fixCancelledOrderPaymentStatus = async (req, res) => {
+const fixCancelledOrderPaymentStatus = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     
-    const order = await Order.findOne({ orderId });
+    const order: any = await Order.findOne({ orderId });
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -1616,7 +1620,7 @@ const fixCancelledOrderPaymentStatus = async (req, res) => {
         : PAYMENT_STATUS.CANCELLED;
     }
 
-    order.items.forEach(item => {
+    order.items.forEach((item: any) => {
       if (item.status === ORDER_STATUS.CANCELLED) {
         const oldItemPaymentStatus = item.paymentStatus;
         
@@ -1643,7 +1647,7 @@ const fixCancelledOrderPaymentStatus = async (req, res) => {
         orderId: order.orderId,
         status: order.status,
         paymentStatus: order.paymentStatus,
-        items: order.items.map(item => ({
+        items: order.items.map((item: any) => ({
           _id: item._id,
           status: item.status,
           paymentStatus: item.paymentStatus
@@ -1651,7 +1655,7 @@ const fixCancelledOrderPaymentStatus = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fixing cancelled order payment status:', error);
     res.status(500).json({
       success: false,
@@ -1660,7 +1664,7 @@ const fixCancelledOrderPaymentStatus = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getAllOrders,
   getOrderDetails,
   getOrderDetailsJSON,

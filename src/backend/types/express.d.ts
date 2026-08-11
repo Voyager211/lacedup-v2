@@ -33,6 +33,20 @@ declare module 'express-session' {
     };
     /** Email pending OTP verification during an email change. */
     pendingEmail?: string;
+    /** OTP challenge held while the user confirms an email change. */
+    // Two flows write this with slightly different shapes (email change vs
+    // OTP re-send), so everything past `otp` is optional.
+    emailChangeOtp?: {
+      otp: string;
+      currentEmail?: string;
+      email?: string;
+      newEmail?: string;
+      userId?: unknown;
+      expiresAt?: number;
+      [key: string]: unknown;
+    } | null;
+    /** Current email, mirrored into the session by the profile flow. */
+    email?: string;
     /** Coupon applied to the current checkout, held until the order is placed. */
     appliedCoupon?: {
       code: string;

@@ -11,8 +11,10 @@ export interface ICartItem {
   quantity: number;
   price: number;
   totalPrice: number;
-  status: string;
-  cancellationReason: string;
+  /** Schema defaults to 'active'. */
+  status?: string;
+  /** Schema defaults to 'none'. */
+  cancellationReason?: string;
 }
 
 export interface ICart extends Document {

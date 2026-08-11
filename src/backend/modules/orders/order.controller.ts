@@ -1,16 +1,17 @@
-const Order = require('./order.model');
-const Cart = require('../cart/cart.model');
-const Product = require('../catalog/product.model');
-const Address = require('../addresses/address.model');
-const User = require('../users/user.model');
-const Return = require('../returns/return.model');
-const orderService = require('./order.service');
-const walletService = require('../wallet/wallet.service');
-const paypal = require('@paypal/checkout-server-sdk');
-const razorpayService = require('../payments/razorpay.provider');
-const { getPagination } = require('../../common/utils/pagination.util');
+import type { Request, Response } from 'express';
+import Order from './order.model';
+import Cart from '../cart/cart.model';
+import Product from '../catalog/product.model';
+import Address from '../addresses/address.model';
+import User from '../users/user.model';
+import Return from '../returns/return.model';
+import * as orderService from './order.service';
+import * as walletService from '../wallet/wallet.service';
+import paypal from '@paypal/checkout-server-sdk';
+import * as razorpayService from '../payments/razorpay.provider';
+import { getPagination } from '../../common/utils/pagination.util';
 
-const {
+import {
   ORDER_STATUS,
   PAYMENT_STATUS, 
   CANCELLATION_REASONS, 
@@ -19,16 +20,16 @@ const {
   getPaymentStatusArray,
   getCancellationReasonsArray,
   getReturnReasonsArray
-} = require('../../common/constants/order.constants');
+} from '../../common/constants/order.constants';
 
 
 
 // Get all orders for user
-const getUserOrders = async (req, res) => {
+const getUserOrders = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user._id : req.session.userId;
+    const userId = req.user ? req.user!._id : req.session.userId;
 
-    const user = await User.findById(userId);
+    const user: any = await User.findById(userId);
     if (!user) {
       return res.redirect('/login');
     }
@@ -36,7 +37,7 @@ const getUserOrders = async (req, res) => {
     const page = 1;
     const limit = 4;
 
-    const filter = { user: userId };
+    const filter: Record<string, any> = { user: userId };
 
     const queryBuilder = Order.find(filter)
       .populate('items.productId', 'productName mainImage slug')
@@ -67,7 +68,7 @@ const getUserOrders = async (req, res) => {
     const nextPage = currentPage + 1;
     
     // Generate page numbers (show up to 5 pages around current page)
-    const pageNumbers = [];
+    const pageNumbers: any[] = [];
     const maxPagesToShow = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
@@ -98,7 +99,7 @@ const getUserOrders = async (req, res) => {
       returnReasons: getReturnReasonsArray()
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading orders: ', error);
     res.status(500).render('errors/server-error', {
       message: 'Error loading orders',
@@ -116,13 +117,13 @@ const getUserOrders = async (req, res) => {
 
 
 
-const getUserOrdersPaginated = async (req, res) => {
+const getUserOrdersPaginated = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user._id : req.session.userId;
-    const page = parseInt(req.query.page) || 1;
+    const userId = req.user ? req.user!._id : req.session.userId;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 4;
-    const statusFilter = req.query.status || '';
-    const searchQuery = req.query.search || '';
+    const statusFilter = String(req.query.status || '');
+    const searchQuery = String(req.query.search || '');
 
     if (!userId) {
       return res.status(401).json({
@@ -131,7 +132,7 @@ const getUserOrdersPaginated = async (req, res) => {
       });
     }
 
-    const filter = { user: userId };
+    const filter: Record<string, any> = { user: userId };
 
     if (!searchQuery && !statusFilter) {
       const queryBuilder = Order.find(filter)
@@ -192,25 +193,25 @@ const getUserOrdersPaginated = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    let filteredOrders = allOrders;
+    let filteredOrders: any = allOrders;
 
     //  Apply search filter
     if (searchQuery) {
-      filteredOrders = filteredOrders.filter(order => {
+      filteredOrders = filteredOrders.filter((order: any) => {
         const searchLower = searchQuery.toLowerCase();
 
         // Check order ID
         const orderIdMatch = order.orderId.toLowerCase().includes(searchLower);
 
         // Check product names
-        const productMatch = order.items.some(item => {
-          const productName = item.productId?.productName;
+        const productMatch = order.items.some((item: any) => {
+          const productName = (item.productId as any)?.productName;
           return productName && productName.toLowerCase().includes(searchLower);
         });
 
         // Check brand names
-        const brandMatch = order.items.some(item => {
-          const brandName = item.productId?.brand?.name;
+        const brandMatch = order.items.some((item: any) => {
+          const brandName = (item.productId as any)?.brand?.name;
           return brandName && brandName.toLowerCase().includes(searchLower);
         });
 
@@ -220,9 +221,9 @@ const getUserOrdersPaginated = async (req, res) => {
 
     //  Apply status filter
     if (statusFilter) {
-      filteredOrders = filteredOrders.map(order => {
+      filteredOrders = filteredOrders.map((order: any) => {
         // Filter items by status
-        const filteredItems = order.items.filter(item => item.status === statusFilter);
+        const filteredItems = order.items.filter((item: any) => item.status === statusFilter);
 
         // Only return order if it has items matching the status
         if (filteredItems.length > 0) {
@@ -232,7 +233,7 @@ const getUserOrdersPaginated = async (req, res) => {
           };
         }
         return null;
-      }).filter(order => order !== null);
+      }).filter((order: any) => order !== null);
     }
 
     //  Calculate pagination for filtered results
@@ -271,7 +272,7 @@ const getUserOrdersPaginated = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching paginated orders:', error);
     res.status(500).json({
       success: false,
@@ -281,8 +282,8 @@ const getUserOrdersPaginated = async (req, res) => {
 };
 
 // Helper function to generate page numbers
-function generatePageNumbers(currentPage, totalPages) {
-  const pageNumbers = [];
+function generatePageNumbers(currentPage: any, totalPages: any) {
+  const pageNumbers: any[] = [];
   const maxPagesToShow = 5;
   let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
   let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
@@ -299,10 +300,10 @@ function generatePageNumbers(currentPage, totalPages) {
 }
 
 
-const searchOrders = async (req, res) => {
+const searchOrders = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user._id : req.session.userId;
-    const searchTerm = req.query.q || '';
+    const userId = req.user ? req.user!._id : req.session.userId;
+    const searchTerm = String(req.query.q || '');
 
     if (!searchTerm) {
       return res.json({
@@ -311,7 +312,7 @@ const searchOrders = async (req, res) => {
       });
     }
 
-    const orders = await Order.find({ user: userId})
+    const orders: any = await Order.find({ user: userId})
     .populate({
         path: 'items.productId',
         select: 'productName mainImage slug brand',
@@ -324,18 +325,18 @@ const searchOrders = async (req, res) => {
     .limit(50)
     .lean();
 
-    const filteredOrders = orders.filter(order => {
+    const filteredOrders: any = orders.filter((order: any) => {
       const searchLower = searchTerm.toLowerCase();
 
       const orderIdMatch = order.orderId.toLowerCase().includes(searchLower);
 
-      const productMatch = order.items.some(item => {
-        const productName = item.productId?.productName;
+      const productMatch = order.items.some((item: any) => {
+        const productName = (item.productId as any)?.productName;
         return productName && productName.toLowerCase().includes(searchLower);
       });
 
-      const brandMatch = order.items.some(item => {
-        const brandName = item.productId?.brand?.name;
+      const brandMatch = order.items.some((item: any) => {
+        const brandName = (item.productId as any)?.brand?.name;
         return brandName && brandName.toLowerCase().includes(searchLower);
       });
 
@@ -350,7 +351,7 @@ const searchOrders = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search error:', error);
     res.status(500).json({
       success: false,
@@ -362,10 +363,10 @@ const searchOrders = async (req, res) => {
 
 
 // Get order details
-const getOrderDetails = async (req, res) => {
+const getOrderDetails = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
-    const userId = req.user ? req.user._id : req.session.userId;
+    const orderId = String(req.params.orderId);
+    const userId = req.user ? req.user!._id : req.session.userId;
 
     if (!userId) {
       return res.redirect('/login');
@@ -376,13 +377,13 @@ const getOrderDetails = async (req, res) => {
     const returnReasons = RETURN_REASONS;
 
     // Get user data
-    const user = await User.findById(userId).select('name email profilePhoto');
+    const user: any = await User.findById(userId).select('name email profilePhoto');
     if (!user) {
       return res.redirect('/login');
     }
 
     // Get order details with populated product data and address
-    const order = await Order.findOne({ orderId: orderId, user: userId })
+    const order: any = await Order.findOne({ orderId: orderId, user: userId })
       .populate({
         path: 'items.productId',
         select: 'productName mainImage subImages regularPrice salePrice slug'
@@ -416,22 +417,22 @@ const getOrderDetails = async (req, res) => {
     }
 
     // Get return requests for this order
-    const returnRequests = await Return.find({ orderId: orderId, userId: userId });
-    const returnRequestsMap = {};
-    returnRequests.forEach(returnReq => {
+    const returnRequests: any = await Return.find({ orderId: orderId, userId: userId });
+    const returnRequestsMap: Record<string, any> = {};
+    returnRequests.forEach((returnReq: any) => {
       returnRequestsMap[returnReq.itemId.toString()] = returnReq;
     });
 
     // Add return request information to each item
-    order.items = order.items.map(item => ({
+    order.items = order.items.map((item: any) => ({
       ...item,
-      returnRequest: returnRequestsMap[item._id.toString()] || null
+      returnRequest: returnRequestsMap[item._id!.toString()] || null
     }));
 
     // Get the actual delivery address from the populated address document
-    if (order.deliveryAddress && order.deliveryAddress.addressId && order.deliveryAddress.addressId.address) {
+    if (order.deliveryAddress && order.deliveryAddress.addressId && (order.deliveryAddress.addressId as any).address) {
       const addressIndex = order.deliveryAddress.addressIndex;
-      const actualAddress = order.deliveryAddress.addressId.address[addressIndex];
+      const actualAddress = (order.deliveryAddress.addressId as any).address[addressIndex];
       order.deliveryAddress = actualAddress || {
         name: 'Address not found',
         addressType: 'N/A',
@@ -454,11 +455,11 @@ const getOrderDetails = async (req, res) => {
     }
 
     // Create comprehensive status history combining order and item level changes
-    const comprehensiveStatusHistory = [];
+    const comprehensiveStatusHistory: any[] = [];
     
     // Add order-level status history
     if (order.statusHistory && order.statusHistory.length > 0) {
-      order.statusHistory.forEach(statusEntry => {
+      order.statusHistory.forEach((statusEntry: any) => {
         comprehensiveStatusHistory.push({
           type: 'order',
           status: statusEntry.status,
@@ -471,10 +472,10 @@ const getOrderDetails = async (req, res) => {
 
     // Add item-level status history
     if (order.items && order.items.length > 0) {
-      order.items.forEach(item => {
+      order.items.forEach((item: any) => {
         if (item.statusHistory && item.statusHistory.length > 0) {
-          item.statusHistory.forEach(statusEntry => {
-            const productName = item.productId ? item.productId.productName : 'Product';
+          item.statusHistory.forEach((statusEntry: any) => {
+            const productName = item.productId ? (item.productId as any).productName : 'Product';
             comprehensiveStatusHistory.push({
               type: 'item',
               status: statusEntry.status,
@@ -488,8 +489,8 @@ const getOrderDetails = async (req, res) => {
 
         // Add return request history
         if (item.returnRequest && item.returnRequest.statusHistory) {
-          item.returnRequest.statusHistory.forEach(statusEntry => {
-            const productName = item.productId ? item.productId.productName : 'Product';
+          item.returnRequest.statusHistory.forEach((statusEntry: any) => {
+            const productName = item.productId ? (item.productId as any).productName : 'Product';
             comprehensiveStatusHistory.push({
               type: 'return',
               status: statusEntry.status,
@@ -505,7 +506,7 @@ const getOrderDetails = async (req, res) => {
     }
 
     // Sort comprehensive history by date (newest first)
-    comprehensiveStatusHistory.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    comprehensiveStatusHistory.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     // Add the comprehensive status history to the order object
     order.comprehensiveStatusHistory = comprehensiveStatusHistory;
@@ -521,7 +522,7 @@ const getOrderDetails = async (req, res) => {
       ORDER_STATUS: ORDER_STATUS  
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading order details:', error);
     res.status(500).render('errors/server-error', {
       message: 'Error loading order details',
@@ -539,11 +540,11 @@ const getOrderDetails = async (req, res) => {
 
 
 // Cancel entire order
-const cancelOrder = async (req, res) => {
+const cancelOrder = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     const { reason } = req.body;
-    const userId = req.user ? req.user._id : req.session.userId;
+    const userId = req.user ? req.user!._id : req.session.userId;
 
     //  DEBUGGING - Log all received data
     console.log('🔍 BACKEND DEBUG - Cancel Order:');
@@ -587,7 +588,7 @@ const cancelOrder = async (req, res) => {
     }
 
     // Find the order to verify ownership
-    const order = await Order.findOne({ orderId: orderId, user: userId });
+    const order: any = await Order.findOne({ orderId: orderId, user: userId });
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -604,7 +605,7 @@ const cancelOrder = async (req, res) => {
     console.log('Order payment status before:', order.paymentStatus);
     console.log('Order payment method:', order.paymentMethod);
     console.log('Items before cancellation:');
-    order.items.forEach((item, index) => {
+    order.items.forEach((item: any, index: number) => {
       console.log(`  Item ${index + 1}:`, {
         itemId: item._id,
         status: item.status,
@@ -621,10 +622,10 @@ const cancelOrder = async (req, res) => {
     //  DEBUG: Check status AFTER cancellation
     console.log('🔍 AFTER CANCEL ORDER:');
     const orderAfter = await Order.findOne({ orderId: orderId });
-    console.log('Order status after:', orderAfter.status);
-    console.log('Order payment status after:', orderAfter.paymentStatus);
+    console.log('Order status after:', orderAfter!.status);
+    console.log('Order payment status after:', orderAfter!.paymentStatus);
     console.log('Items after cancellation:');
-    orderAfter.items.forEach((item, index) => {
+    orderAfter!.items.forEach((item, index) => {
       console.log(`  Item ${index + 1}:`, {
         itemId: item._id,
         status: item.status,
@@ -640,7 +641,7 @@ const cancelOrder = async (req, res) => {
       if (item.status === ORDER_STATUS.CANCELLED) {
         const product = await Product.findById(item.productId);
         if (product) {
-          const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
+          const variant = product.variants.find(v => v._id!.toString() === item.variantId.toString());
           if (variant) {
             variant.stock += item.quantity;
             await product.save();
@@ -657,7 +658,7 @@ const cancelOrder = async (req, res) => {
       message: result.message
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(' Error cancelling order:', error);
     res.status(500).json({
       success: false,
@@ -668,11 +669,12 @@ const cancelOrder = async (req, res) => {
 
 
 // Cancel individual item
-const cancelItem = async (req, res) => {
+const cancelItem = async (req: Request, res: Response) => {
   try {
-    const { orderId, itemId } = req.params;
+    const orderId = String(req.params.orderId);
+    const itemId = String(req.params.itemId);
     const { reason } = req.body;
-    const userId = req.user ? req.user._id : req.session.userId;
+    const userId = req.user ? req.user!._id : req.session.userId;
 
     //  DEBUGGING - Log all received data
     console.log('🔍 BACKEND DEBUG - Cancel Item:');
@@ -717,7 +719,7 @@ const cancelItem = async (req, res) => {
     }
 
     // Find the order to verify ownership
-    const order = await Order.findOne({ orderId: orderId, user: userId });
+    const order: any = await Order.findOne({ orderId: orderId, user: userId });
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -757,23 +759,23 @@ const cancelItem = async (req, res) => {
     //  DEBUG: Check status AFTER item cancellation
     console.log('🔍 AFTER CANCEL ITEM:');
     const orderAfter = await Order.findOne({ orderId: orderId });
-    const itemAfter = orderAfter.items.id(itemId);
+    const itemAfter = orderAfter!.items.id(itemId);
     console.log('Target item after cancellation:', {
-      itemId: itemAfter._id,
-      status: itemAfter.status,
-      paymentStatus: itemAfter.paymentStatus,
-      size: itemAfter.size,
-      quantity: itemAfter.quantity,
-      price: itemAfter.price
+      itemId: itemAfter!._id,
+      status: itemAfter!.status,
+      paymentStatus: itemAfter!.paymentStatus,
+      size: itemAfter!.size,
+      quantity: itemAfter!.quantity,
+      price: itemAfter!.price
     });
-    console.log('Order status after:', orderAfter.status);
-    console.log('Order payment status after:', orderAfter.paymentStatus);
+    console.log('Order status after:', orderAfter!.status);
+    console.log('Order payment status after:', orderAfter!.paymentStatus);
     console.log('========================');
 
     // Restore stock for cancelled item
     const product = await Product.findById(item.productId);
     if (product) {
-      const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
+      const variant = product.variants.find(v => v._id!.toString() === item.variantId.toString());
       if (variant) {
         variant.stock += item.quantity;
         await product.save();
@@ -788,7 +790,7 @@ const cancelItem = async (req, res) => {
       message: result.message
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(' Error cancelling item:', error);
     res.status(500).json({
       success: false,
@@ -800,11 +802,11 @@ const cancelItem = async (req, res) => {
 
 
 // Return request for entire order
-const requestOrderReturn = async (req, res) => {
+const requestOrderReturn = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     const { reason } = req.body;
-    const userId = req.user ? req.user._id : req.session.userId;
+    const userId = req.user ? req.user!._id : req.session.userId;
 
     if (!userId) {
       return res.status(401).json({
@@ -831,7 +833,7 @@ const requestOrderReturn = async (req, res) => {
     }
 
     // Verify order ownership
-    const order = await Order.findOne({ orderId: orderId, user: userId });
+    const order: any = await Order.findOne({ orderId: orderId, user: userId });
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -848,7 +850,7 @@ const requestOrderReturn = async (req, res) => {
       returnRequestsCount: result.itemsAffected
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating order return request:', error);
     res.status(500).json({
       success: false,
@@ -858,11 +860,12 @@ const requestOrderReturn = async (req, res) => {
 };
 
 // Return request for individual item
-const requestItemReturn = async (req, res) => {
+const requestItemReturn = async (req: Request, res: Response) => {
   try {
-    const { orderId, itemId } = req.params;
+    const orderId = String(req.params.orderId);
+    const itemId = String(req.params.itemId);
     const { reason } = req.body;
-    const userId = req.user ? req.user._id : req.session.userId;
+    const userId = req.user ? req.user!._id : req.session.userId;
 
     if (!userId) {
       return res.status(401).json({
@@ -890,7 +893,7 @@ const requestItemReturn = async (req, res) => {
 
 
     // Verify order ownership
-    const order = await Order.findOne({ orderId: orderId, user: userId });
+    const order: any = await Order.findOne({ orderId: orderId, user: userId });
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -906,7 +909,7 @@ const requestItemReturn = async (req, res) => {
       message: result.message
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating return request:', error);
     res.status(500).json({
       success: false,
@@ -917,10 +920,10 @@ const requestItemReturn = async (req, res) => {
 
 
 // Download invoice
-const downloadInvoice = async (req, res) => {
+const downloadInvoice = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
-    const userId = req.user ? req.user._id : req.session.userId;
+    const orderId = String(req.params.orderId);
+    const userId = req.user ? req.user!._id : req.session.userId;
 
     if (!userId) {
       return res.status(401).json({
@@ -930,7 +933,7 @@ const downloadInvoice = async (req, res) => {
     }
 
     // Get order details with populated product data and address
-    const order = await Order.findOne({ orderId: orderId, user: userId })
+    const order: any = await Order.findOne({ orderId: orderId, user: userId })
       .populate({
         path: 'items.productId',
         select: 'productName mainImage subImages regularPrice salePrice'
@@ -953,9 +956,9 @@ const downloadInvoice = async (req, res) => {
     }
 
     // Get the actual delivery address from the populated address document
-    if (order.deliveryAddress && order.deliveryAddress.addressId && order.deliveryAddress.addressId.address) {
+    if (order.deliveryAddress && order.deliveryAddress.addressId && (order.deliveryAddress.addressId as any).address) {
       const addressIndex = order.deliveryAddress.addressIndex;
-      const actualAddress = order.deliveryAddress.addressId.address[addressIndex];
+      const actualAddress = (order.deliveryAddress.addressId as any).address[addressIndex];
       order.deliveryAddress = actualAddress || {
         name: 'Address not found',
         addressType: 'N/A',
@@ -980,7 +983,7 @@ const downloadInvoice = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="Invoice-${orderId}.html"`);
     res.send(invoiceHTML);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating invoice:', error);
     res.status(500).json({
       success: false,
@@ -990,7 +993,7 @@ const downloadInvoice = async (req, res) => {
 };
 
 // Helper function to generate invoice HTML
-function generateInvoiceHTML(order) {
+function generateInvoiceHTML(order: any) {
   const currentDate = new Date().toLocaleDateString('en-IN');
   
   return `
@@ -1128,12 +1131,12 @@ function generateInvoiceHTML(order) {
                 <div class="customer-details">
                     <div class="section-title">Bill To</div>
                     <div class="details-content">
-                        <strong>${order.deliveryAddress.name}</strong><br>
-                        ${order.deliveryAddress.addressType}<br>
-                        ${order.deliveryAddress.landMark}<br>
-                        ${order.deliveryAddress.city}, ${order.deliveryAddress.state}<br>
-                        PIN: ${order.deliveryAddress.pincode}<br>
-                        Phone: ${order.deliveryAddress.phone}
+                        <strong>${(order.deliveryAddress as any).name}</strong><br>
+                        ${(order.deliveryAddress as any).addressType}<br>
+                        ${(order.deliveryAddress as any).landMark}<br>
+                        ${(order.deliveryAddress as any).city}, ${(order.deliveryAddress as any).state}<br>
+                        PIN: ${(order.deliveryAddress as any).pincode}<br>
+                        Phone: ${(order.deliveryAddress as any).phone}
                     </div>
                 </div>
             </div>
@@ -1150,9 +1153,9 @@ function generateInvoiceHTML(order) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${order.items.map(item => `
+                    ${order.items.map((item: any) => `
                         <tr>
-                            <td>${item.productId ? item.productId.productName : 'Product'}</td>
+                            <td>${item.productId ? (item.productId as any).productName : 'Product'}</td>
                             <td>${item.size}</td>
                             <td class="text-right">${item.quantity}</td>
                             <td class="text-right">₹${item.price.toLocaleString('en-IN')}</td>
@@ -1204,7 +1207,7 @@ function generateInvoiceHTML(order) {
   `;
 }
 
-module.exports = {
+export {
   getUserOrders,
   getUserOrdersPaginated,
   searchOrders,
