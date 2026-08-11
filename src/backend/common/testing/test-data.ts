@@ -1,5 +1,12 @@
-const mongoose = require('mongoose');
-const { ORDER_STATUS, PAYMENT_STATUS } = require('../constants/order.constants');
+import mongoose from 'mongoose';
+import { ORDER_STATUS, PAYMENT_STATUS } from '../constants/order.constants';
+import User from '../../modules/users/user.model';
+import Category from '../../modules/catalog/category.model';
+import Brand from '../../modules/catalog/brand.model';
+import Product from '../../modules/catalog/product.model';
+import Address from '../../modules/addresses/address.model';
+import Order from '../../modules/orders/order.model';
+import Return from '../../modules/returns/return.model';
 
 /**
  * Generate a unique order ID for testing
@@ -12,7 +19,6 @@ function generateOrderId() {
  * Create test user
  */
 async function createTestUser() {
-  const User = require('../../modules/users/user.model');
   
   const testUser = new User({
     name: 'Test User',
@@ -31,7 +37,6 @@ async function createTestUser() {
  * Create test category
  */
 async function createTestCategory() {
-  const Category = require('../../modules/catalog/category.model');
   
   const testCategory = new Category({
     name: `Test Category ${Date.now()}`,
@@ -47,7 +52,6 @@ async function createTestCategory() {
  * Create test brand
  */
 async function createTestBrand() {
-  const Brand = require('../../modules/catalog/brand.model');
   
   const testBrand = new Brand({
     name: `Test Brand ${Date.now()}`,
@@ -64,7 +68,6 @@ async function createTestBrand() {
  * Create test product
  */
 async function createTestProduct(name = 'Test Product') {
-  const Product = require('../../modules/catalog/product.model');
   
   // Create real brand and category
   const brand = await createTestBrand();
@@ -116,8 +119,7 @@ async function createTestProduct(name = 'Test Product') {
 /**
  * Create test address
  */
-async function createTestAddress(userId) {
-  const Address = require('../../modules/addresses/address.model');
+async function createTestAddress(userId: any) {
   
   const testAddress = new Address({
     userId: userId,
@@ -147,8 +149,7 @@ async function createTestAddress(userId) {
 /**
  * Create test order with specified configuration
  */
-async function createTestOrder(config = {}) {
-  const Order = require('../../modules/orders/order.model');
+async function createTestOrder(config: any = {}) {
   
   const {
     itemCount = 3,
@@ -224,7 +225,9 @@ async function createTestOrder(config = {}) {
   // Add payment IDs for online payments
   if (paymentMethod === 'wallet' && paymentStatus === PAYMENT_STATUS.COMPLETED) {
     // Simulate wallet payment
-    order.walletAmountUsed = totalAmount;
+    // walletAmountUsed is not declared on the Order schema, so Mongoose
+    // discards it. Kept for parity with the original fixture.
+    (order as any).walletAmountUsed = totalAmount;
   } else if (paymentMethod === 'upi' && paymentStatus === PAYMENT_STATUS.COMPLETED) {
     order.razorpayPaymentId = `pay_test_${Date.now()}`;
     order.razorpayOrderId = `order_test_${Date.now()}`;
@@ -241,14 +244,7 @@ async function createTestOrder(config = {}) {
 /**
  * Cleanup test data
  */
-async function cleanupTestData(orderIds = []) {
-  const Order = require('../../modules/orders/order.model');
-  const User = require('../../modules/users/user.model');
-  const Product = require('../../modules/catalog/product.model');
-  const Address = require('../../modules/addresses/address.model');
-  const Return = require('../../modules/returns/return.model');
-  const Brand = require('../../modules/catalog/brand.model');           // ✅ Added
-  const Category = require('../../modules/catalog/category.model');     // ✅ Added
+async function cleanupTestData(orderIds: string[] = []) {
   
   // Delete test orders
   for (const orderId of orderIds) {
@@ -285,7 +281,7 @@ async function cleanupTestData(orderIds = []) {
 }
 
 
-module.exports = {
+export {
   generateOrderId,
   createTestUser,
   createTestCategory,

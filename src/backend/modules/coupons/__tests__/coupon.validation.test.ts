@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
-const db = require('../../../common/testing/db');
-const Coupon = require('../coupon.model');
-const { validateCoupon, calculateDiscount } = require('../coupon.validation');
+import mongoose from 'mongoose';
+import * as db from '../../../common/testing/db';
+import Coupon from '../coupon.model';
+import { validateCoupon, calculateDiscount } from '../coupon.validation';
 
-const daysFromNow = (n) => new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+const daysFromNow = (n: any) => new Date(Date.now() + n * 24 * 60 * 60 * 1000);
 
 const makeCoupon = (overrides = {}) =>
   Coupon.create({
@@ -63,7 +63,7 @@ describe('validateCoupon', () => {
 
   it('accepts a valid, active, in-date coupon', async () => {
     await makeCoupon();
-    const result = await validateCoupon('SAVE10', userId, 1000);
+    const result = (await validateCoupon('SAVE10', userId, 1000)) as any;
 
     expect(result.valid).toBe(true);
     expect(result.coupon.code).toBe('SAVE10');
@@ -71,23 +71,23 @@ describe('validateCoupon', () => {
 
   it('matches the code case-insensitively', async () => {
     await makeCoupon();
-    expect((await validateCoupon('save10', userId, 1000)).valid).toBe(true);
+    expect(((await validateCoupon('save10', userId, 1000)) as any).valid).toBe(true);
   });
 
   it('rejects an unknown code', async () => {
-    const result = await validateCoupon('NOPE', userId, 1000);
+    const result = (await validateCoupon('NOPE', userId, 1000)) as any;
     expect(result.valid).toBe(false);
     expect(result.message).toMatch(/invalid/i);
   });
 
   it('rejects an inactive coupon', async () => {
     await makeCoupon({ isActive: false });
-    expect((await validateCoupon('SAVE10', userId, 1000)).valid).toBe(false);
+    expect(((await validateCoupon('SAVE10', userId, 1000)) as any).valid).toBe(false);
   });
 
   it('rejects an expired coupon', async () => {
     await makeCoupon({ validFrom: daysFromNow(-10), validTo: daysFromNow(-5) });
-    const result = await validateCoupon('SAVE10', userId, 1000);
+    const result = (await validateCoupon('SAVE10', userId, 1000)) as any;
 
     expect(result.valid).toBe(false);
     expect(result.message).toMatch(/expired|not yet active/i);
@@ -95,18 +95,18 @@ describe('validateCoupon', () => {
 
   it('rejects a coupon that is not yet active', async () => {
     await makeCoupon({ validFrom: daysFromNow(5), validTo: daysFromNow(10) });
-    expect((await validateCoupon('SAVE10', userId, 1000)).valid).toBe(false);
+    expect(((await validateCoupon('SAVE10', userId, 1000)) as any).valid).toBe(false);
   });
 
   // validTo is stretched to 23:59:59, so a coupon must still work on its final day.
   it('accepts a coupon on its last valid day', async () => {
     await makeCoupon({ validFrom: daysFromNow(-5), validTo: new Date() });
-    expect((await validateCoupon('SAVE10', userId, 1000)).valid).toBe(true);
+    expect(((await validateCoupon('SAVE10', userId, 1000)) as any).valid).toBe(true);
   });
 
   it('rejects an order below the minimum order value', async () => {
     await makeCoupon({ minimumOrderValue: 1500 });
-    const result = await validateCoupon('SAVE10', userId, 1000);
+    const result = (await validateCoupon('SAVE10', userId, 1000)) as any;
 
     expect(result.valid).toBe(false);
     expect(result.message).toMatch(/minimum order value/i);
@@ -114,12 +114,12 @@ describe('validateCoupon', () => {
 
   it('accepts an order exactly at the minimum order value', async () => {
     await makeCoupon({ minimumOrderValue: 1000 });
-    expect((await validateCoupon('SAVE10', userId, 1000)).valid).toBe(true);
+    expect(((await validateCoupon('SAVE10', userId, 1000)) as any).valid).toBe(true);
   });
 
   it('rejects once the global usage limit is reached', async () => {
     await makeCoupon({ usageLimit: 5, usedCount: 5 });
-    const result = await validateCoupon('SAVE10', userId, 1000);
+    const result = (await validateCoupon('SAVE10', userId, 1000)) as any;
 
     expect(result.valid).toBe(false);
     expect(result.message).toMatch(/usage limit/i);
@@ -130,7 +130,7 @@ describe('validateCoupon', () => {
       userLimit: 1,
       usedBy: [{ user: userId, usedAt: new Date() }]
     });
-    const result = await validateCoupon('SAVE10', userId, 1000);
+    const result = (await validateCoupon('SAVE10', userId, 1000)) as any;
 
     expect(result.valid).toBe(false);
     expect(result.message).toMatch(/already used/i);
@@ -142,6 +142,6 @@ describe('validateCoupon', () => {
       userLimit: 1,
       usedBy: [{ user: new mongoose.Types.ObjectId(), usedAt: new Date() }]
     });
-    expect((await validateCoupon('SAVE10', userId, 1000)).valid).toBe(true);
+    expect(((await validateCoupon('SAVE10', userId, 1000)) as any).valid).toBe(true);
   });
 });

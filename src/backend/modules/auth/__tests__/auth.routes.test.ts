@@ -1,13 +1,12 @@
-process.env.NODE_ENV = 'test';
+import request from 'supertest';
+import bcrypt from 'bcryptjs';
+import * as db from '../../../common/testing/db';
+import app from '../../../app';
+import User from '../../users/user.model';
 
-const request = require('supertest');
-const bcrypt = require('bcryptjs');
-const db = require('../../../common/testing/db');
-
-// app.js must be required only after NODE_ENV is set, so the rate limiters
-// register in skip mode and the suite is not throttled by its own requests.
-let app;
-let User;
+// NODE_ENV=test is set by vitest.config.mjs, before any module loads, so the
+// rate limiters register in skip mode and this suite is not throttled by its
+// own repeated login attempts.
 
 const SEEDED = {
   name: 'Test Shopper',
@@ -18,8 +17,6 @@ const SEEDED = {
 describe('auth routes (HTTP)', () => {
   beforeAll(async () => {
     await db.connect();
-    app = require('../../../app');
-    User = require('../../users/user.model');
   });
 
   afterAll(async () => {
@@ -60,8 +57,8 @@ describe('auth routes (HTTP)', () => {
         .send({ email: SEEDED.email, password: 'WrongPassword1!' });
 
       // Must not hand back a session cookie on a failed login.
-      const cookies = res.headers['set-cookie'] || [];
-      expect(cookies.some((c) => c.startsWith('user.sid'))).toBe(false);
+      const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+      expect(cookies.some((c: any) => c.startsWith('user.sid'))).toBe(false);
     });
 
     it('rejects an unknown email', async () => {
@@ -70,8 +67,8 @@ describe('auth routes (HTTP)', () => {
         .type('form')
         .send({ email: 'nobody@example.com', password: SEEDED.password });
 
-      const cookies = res.headers['set-cookie'] || [];
-      expect(cookies.some((c) => c.startsWith('user.sid'))).toBe(false);
+      const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+      expect(cookies.some((c: any) => c.startsWith('user.sid'))).toBe(false);
     });
 
     // A blocked user holding valid credentials must still be refused entry.
@@ -105,8 +102,8 @@ describe('auth routes (HTTP)', () => {
 
     it('does not store a password in plain text when a user is created', async () => {
       const user = await User.findOne({ email: SEEDED.email }).lean();
-      expect(user.password).not.toBe(SEEDED.password);
-      expect(user.password.startsWith('$2')).toBe(true);
+      expect(user!.password).not.toBe(SEEDED.password);
+      expect(user!.password.startsWith('$2')).toBe(true);
     });
   });
 

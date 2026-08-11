@@ -13,11 +13,16 @@ export default defineConfig({
     globals: true,
     include: ['src/backend/**/*.test.js', 'src/backend/**/*.test.ts'],
 
-    // The backend is CommonJS, so require() chains inside source files are
-    // resolved by Node itself, which cannot find a .ts file from an
-    // extensionless specifier. tsx/cjs patches require to handle that, and is
-    // the same loader `npm run dev` uses.
-    setupFiles: ['src/backend/common/testing/register-tsx.js'],
+    // Set before any module is imported, so the rate limiters register in skip
+    // mode and the suite is not throttled by its own repeated requests. The
+    // auth suite previously deferred requiring the app to achieve this.
+    env: { NODE_ENV: 'test' },
+
+    // NOTE: this previously loaded tsx/cjs via a setup file, so that .js source
+    // files could require() their already-converted .ts neighbours. The backend
+    // is now entirely TypeScript and Vitest resolves .ts natively, so the hook
+    // is gone - it was also corrupting the sourcemaps Vitest reads when
+    // formatting stack traces.
 
     // Spinning up an in-memory mongod and seeding fixtures is slower than a
     // pure unit test; these are deliberately generous.

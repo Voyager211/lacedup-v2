@@ -1,7 +1,7 @@
-const {
+import {
   validateProductAvailability,
   validateCartItem
-} = require('../cart.validation');
+} from '../cart.validation';
 
 const product = (overrides = {}) => ({
   _id: 'p1',
@@ -114,6 +114,6 @@ describe('validateCartItem', () => {
     const result = validateCartItem({ productId: null, size: 'UK 9', quantity: 1 });
 
     expect(result.isValid).toBe(false);
-    expect(result.details.productName).toBe('Unknown Product');
+    expect(result.details!.productName).toBe('Unknown Product');
   });
 });

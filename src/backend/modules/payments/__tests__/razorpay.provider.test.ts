@@ -1,12 +1,12 @@
-const crypto = require('crypto');
-const {
+import crypto from 'crypto';
+import {
   verifyPaymentSignature,
   getRazorpayInstance
-} = require('../razorpay.provider');
+} from '../razorpay.provider';
 
 const KEY_SECRET = 'test_secret_key';
 
-const sign = (orderId, paymentId, secret = KEY_SECRET) =>
+const sign = (orderId: string, paymentId: any, secret = KEY_SECRET) =>
   crypto.createHmac('sha256', secret).update(`${orderId}|${paymentId}`).digest('hex');
 
 describe('razorpay provider', () => {

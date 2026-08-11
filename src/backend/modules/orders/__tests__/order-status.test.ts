@@ -1,44 +1,39 @@
-require('colors');
-const mongoose = require('mongoose');
+/**
+ * Order status, cancellation and return scenarios.
+ *
+ * These run against the real wallet service on an in-memory MongoDB rather
+ * than a mock.
+ *
+ * The original file monkey-patched Module.prototype.require to swap in
+ * common/testing/mocks/wallet-service.mock, matching on the string
+ * 'walletService'. Since the Phase 1 restructure the module has been named
+ * wallet.service, so that match stopped hitting and the mock has been inert
+ * ever since - these tests were already exercising the real service. The dead
+ * interception is removed rather than left as false reassurance; the mock file
+ * is kept for suites that do want it.
+ */
+import mongoose from 'mongoose';
 
-
-// ✅ FIX 2: Mock wallet service manually BEFORE requiring orderService
-const mockWalletService = require('../../../common/testing/mocks/wallet-service.mock');
-
-
-// Intercept the wallet service require
-const Module = require('module');
-const originalRequire = Module.prototype.require;
-Module.prototype.require = function(id) {
-  if (id.includes('walletService') && !id.includes('mocks')) {
-    return mockWalletService;
-  }
-  return originalRequire.apply(this, arguments);
-};
-
-
-const orderService = require('../order.service');
-const { ORDER_STATUS, PAYMENT_STATUS, CANCELLATION_REASONS, RETURN_REASONS } = require('../../../common/constants/order.constants');
-const {
-  createTestOrder,
-  cleanupTestData
-} = require('../../../common/testing/test-data');
-const {
-  TestResult,
-  assert,
-  assertEqual,
-  runTestSuite
-} = require('../../../common/testing/test-helpers');
-
-
+import * as orderService from '../order.service';
+import type { PaymentStatus } from '../../../common/constants/order.constants';
+import {
+  ORDER_STATUS,
+  PAYMENT_STATUS,
+  CANCELLATION_REASONS,
+  RETURN_REASONS
+} from '../../../common/constants/order.constants';
+import { createTestOrder, cleanupTestData } from '../../../common/testing/test-data';
+import { assert, assertEqual } from '../../../common/testing/test-helpers';
+import Order from '../order.model';
+import Return from '../../returns/return.model';
 
 // Track created orders for cleanup
-const createdOrders = [];
+const createdOrders: string[] = [];
 
 
 
 // Database lifecycle - an in-memory mongod, never the real cluster
-const db = require('../../../common/testing/db');
+import * as db from '../../../common/testing/db';
 
 
 
@@ -185,7 +180,7 @@ const phase2Tests = [
 
 
 
-      const itemId = order.items[0]._id;
+      const itemId = String(order.items[0]._id);
       const result = await orderService.updateItemStatus(
         order.orderId,
         itemId,
@@ -217,13 +212,13 @@ const phase2Tests = [
         createdOrders.push(order.orderId);
 
         // ✅ FIX: Use the service to deliver items 0 and 1 (not manual DB manipulation)
-        await orderService.updateItemStatus(order.orderId, order.items[0]._id, ORDER_STATUS.DELIVERED);
-        await orderService.updateItemStatus(order.orderId, order.items[1]._id, ORDER_STATUS.DELIVERED);
+        await orderService.updateItemStatus(order.orderId, String(order.items[0]._id), ORDER_STATUS.DELIVERED);
+        await orderService.updateItemStatus(order.orderId, String(order.items[1]._id), ORDER_STATUS.DELIVERED);
 
         // Now deliver the last item (all 3 should be delivered)
         const result = await orderService.updateItemStatus(
         order.orderId,
-        order.items[2]._id,
+        String(order.items[2]._id),
         ORDER_STATUS.DELIVERED
         );
 
@@ -249,7 +244,7 @@ const phase2Tests = [
 
 
 
-      const itemId = order.items[0]._id;
+      const itemId = String(order.items[0]._id);
       
       try {
         await orderService.updateItemStatus(
@@ -258,7 +253,7 @@ const phase2Tests = [
           ORDER_STATUS.DELIVERED // Invalid: can't go from Pending to Delivered
         );
         throw new Error('Should have thrown error for invalid transition');
-      } catch (error) {
+      } catch (error: any) {
         assert(error.message.includes('Invalid item status transition'), 'Should reject invalid transition');
       }
     }
@@ -349,7 +344,7 @@ const phase3Tests = [
 
 
 
-      const itemId = order.items[0]._id;
+      const itemId = String(order.items[0]._id);
       const result = await orderService.cancelItem(
         order.orderId,
         itemId,
@@ -381,7 +376,7 @@ const phase3Tests = [
         });
         createdOrders.push(order.orderId);
 
-        const itemId = order.items[0]._id;
+        const itemId = String(order.items[0]._id);
         const result = await orderService.cancelItem(
         order.orderId,
         itemId,
@@ -394,7 +389,7 @@ const phase3Tests = [
         // ✅ Fixed: The order should recalculate payment based on items
         // When 1 of 3 items is refunded, order payment could be Partially Refunded OR Partially Completed
         // depending on your business logic. Let's check what it actually is:
-        const validPaymentStatuses = [PAYMENT_STATUS.PARTIALLY_REFUNDED, PAYMENT_STATUS.PARTIALLY_COMPLETED];
+        const validPaymentStatuses: PaymentStatus[] = [PAYMENT_STATUS.PARTIALLY_REFUNDED, PAYMENT_STATUS.PARTIALLY_COMPLETED];
         assert(
         validPaymentStatuses.includes(result.order.paymentStatus),
         `Order payment should be Partially Refunded or Partially Completed, got ${result.order.paymentStatus}`
@@ -421,13 +416,13 @@ const phase3Tests = [
 
 
       // Cancel item 1
-      await orderService.cancelItem(order.orderId, order.items[0]._id, CANCELLATION_REASONS.CHANGED_MIND);  // ✅ Updated
+      await orderService.cancelItem(order.orderId, String(order.items[0]._id), CANCELLATION_REASONS.CHANGED_MIND);  // ✅ Updated
       
       // Cancel item 2
-      await orderService.cancelItem(order.orderId, order.items[1]._id, CANCELLATION_REASONS.PRODUCT_OUT_OF_STOCK);  // ✅ Updated
+      await orderService.cancelItem(order.orderId, String(order.items[1]._id), CANCELLATION_REASONS.PRODUCT_OUT_OF_STOCK);  // ✅ Updated
       
       // Cancel item 3
-      const result = await orderService.cancelItem(order.orderId, order.items[2]._id, CANCELLATION_REASONS.OTHER);  // ✅ Updated
+      const result = await orderService.cancelItem(order.orderId, String(order.items[2]._id), CANCELLATION_REASONS.OTHER);  // ✅ Updated
 
 
 
@@ -451,12 +446,12 @@ const phase3Tests = [
 
 
 
-      const itemId = order.items[0]._id;
+      const itemId = String(order.items[0]._id);
       
       try {
         await orderService.cancelItem(order.orderId, itemId, CANCELLATION_REASONS.CHANGED_MIND);  // ✅ Updated
         throw new Error('Should have thrown error for cancelling shipped item');
-      } catch (error) {
+      } catch (error: any) {
         assert(error.message.includes('cannot be cancelled'), 'Should reject cancelling shipped item');
       }
     }
@@ -487,7 +482,7 @@ const phase4Tests = [
 
 
 
-      const itemId = order.items[0]._id;
+      const itemId = String(order.items[0]._id);
       const result = await orderService.requestItemReturn(
         order.orderId,
         itemId,
@@ -500,10 +495,9 @@ const phase4Tests = [
       assert(result.success, 'Return request should succeed');
       
       // Verify return request created
-      const Return = require('../../returns/return.model');
       const returnRequest = await Return.findOne({ orderId: order.orderId, itemId: itemId });
       assert(returnRequest !== null, 'Return request should be created');
-      assertEqual(returnRequest.status, 'Pending', 'Return status should be Pending');
+      assertEqual(returnRequest!.status, 'Pending', 'Return status should be Pending');
     }
   },
 
@@ -537,12 +531,11 @@ const phase4Tests = [
       assertEqual(result.order.status, ORDER_STATUS.PROCESSING_RETURN, 'Order should be Processing Return');
       
       // Verify all items are Processing Return
-      const Order = require('../order.model');
       const updatedOrder = await Order.findOne({ orderId: order.orderId });
-      assert(updatedOrder.items.every(i => i.status === ORDER_STATUS.PROCESSING_RETURN), 'All items should be Processing Return');
+      assert(updatedOrder!.items.every((i: any) => i.status === ORDER_STATUS.PROCESSING_RETURN), 'All items should be Processing Return');
       
       // Payment status should remain Completed (not refunded yet)
-      assertEqual(updatedOrder.paymentStatus, PAYMENT_STATUS.COMPLETED, 'Payment should remain Completed during return request');
+      assertEqual(updatedOrder!.paymentStatus, PAYMENT_STATUS.COMPLETED, 'Payment should remain Completed during return request');
     }
   },
 
@@ -560,12 +553,12 @@ const phase4Tests = [
 
 
 
-      const itemId = order.items[0]._id;
+      const itemId = String(order.items[0]._id);
       
       try {
         await orderService.requestItemReturn(order.orderId, itemId, RETURN_REASONS.OTHER, 'customer');  // ✅ Updated
         throw new Error('Should have thrown error for returning non-delivered item');
-      } catch (error) {
+      } catch (error: any) {
         assert(error.message.includes('can only be returned when delivered'), 'Should reject returning non-delivered item');
       }
     }
@@ -594,22 +587,21 @@ const phase5Tests = [
 
 
       // Deliver item 1
-      await orderService.updateItemStatus(order.orderId, order.items[0]._id, ORDER_STATUS.SHIPPED);
-      await orderService.updateItemStatus(order.orderId, order.items[0]._id, ORDER_STATUS.DELIVERED);
+      await orderService.updateItemStatus(order.orderId, String(order.items[0]._id), ORDER_STATUS.SHIPPED);
+      await orderService.updateItemStatus(order.orderId, String(order.items[0]._id), ORDER_STATUS.DELIVERED);
       
       // Cancel item 2
-      await orderService.cancelItem(order.orderId, order.items[1]._id, CANCELLATION_REASONS.CHANGED_MIND);  // ✅ Updated
+      await orderService.cancelItem(order.orderId, String(order.items[1]._id), CANCELLATION_REASONS.CHANGED_MIND);  // ✅ Updated
       
       // Get updated order
-      const Order = require('../order.model');
       const updatedOrder = await Order.findOne({ orderId: order.orderId });
 
 
 
-      assertEqual(updatedOrder.items[0].status, ORDER_STATUS.DELIVERED, 'Item 1 should be Delivered');
-      assertEqual(updatedOrder.items[1].status, ORDER_STATUS.CANCELLED, 'Item 2 should be Cancelled');
-      assertEqual(updatedOrder.items[2].status, ORDER_STATUS.PROCESSING, 'Item 3 should be Processing');
-      assertEqual(updatedOrder.status, ORDER_STATUS.PARTIALLY_DELIVERED, 'Order should be Partially Delivered');
+      assertEqual(updatedOrder!.items[0].status, ORDER_STATUS.DELIVERED, 'Item 1 should be Delivered');
+      assertEqual(updatedOrder!.items[1].status, ORDER_STATUS.CANCELLED, 'Item 2 should be Cancelled');
+      assertEqual(updatedOrder!.items[2].status, ORDER_STATUS.PROCESSING, 'Item 3 should be Processing');
+      assertEqual(updatedOrder!.status, ORDER_STATUS.PARTIALLY_DELIVERED, 'Order should be Partially Delivered');
     }
   },
 
@@ -631,20 +623,19 @@ const phase5Tests = [
 
 
       // Deliver only 2 items
-      await orderService.updateItemStatus(order.orderId, order.items[0]._id, ORDER_STATUS.DELIVERED);
-      await orderService.updateItemStatus(order.orderId, order.items[1]._id, ORDER_STATUS.DELIVERED);
+      await orderService.updateItemStatus(order.orderId, String(order.items[0]._id), ORDER_STATUS.DELIVERED);
+      await orderService.updateItemStatus(order.orderId, String(order.items[1]._id), ORDER_STATUS.DELIVERED);
       
       // Get updated order
-      const Order = require('../order.model');
       const updatedOrder = await Order.findOne({ orderId: order.orderId });
 
 
 
-      assertEqual(updatedOrder.items[0].paymentStatus, PAYMENT_STATUS.COMPLETED, 'Item 1 payment should be Completed');
-      assertEqual(updatedOrder.items[1].paymentStatus, PAYMENT_STATUS.COMPLETED, 'Item 2 payment should be Completed');
-      assertEqual(updatedOrder.items[2].paymentStatus, PAYMENT_STATUS.PENDING, 'Item 3 payment should be Pending');
-      assertEqual(updatedOrder.status, ORDER_STATUS.PARTIALLY_DELIVERED, 'Order should be Partially Delivered');
-      assertEqual(updatedOrder.paymentStatus, PAYMENT_STATUS.PARTIALLY_COMPLETED, 'Order payment should be Partially Completed');
+      assertEqual(updatedOrder!.items[0].paymentStatus, PAYMENT_STATUS.COMPLETED, 'Item 1 payment should be Completed');
+      assertEqual(updatedOrder!.items[1].paymentStatus, PAYMENT_STATUS.COMPLETED, 'Item 2 payment should be Completed');
+      assertEqual(updatedOrder!.items[2].paymentStatus, PAYMENT_STATUS.PENDING, 'Item 3 payment should be Pending');
+      assertEqual(updatedOrder!.status, ORDER_STATUS.PARTIALLY_DELIVERED, 'Order should be Partially Delivered');
+      assertEqual(updatedOrder!.paymentStatus, PAYMENT_STATUS.PARTIALLY_COMPLETED, 'Order payment should be Partially Completed');
     }
   },
 
@@ -663,17 +654,16 @@ const phase5Tests = [
         // ✅ Concurrent updates may cause version conflicts - this is expected
         try {
         await Promise.all([
-            orderService.updateItemStatus(order.orderId, order.items[0]._id, ORDER_STATUS.SHIPPED),
-            orderService.cancelItem(order.orderId, order.items[1]._id, CANCELLATION_REASONS.CHANGED_MIND)
+            orderService.updateItemStatus(order.orderId, String(order.items[0]._id), ORDER_STATUS.SHIPPED),
+            orderService.cancelItem(order.orderId, String(order.items[1]._id), CANCELLATION_REASONS.CHANGED_MIND)
         ]);
         
         // If no error, verify both updates succeeded
-        const Order = require('../order.model');
         const updatedOrder = await Order.findOne({ orderId: order.orderId });
-        assertEqual(updatedOrder.items[0].status, ORDER_STATUS.SHIPPED, 'Item 1 should be Shipped');
-        assertEqual(updatedOrder.items[1].status, ORDER_STATUS.CANCELLED, 'Item 2 should be Cancelled');
+        assertEqual(updatedOrder!.items[0].status, ORDER_STATUS.SHIPPED, 'Item 1 should be Shipped');
+        assertEqual(updatedOrder!.items[1].status, ORDER_STATUS.CANCELLED, 'Item 2 should be Cancelled');
         
-        } catch (error) {
+        } catch (error: any) {
         // ✅ Version error is acceptable for concurrent modifications
         if (error.name === 'VersionError' || error.message.includes('version')) {
             // This is expected - concurrent updates caused a conflict
@@ -699,7 +689,7 @@ const phase5Tests = [
 // The suites above are plain { name, fn } records whose fn throws on failure,
 // so Vitest can drive them directly - the assertions are unchanged from the
 // original standalone script, only the runner is different.
-const SUITES = [
+const SUITES: Array<[string, Array<{ name: string; fn: () => Promise<void> }>]> = [
   ['Phase 1: Order-Level Status Updates', phase1Tests],
   ['Phase 2: Item-Level Status Updates', phase2Tests],
   ['Phase 3: Cancellation Tests', phase3Tests],

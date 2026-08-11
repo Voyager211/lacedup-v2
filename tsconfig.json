@@ -31,7 +31,9 @@
     "sourceMap": true,
     "declaration": false,
 
-    "types": ["node"]
+    /* vitest/globals matches `globals: true` in vitest.config.mjs, which is what
+       lets the suites call describe/it/expect without importing them. */
+    "types": ["node", "vitest/globals"]
   },
   "include": ["src/backend/**/*"],
   "exclude": [

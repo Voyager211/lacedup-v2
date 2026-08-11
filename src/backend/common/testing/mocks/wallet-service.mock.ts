@@ -1,8 +1,11 @@
 /**
- * Mock wallet service for testing
+ * Mock wallet service for testing.
+ *
+ * Returns fixed balances so order tests can assert on refund behaviour without
+ * standing up real wallet state.
  */
 const mockWalletService = {
-  addCredit: async (userId, amount, description, orderId) => {
+  addCredit: async (userId: string, amount: number, description: string, orderId?: string) => {
     console.log(`✅ Mock: Wallet credited ₹${amount} to user ${userId}`);
     return {
       success: true,
@@ -15,8 +18,8 @@ const mockWalletService = {
       }
     };
   },
-  
-  deductCredit: async (userId, amount, description, orderId) => {
+
+  deductCredit: async (userId: string, amount: number, description: string, orderId?: string) => {
     console.log(`✅ Mock: Wallet debited ₹${amount} from user ${userId}`);
     return {
       success: true,
@@ -31,4 +34,4 @@ const mockWalletService = {
   }
 };
 
-module.exports = mockWalletService;
+export = mockWalletService;
