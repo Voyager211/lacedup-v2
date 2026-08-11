@@ -8,7 +8,8 @@ const fs = require('fs');
 const USE_MOCK_EMAIL = !process.env.EMAIL_USER || process.env.MOCK_EMAIL === 'true';
 
 // Pre-compile template for faster rendering
-const templatePath = path.join(__dirname, '..', 'views', 'user', 'partials', 'otp-email.ejs');
+const { VIEWS_DIR } = require('../config/paths');
+const templatePath = path.join(VIEWS_DIR, 'user', 'partials', 'otp-email.ejs');
 let compiledTemplate = null;
 let fallbackHtml = null;
 

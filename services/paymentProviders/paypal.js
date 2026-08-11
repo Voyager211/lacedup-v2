@@ -1,5 +1,5 @@
 const paypal = require('@paypal/checkout-server-sdk');
-require('dotenv').config();
+require('../../config/env');
 
 // Sandbox environment (switch to LiveEnvironment with live keys later)
 const environment = new paypal.core.SandboxEnvironment(

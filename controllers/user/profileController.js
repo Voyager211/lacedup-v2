@@ -6,6 +6,7 @@ const Order = require('../../models/Order');
 const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
+const { PROFILE_UPLOADS_DIR } = require("../../config/paths");
 
 // Generate OTP function (since generateOtp utility might not exist)
 const generateOtp = () => {
@@ -911,7 +912,7 @@ const uploadProfilePhoto = async (req, res) => {
     }
 
     // Ensure uploads directory exists
-    const uploadsDir = path.join(__dirname, '../../public/uploads/profiles');
+    const uploadsDir = PROFILE_UPLOADS_DIR;
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
@@ -990,7 +991,7 @@ const deleteProfilePhoto = async (req, res) => {
     }
 
     // Delete the physical file
-    const photoPath = path.join(__dirname, '../../public/uploads/profiles', currentUser.profilePhoto);
+    const photoPath = path.join(PROFILE_UPLOADS_DIR, currentUser.profilePhoto);
     if (fs.existsSync(photoPath)) {
       fs.unlinkSync(photoPath);
     }

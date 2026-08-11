@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./config/env');
 
 // Package imports
 const express = require('express');
@@ -15,6 +15,7 @@ const morganBody = require('morgan-body');
 
 // Middleware imports
 const connectDB = require('./config/db');
+const { PUBLIC_DIR, VIEWS_DIR } = require('./config/paths');
 const isAdmin = require('./middlewares/isAdmin');
 const { addUserContext } = require('./middlewares/user-middleware');
 const checkUserBlocked = require('./middlewares/checkUserBlocked');
@@ -56,14 +57,15 @@ connectDB();
 
 // View engine
 app.set('view engine', 'ejs');
+app.set('views', VIEWS_DIR);
 app.use(expressLayouts);
-app.set('layout', 'admin/layout'); 
+app.set('layout', 'admin/layout');
 
 // Middlewares
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.json({ limit: '50mb' }));
 app.use(methodOverride('_method'));
-app.use(express.static('public'));
+app.use(express.static(PUBLIC_DIR));
 app.use(flash());
 
 // Session configuration with dynamic session names and durations based on route
