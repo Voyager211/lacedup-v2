@@ -1,4 +1,4 @@
-const rateLimit = require('express-rate-limit');
+import rateLimit from 'express-rate-limit';
 
 /**
  * Rate limiters.
@@ -8,7 +8,15 @@ const rateLimit = require('express-rate-limit');
  */
 const isTest = process.env.NODE_ENV === 'test';
 
-const makeLimiter = ({ windowMs, limit, message }) =>
+const makeLimiter = ({
+  windowMs,
+  limit,
+  message
+}: {
+  windowMs: number;
+  limit: number;
+  message: string;
+}) =>
   rateLimit({
     windowMs,
     limit,
@@ -22,7 +30,7 @@ const makeLimiter = ({ windowMs, limit, message }) =>
  * Login and signup. Tight, because this is the endpoint an attacker hammers
  * when credential-stuffing.
  */
-const authLimiter = makeLimiter({
+export const authLimiter = makeLimiter({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   message: 'Too many login attempts. Please try again in 15 minutes.'
@@ -32,7 +40,7 @@ const authLimiter = makeLimiter({
  * OTP request and verification. Each send costs a real email, and an
  * unthrottled verify endpoint lets a 6-digit code be brute-forced.
  */
-const otpLimiter = makeLimiter({
+export const otpLimiter = makeLimiter({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   message: 'Too many OTP requests. Please try again in 15 minutes.'
@@ -41,7 +49,7 @@ const otpLimiter = makeLimiter({
 /**
  * Password reset requests.
  */
-const passwordResetLimiter = makeLimiter({
+export const passwordResetLimiter = makeLimiter({
   windowMs: 60 * 60 * 1000,
   limit: 5,
   message: 'Too many password reset requests. Please try again later.'
@@ -50,7 +58,7 @@ const passwordResetLimiter = makeLimiter({
 /**
  * Coupon application - stops the coupon table being enumerated by brute force.
  */
-const couponRateLimit = makeLimiter({
+export const couponRateLimit = makeLimiter({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   message: 'Too many coupon attempts, please try again later.'
@@ -59,7 +67,7 @@ const couponRateLimit = makeLimiter({
 /**
  * Payment initiation and verification.
  */
-const paymentLimiter = makeLimiter({
+export const paymentLimiter = makeLimiter({
   windowMs: 15 * 60 * 1000,
   limit: 30,
   message: 'Too many payment attempts. Please try again shortly.'
@@ -69,17 +77,8 @@ const paymentLimiter = makeLimiter({
  * Broad backstop for the whole API surface. Generous enough not to affect
  * normal browsing.
  */
-const apiLimiter = makeLimiter({
+export const apiLimiter = makeLimiter({
   windowMs: 15 * 60 * 1000,
   limit: 500,
   message: 'Too many requests. Please slow down.'
 });
-
-module.exports = {
-  authLimiter,
-  otpLimiter,
-  passwordResetLimiter,
-  couponRateLimit,
-  paymentLimiter,
-  apiLimiter
-};

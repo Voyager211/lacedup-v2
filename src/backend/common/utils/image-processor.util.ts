@@ -1,10 +1,21 @@
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
-const { PRODUCT_UPLOADS_DIR } = require('../../config/paths');
+import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
+import { PRODUCT_UPLOADS_DIR } from '../../config/paths';
 
-const processImages = async (files) => {
-  const processed = [];
+/** Subset of Multer's file shape that this utility actually uses. */
+export interface UploadedFile {
+  originalname: string;
+  buffer: Buffer;
+}
+
+export interface ProcessedImage {
+  url: string;
+  filename: string;
+}
+
+export const processImages = async (files: UploadedFile[]): Promise<ProcessedImage[]> => {
+  const processed: ProcessedImage[] = [];
 
   // Ensure the destination exists - sharp.toFile does not create directories
   if (!fs.existsSync(PRODUCT_UPLOADS_DIR)) {
@@ -25,5 +36,3 @@ const processImages = async (files) => {
 
   return processed;
 };
-
-module.exports = { processImages };

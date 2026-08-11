@@ -1,20 +1,22 @@
-exports.addUserContext = (req, res, next) => {
+import type { NextFunction, Request, Response } from 'express';
+
+export const addUserContext = (req: Request, res: Response, next: NextFunction) => {
   res.locals.user = req.user || null;
   next();
 };
 
 // Middleware to ensure user is authenticated
-exports.ensureAuthenticated = (req, res, next) => {
+export const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   // Check if user is authenticated via passport (OAuth)
   if (req.isAuthenticated && req.isAuthenticated()) {
     return next();
   }
-  
+
   // Check if user is authenticated via session
   if (req.session && req.session.userId) {
     return next();
   }
-  
+
   // If not authenticated, redirect to login
   if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
     // For AJAX requests, return JSON error
@@ -30,16 +32,16 @@ exports.ensureAuthenticated = (req, res, next) => {
 };
 
 // Middleware to ensure user is not authenticated (for login/register pages)
-exports.ensureNotAuthenticated = (req, res, next) => {
+export const ensureNotAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   // Check if user is authenticated via passport (OAuth)
   if (req.isAuthenticated && req.isAuthenticated()) {
     return res.redirect('/');
   }
-  
+
   // Check if user is authenticated via session
   if (req.session && req.session.userId) {
     return res.redirect('/');
   }
-  
+
   return next();
 };

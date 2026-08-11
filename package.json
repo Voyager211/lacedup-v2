@@ -53,6 +53,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/connect-flash": "^0.0.40",
+    "@types/ejs": "^3.1.5",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
     "@types/method-override": "^3.0.0",

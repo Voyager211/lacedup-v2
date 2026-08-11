@@ -1,23 +1,23 @@
 // Mock email service for testing when Gmail is not working
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { LOGS_DIR as logsDir } from '../../config/paths';
 
 // Create logs directory if it doesn't exist
-const { LOGS_DIR: logsDir } = require('../../config/paths');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-module.exports = async function mockSendEmail(to, subject, html) {
+const mockSendEmail = async (to: string, subject: string, html: string): Promise<void> => {
   try {
     const timestamp = new Date().toISOString();
-    
+
     // Log to console (faster than file operations)
     console.log(` MOCK EMAIL SENT:`);
     console.log(`   To: ${to}`);
     console.log(`   Subject: ${subject}`);
     console.log(`   Time: ${timestamp}`);
-    
+
     // Extract OTP from HTML if present
     const otpMatch = html.match(/<strong[^>]*>(\d{6})<\/strong>/);
     if (otpMatch) {
@@ -33,7 +33,7 @@ module.exports = async function mockSendEmail(to, subject, html) {
         otp: otpMatch ? otpMatch[1] : null,
         status: 'sent'
       };
-      
+
       const logFile = path.join(logsDir, 'mock-emails.log');
       // Use async write to avoid blocking
       fs.appendFile(logFile, JSON.stringify(logEntry) + '\n', (err) => {
@@ -47,3 +47,5 @@ module.exports = async function mockSendEmail(to, subject, html) {
     throw err;
   }
 };
+
+export = mockSendEmail;

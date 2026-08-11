@@ -1,11 +1,14 @@
-const preventBackNavigation = (req, res, next) => {
-  // Set comprehensive cache control headers
-  res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
-    'Pragma': 'no-cache',
-    'Expires': '0',
-    'Surrogate-Control': 'no-store'
-  });
+import type { NextFunction, Request, Response } from 'express';
+
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  Pragma: 'no-cache',
+  Expires: '0',
+  'Surrogate-Control': 'no-store'
+};
+
+export const preventBackNavigation = (req: Request, res: Response, next: NextFunction) => {
+  res.set(NO_CACHE_HEADERS);
 
   // Check if user is already authenticated (shouldn't access auth pages)
   if (req.isAuthenticated()) {
@@ -16,14 +19,8 @@ const preventBackNavigation = (req, res, next) => {
 };
 
 // Specific middleware for OTP verification pages
-const preventOtpBackNavigation = (req, res, next) => {
-  // Set comprehensive cache control headers
-  res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
-    'Pragma': 'no-cache',
-    'Expires': '0',
-    'Surrogate-Control': 'no-store'
-  });
+export const preventOtpBackNavigation = (req: Request, res: Response, next: NextFunction) => {
+  res.set(NO_CACHE_HEADERS);
 
   // Check if user is already authenticated
   if (req.isAuthenticated()) {
@@ -55,9 +52,4 @@ const preventOtpBackNavigation = (req, res, next) => {
   }
 
   next();
-};
-
-module.exports = {
-  preventBackNavigation,
-  preventOtpBackNavigation
 };

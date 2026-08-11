@@ -1,7 +1,7 @@
-const nodemailer = require('nodemailer');
+import nodemailer, { type Transporter } from 'nodemailer';
 
 // Create transporter with better error handling and configuration
-const createTransporter = () => {
+const createTransporter = (): Transporter | null => {
   // Check if email credentials are provided
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn('⚠️ Email credentials not found in environment variables');
@@ -11,24 +11,24 @@ const createTransporter = () => {
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
-    secure: false, 
+    secure: false,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
     },
-    
-    pool: true, 
-    maxConnections: 5, 
+
+    pool: true,
+    maxConnections: 5,
     maxMessages: 100,
-    rateLimit: 10, 
+    rateLimit: 10,
     tls: {
       ciphers: 'SSLv3',
       rejectUnauthorized: false
     },
     // Reduce timeouts for faster failure detection
-    connectionTimeout: 10000, 
-    greetingTimeout: 5000, 
-    socketTimeout: 30000 
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 30000
   });
 };
 
@@ -37,17 +37,18 @@ const transporter = createTransporter();
 // Pre-verify transporter on startup to avoid delays later
 let isTransporterVerified = false;
 if (transporter) {
-  transporter.verify()
+  transporter
+    .verify()
     .then(() => {
       isTransporterVerified = true;
     })
-    .catch((err) => {
+    .catch((err: Error) => {
       console.warn(' Email transporter pre-verification failed:', err.message);
     });
 }
 
 // Test function to verify email configuration
-const testEmailConfig = async () => {
+const testEmailConfig = async (): Promise<boolean> => {
   try {
     if (!transporter) {
       console.error(' Email transporter not initialized');
@@ -56,22 +57,37 @@ const testEmailConfig = async () => {
 
     console.log(' Testing email configuration...');
     console.log(' EMAIL_USER:', process.env.EMAIL_USER);
-    console.log(' EMAIL_PASS length:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 'undefined');
+    console.log(
+      ' EMAIL_PASS length:',
+      process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 'undefined'
+    );
 
     await transporter.verify();
     console.log(' Email configuration verified successfully');
     return true;
   } catch (err) {
-    console.error(' Email configuration test failed:', err.message);
+    console.error(' Email configuration test failed:', (err as Error).message);
     return false;
   }
 };
 
-module.exports = async function sendEmail(to, subject, html) {
+/**
+ * Callable module with an attached helper, matching the original
+ * `module.exports = sendEmail; module.exports.testEmailConfig = ...` shape so
+ * existing `require()` call sites keep working unchanged.
+ */
+interface SendEmail {
+  (to: string, subject: string, html: string): Promise<void>;
+  testEmailConfig: () => Promise<boolean>;
+}
+
+const sendEmail = async (to: string, subject: string, html: string): Promise<void> => {
   try {
     // Check if transporter is available
     if (!transporter) {
-      throw new Error('Email service not configured. Please check EMAIL_USER and EMAIL_PASS environment variables.');
+      throw new Error(
+        'Email service not configured. Please check EMAIL_USER and EMAIL_PASS environment variables.'
+      );
     }
 
     // Skip verification if already pre-verified for faster sending
@@ -86,21 +102,25 @@ module.exports = async function sendEmail(to, subject, html) {
       subject,
       html
     });
-
   } catch (err) {
     console.error(` Email sending failed to ${to}:`, err);
-    
+
+    const code = (err as NodeJS.ErrnoException).code;
+
     // Reset verification status on auth errors
-    if (err.code === 'EAUTH') {
+    if (code === 'EAUTH') {
       isTransporterVerified = false;
-      throw new Error('Email authentication failed. Please check your Gmail App Password or enable 2-factor authentication.');
-    } else if (err.code === 'ECONNECTION') {
-      throw new Error('Failed to connect to email server. Please check your internet connection.');
+      throw new Error(
+        'Email authentication failed. Please check your Gmail App Password or enable 2-factor authentication.'
+      );
+    } else if (code === 'ECONNECTION') {
+      throw new Error(
+        'Failed to connect to email server. Please check your internet connection.'
+      );
     } else {
       throw err;
     }
   }
 };
 
-// Export test function for debugging
-module.exports.testEmailConfig = testEmailConfig;
+export = Object.assign(sendEmail, { testEmailConfig }) as SendEmail;

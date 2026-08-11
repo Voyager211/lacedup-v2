@@ -1,6 +1,12 @@
-const Product = require('../../modules/catalog/product.model');
+import type { NextFunction, Request, Response } from 'express';
+import Product from '../../modules/catalog/product.model';
+import type { ICategory } from '../../modules/catalog/catalog.types';
 
-const ensureVisible = async (req, res, next) => {
+/**
+ * Blocks access to a product page when the product, or the category it belongs
+ * to, has been unlisted or soft-deleted.
+ */
+const ensureVisible = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const productSlug = req.params.slug;
 
@@ -30,8 +36,11 @@ const ensureVisible = async (req, res, next) => {
       });
     }
 
+    // Populated by the .populate('category') above
+    const category = product.category as unknown as ICategory | null;
+
     // Check if product's category exists and is active
-    if (!product.category || product.category.isDeleted || !product.category.isActive) {
+    if (!category || category.isDeleted || !category.isActive) {
       return res.status(404).render('errors/404', {
         title: 'Product Not Available',
         message: 'This product is no longer available as its category has been disabled.',
@@ -52,4 +61,4 @@ const ensureVisible = async (req, res, next) => {
   }
 };
 
-module.exports = ensureVisible;
+export = ensureVisible;

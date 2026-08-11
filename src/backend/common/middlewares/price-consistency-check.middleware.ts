@@ -1,7 +1,26 @@
+import type { NextFunction, Request, Response } from 'express';
+
+interface VariantLike {
+  size?: string;
+  finalPrice?: number;
+  basePrice?: number;
+  variantSpecificOffer?: number;
+}
+
+interface ProductLike {
+  productName?: string;
+  productOffer?: number;
+  category?: { categoryOffer?: number };
+  brand?: { brandOffer?: number };
+  variants?: VariantLike[];
+}
+
 /**
- * Middleware to check price consistency in development/staging
+ * Development-only guard that warns when a stored variant price disagrees with
+ * what the current offers would produce. Prices are meant to be computed at
+ * read time, so a mismatch means something persisted a stale finalPrice.
  */
-const priceConsistencyCheck = (req, res, next) => {
+const priceConsistencyCheck = (_req: Request, res: Response, next: NextFunction) => {
   // Only run in development/staging environments
   if (process.env.NODE_ENV === 'production') {
     return next();
@@ -9,25 +28,25 @@ const priceConsistencyCheck = (req, res, next) => {
 
   // Hook into response to check prices before sending
   const originalJson = res.json;
-  res.json = function(data) {
+  res.json = function (data: { products?: ProductLike[]; product?: ProductLike }) {
     // Check if response contains product data
     if (data && (data.products || data.product)) {
-      const products = data.products || [data.product];
-      
-      products.forEach(product => {
+      const products = data.products || (data.product ? [data.product] : []);
+
+      products.forEach((product) => {
         if (product.variants && product.variants.length > 0) {
-          product.variants.forEach(variant => {
+          product.variants.forEach((variant) => {
             if (variant.finalPrice && variant.basePrice) {
               // Calculate what the price should be
-              const categoryOffer = (product.category && product.category.categoryOffer) || 0;
-              const brandOffer = (product.brand && product.brand.brandOffer) || 0;
+              const categoryOffer = product.category?.categoryOffer || 0;
+              const brandOffer = product.brand?.brandOffer || 0;
               const productOffer = product.productOffer || 0;
               const variantOffer = variant.variantSpecificOffer || 0;
               const maxOffer = Math.max(categoryOffer, brandOffer, productOffer, variantOffer);
               const expectedPrice = variant.basePrice * (1 - maxOffer / 100);
-              
+
               const priceDifference = Math.abs(variant.finalPrice - expectedPrice);
-              
+
               if (priceDifference > 0.01) {
                 console.warn(`⚠️ Price inconsistency detected:`, {
                   product: product.productName,
@@ -42,11 +61,11 @@ const priceConsistencyCheck = (req, res, next) => {
         }
       });
     }
-    
+
     return originalJson.call(this, data);
   };
-  
+
   next();
 };
 
-module.exports = priceConsistencyCheck;
+export = priceConsistencyCheck;
