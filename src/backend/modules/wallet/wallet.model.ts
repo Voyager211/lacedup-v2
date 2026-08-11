@@ -1,6 +1,7 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IWallet } from './wallet.types';
 
-const walletSchema = new mongoose.Schema(
+const walletSchema = new mongoose.Schema<IWallet>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -79,7 +80,7 @@ const walletSchema = new mongoose.Schema(
 walletSchema.pre('save', function (next) {
   this.transactions.forEach((transaction) => {
     if (!transaction.transactionId) {
-      // Format: TXN{timestamp}{random}{uuid snippet}
+      // Format: TXN{timestamp}{random}
       const timestamp = Date.now();
       const random = Math.floor(Math.random() * 10000);
       transaction.transactionId = `TXN${timestamp}${random}`;
@@ -89,26 +90,26 @@ walletSchema.pre('save', function (next) {
 });
 
 //  Virtual to get latest transaction
-walletSchema.virtual('latestTransaction').get(function () {
+walletSchema.virtual('latestTransaction').get(function (this: IWallet) {
   return this.transactions.length > 0
     ? this.transactions[this.transactions.length - 1]
     : null;
 });
 
 //  Virtual to get total transaction count
-walletSchema.virtual('transactionCount').get(function () {
+walletSchema.virtual('transactionCount').get(function (this: IWallet) {
   return this.transactions.length;
 });
 
 //  Virtual to get total credits
-walletSchema.virtual('totalCredits').get(function () {
+walletSchema.virtual('totalCredits').get(function (this: IWallet) {
   return this.transactions
     .filter((t) => t.type === 'credit' && t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
 });
 
 //  Virtual to get total debits
-walletSchema.virtual('totalDebits').get(function () {
+walletSchema.virtual('totalDebits').get(function (this: IWallet) {
   return this.transactions
     .filter((t) => t.type === 'debit' && t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -121,8 +122,10 @@ walletSchema.set('toJSON', { virtuals: true });
 // INDEXES - Optimized for Performance
 // ============================================
 
-// Primary index for user wallet lookups
-walletSchema.index({ userId: 1 });
+// NOTE: userId is declared `unique: true` above, which already creates an
+// index. The former explicit walletSchema.index({ userId: 1 }) duplicated it
+// and was the source of the "Duplicate schema index on {userId:1}" warning
+// logged on every boot.
 
 //  COMPOUND INDEXES: For common query patterns
 walletSchema.index({ userId: 1, updatedAt: -1 }); // User wallets by last update
@@ -151,4 +154,4 @@ walletSchema.index(
   { sparse: true }
 );
 
-module.exports = mongoose.model('Wallet', walletSchema);
+export = mongoose.model<IWallet>('Wallet', walletSchema);
