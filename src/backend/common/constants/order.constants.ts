@@ -1,6 +1,14 @@
-const ORDER_STATUS = {
+/**
+ * Order domain constants.
+ *
+ * Declared `as const` so each map yields a literal union type rather than
+ * `string` - that is what makes OrderStatus, PaymentStatus and friends useful
+ * as types across the rest of the backend.
+ */
+
+export const ORDER_STATUS = {
   PENDING: 'Pending',
-  PROCESSING: 'Processing', 
+  PROCESSING: 'Processing',
   SHIPPED: 'Shipped',
   DELIVERED: 'Delivered',
   CANCELLED: 'Cancelled',
@@ -9,9 +17,9 @@ const ORDER_STATUS = {
   PARTIALLY_RETURNED: 'Partially Returned',
   PARTIALLY_DELIVERED: 'Partially Delivered',
   PROCESSING_RETURN: 'Processing Return'
-};
+} as const;
 
-const PAYMENT_STATUS = {
+export const PAYMENT_STATUS = {
   PENDING: 'Pending',
   COMPLETED: 'Completed',
   FAILED: 'Failed',
@@ -19,9 +27,9 @@ const PAYMENT_STATUS = {
   CANCELLED: 'Cancelled',
   PARTIALLY_COMPLETED: 'Partially Completed',
   PARTIALLY_REFUNDED: 'Partially Refunded'
-};
+} as const;
 
-const CANCELLATION_REASONS = {
+export const CANCELLATION_REASONS = {
   ORDERED_BY_MISTAKE: 'Ordered by mistake',
   FOUND_BETTER_PRICE: 'Found a better price elsewhere',
   DELIVERY_TIME_LONG: 'Delivery time too long',
@@ -33,9 +41,9 @@ const CANCELLATION_REASONS = {
   INCORRECT_ADDRESS: 'Incorrect or incomplete shipping address',
   SWITCHED_PRODUCT: 'Switched to a different product',
   OTHER: 'Other'
-};
+} as const;
 
-const RETURN_REASONS = {
+export const RETURN_REASONS = {
   SIZE_TOO_SMALL: 'Size too small',
   SIZE_TOO_LARGE: 'Size too large',
   WRONG_ITEM: 'Wrong item received',
@@ -46,48 +54,40 @@ const RETURN_REASONS = {
   RECEIVED_LATE: 'Received too late',
   QUALITY_UNSATISFACTORY: 'Product quality not satisfactory',
   UNCOMFORTABLE: 'Footwear is uncomfortable',
-  COLOR_MISMATCH: 'Color doesn\'t match the image',
+  COLOR_MISMATCH: "Color doesn't match the image",
   FOUND_BETTER_PRICE: 'Found a better price elsewhere',
   OTHER: 'Other'
-};
+} as const;
 
-const PAYMENT_METHODS = {
+export const PAYMENT_METHODS = {
   COD: 'cod',
   CARD: 'card',
   UPI: 'upi',
   PAYPAL: 'paypal',
   NETBANKING: 'netbanking',
   WALLET: 'wallet'
-};
+} as const;
 
-const RETURN_STATUS = {
+export const RETURN_STATUS = {
   PENDING: 'Pending',
   APPROVED: 'Approved',
-  REJECTED: 'Rejected', 
+  REJECTED: 'Rejected',
   COMPLETED: 'Completed'
-};
+} as const;
+
+export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
+export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+export type CancellationReason =
+  (typeof CANCELLATION_REASONS)[keyof typeof CANCELLATION_REASONS];
+export type ReturnReason = (typeof RETURN_REASONS)[keyof typeof RETURN_REASONS];
+export type PaymentMethod = (typeof PAYMENT_METHODS)[keyof typeof PAYMENT_METHODS];
+export type ReturnStatus = (typeof RETURN_STATUS)[keyof typeof RETURN_STATUS];
 
 // Helper functions to get arrays for Mongoose enum validation
-const getOrderStatusArray = () => Object.values(ORDER_STATUS);
-const getPaymentStatusArray = () => Object.values(PAYMENT_STATUS);
-const getCancellationReasonsArray = () => Object.values(CANCELLATION_REASONS);
-const getReturnReasonsArray = () => Object.values(RETURN_REASONS);
-const getPaymentMethodsArray = () => Object.values(PAYMENT_METHODS);
-const getReturnStatusArray = () => Object.values(RETURN_STATUS);
-
-module.exports = {
-  ORDER_STATUS,
-  PAYMENT_STATUS,
-  CANCELLATION_REASONS,
-  RETURN_REASONS,
-  PAYMENT_METHODS,
-  RETURN_STATUS,   
-  
-  // Helper functions
-  getOrderStatusArray,
-  getPaymentStatusArray,
-  getCancellationReasonsArray,
-  getReturnReasonsArray,
-  getPaymentMethodsArray,
-  getReturnStatusArray
-};
+export const getOrderStatusArray = (): OrderStatus[] => Object.values(ORDER_STATUS);
+export const getPaymentStatusArray = (): PaymentStatus[] => Object.values(PAYMENT_STATUS);
+export const getCancellationReasonsArray = (): CancellationReason[] =>
+  Object.values(CANCELLATION_REASONS);
+export const getReturnReasonsArray = (): ReturnReason[] => Object.values(RETURN_REASONS);
+export const getPaymentMethodsArray = (): PaymentMethod[] => Object.values(PAYMENT_METHODS);
+export const getReturnStatusArray = (): ReturnStatus[] => Object.values(RETURN_STATUS);

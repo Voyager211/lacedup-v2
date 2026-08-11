@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+
+    /* node16 keeps CommonJS emit (the whole backend is require/module.exports)
+       while using the modern resolver - TypeScript 7 removed the legacy
+       "node"/node10 resolution mode. */
+    "module": "node16",
+    "moduleResolution": "node16",
+    "lib": ["ES2022"],
+
+    "rootDir": "src/backend",
+    "outDir": "dist/backend",
+
+    /* Strict from the first converted file rather than bolted on later. */
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": false,
+
+    /* .js and .ts coexist while the conversion is in progress. checkJs stays
+       off so the not-yet-converted files do not produce thousands of errors. */
+    "allowJs": true,
+    "checkJs": false,
+
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    "sourceMap": true,
+    "declaration": false,
+
+    "types": ["node"]
+  },
+  "include": ["src/backend/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/backend/views",
+    "src/frontend"
+  ]
+}

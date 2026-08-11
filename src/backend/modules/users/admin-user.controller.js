@@ -1,5 +1,5 @@
 const User = require('./user.model');
-const getPagination = require('../../common/utils/pagination.util');
+const { getPagination } = require('../../common/utils/pagination.util');
 
 
 const listUsers = async (req, res) => {

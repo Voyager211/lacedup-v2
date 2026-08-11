@@ -1,5 +1,5 @@
 const Brand = require('./brand.model');
-const getPagination = require('../../common/utils/pagination.util');
+const { getPagination } = require('../../common/utils/pagination.util');
 const { validateBase64Image } = require('../../common/utils/image-validation.util');
 const sharp = require('sharp');
 const path = require('path');

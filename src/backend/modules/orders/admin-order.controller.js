@@ -12,7 +12,7 @@ const {
   getCancellationReasonsArray,
   getReturnReasonsArray
 } = require('../../common/constants/order.constants');
-const getPagination = require('../../common/utils/pagination.util');
+const { getPagination } = require('../../common/utils/pagination.util');
 
 
 const validateTransitionAndGetOrder = async (orderId, newStatus, isItem = false, itemId = null) => {

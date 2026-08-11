@@ -8,7 +8,7 @@ const orderService = require('./order.service');
 const walletService = require('../wallet/wallet.service');
 const paypal = require('@paypal/checkout-server-sdk');
 const razorpayService = require('../payments/razorpay.provider');
-const getPagination = require('../../common/utils/pagination.util');
+const { getPagination } = require('../../common/utils/pagination.util');
 
 const {
   ORDER_STATUS,
