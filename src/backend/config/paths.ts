@@ -1,4 +1,4 @@
-const path = require('path');
+import path from 'path';
 
 /**
  * Central filesystem paths.
@@ -10,32 +10,21 @@ const path = require('path');
  */
 
 // <repo>/src/backend - source that ships with the server
-const BACKEND_ROOT = path.resolve(__dirname, '..');
+export const BACKEND_ROOT = path.resolve(__dirname, '..');
 
 // <repo> - runtime/user data that deliberately lives outside the source tree
-const PROJECT_ROOT = path.resolve(BACKEND_ROOT, '..', '..');
+export const PROJECT_ROOT = path.resolve(BACKEND_ROOT, '..', '..');
 
 // EJS templates are rendered by the backend, so they live alongside it.
 // Removed in Phase 4 when React replaces them.
-const VIEWS_DIR = path.join(BACKEND_ROOT, 'views');
+export const VIEWS_DIR = path.join(BACKEND_ROOT, 'views');
 
 // Static assets and user uploads stay at the repo root: public/uploads holds
 // runtime-generated files referenced by URL from the database, so it is data
 // rather than source and must not move with the code.
-const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
-const LOGS_DIR = path.join(PROJECT_ROOT, 'logs');
+export const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
+export const LOGS_DIR = path.join(PROJECT_ROOT, 'logs');
 
-const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
-const PRODUCT_UPLOADS_DIR = path.join(UPLOADS_DIR, 'products');
-const PROFILE_UPLOADS_DIR = path.join(UPLOADS_DIR, 'profiles');
-
-module.exports = {
-  PROJECT_ROOT,
-  BACKEND_ROOT,
-  PUBLIC_DIR,
-  VIEWS_DIR,
-  LOGS_DIR,
-  UPLOADS_DIR,
-  PRODUCT_UPLOADS_DIR,
-  PROFILE_UPLOADS_DIR
-};
+export const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
+export const PRODUCT_UPLOADS_DIR = path.join(UPLOADS_DIR, 'products');
+export const PROFILE_UPLOADS_DIR = path.join(UPLOADS_DIR, 'profiles');

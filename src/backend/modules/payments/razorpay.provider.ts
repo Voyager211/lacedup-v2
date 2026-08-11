@@ -1,5 +1,5 @@
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
+import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
 /**
  * The Razorpay client is created on first use rather than at module load.
@@ -9,14 +9,12 @@ const crypto = require('crypto');
  * includes checkout and orders) impossible to require in a test without live
  * credentials.
  */
-let razorpayInstance = null;
+let razorpayInstance: Razorpay | null = null;
 
-const getRazorpayInstance = () => {
+export const getRazorpayInstance = (): Razorpay => {
   if (!razorpayInstance) {
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      throw new Error(
-        'Razorpay is not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET'
-      );
+      throw new Error('Razorpay is not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET');
     }
     razorpayInstance = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
@@ -26,8 +24,8 @@ const getRazorpayInstance = () => {
   return razorpayInstance;
 };
 
-//  Create Razorpay Order
-const createRazorpayOrder = async (orderId, amount) => {
+/** Creates a Razorpay order. `amount` is in rupees; Razorpay expects paise. */
+export const createRazorpayOrder = async (orderId: string, amount: number) => {
   try {
     const options = {
       amount: Math.round(amount * 100), // Convert to paise
@@ -37,19 +35,29 @@ const createRazorpayOrder = async (orderId, amount) => {
       notes: { orderId }
     };
 
-    const order = await getRazorpayInstance().orders.create(options);
+    const order = await getRazorpayInstance().orders.create(options as any);
     return order;
   } catch (error) {
-    throw new Error(`Failed to create Razorpay order: ${error.message}`);
+    throw new Error(`Failed to create Razorpay order: ${(error as Error).message}`);
   }
 };
 
-//  Verify Payment Signature
-const verifyPaymentSignature = (razorpayOrderId, paymentId, signature) => {
+/**
+ * Verifies the payment signature.
+ *
+ * The signature is an HMAC-SHA256 of `orderId|paymentId` keyed with the
+ * Razorpay secret, which is what stops a successful payment being replayed
+ * against a different order.
+ */
+export const verifyPaymentSignature = (
+  razorpayOrderId: string,
+  paymentId: string,
+  signature: string
+): boolean => {
   try {
     const body = razorpayOrderId + '|' + paymentId;
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET ?? '')
       .update(body)
       .digest('hex');
 
@@ -60,19 +68,11 @@ const verifyPaymentSignature = (razorpayOrderId, paymentId, signature) => {
   }
 };
 
-//  Fetch Payment Details
-const getPaymentDetails = async (paymentId) => {
+export const getPaymentDetails = async (paymentId: string) => {
   try {
     const payment = await getRazorpayInstance().payments.fetch(paymentId);
     return payment;
   } catch (error) {
-    throw new Error(`Failed to fetch payment: ${error.message}`);
+    throw new Error(`Failed to fetch payment: ${(error as Error).message}`);
   }
-};
-
-module.exports = {
-  getRazorpayInstance,
-  createRazorpayOrder,
-  verifyPaymentSignature,
-  getPaymentDetails
 };
