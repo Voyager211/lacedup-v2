@@ -1,10 +1,11 @@
 {
   "name": "project-1---lacedup",
   "version": "1.0.0",
-  "main": "app.js",
+  "main": "src/backend/app.js",
   "scripts": {
-    "dev": "nodemon app.js",
-    "test:orders": "node tests/orderStatus.test.js",
+    "dev": "nodemon src/backend/app.js",
+    "start": "node src/backend/app.js",
+    "test:orders": "node src/backend/modules/orders/__tests__/order-status.test.js",
     "test": "jest"
   },
   "jest": {
