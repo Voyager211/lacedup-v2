@@ -33,6 +33,13 @@ declare module 'express-session' {
     };
     /** Email pending OTP verification during an email change. */
     pendingEmail?: string;
+    /** Coupon applied to the current checkout, held until the order is placed. */
+    appliedCoupon?: {
+      code: string;
+      name?: string;
+      discountAmount?: number;
+      [key: string]: unknown;
+    } | null;
     [key: string]: unknown;
   }
 }

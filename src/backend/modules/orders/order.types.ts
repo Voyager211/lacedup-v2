@@ -20,7 +20,8 @@ export interface IOrderStatusHistoryEntry {
 }
 
 export interface IOrderItem {
-  _id: Types.ObjectId;
+  /** Assigned by Mongoose when the subdocument is saved. */
+  _id?: Types.ObjectId;
   productId: Types.ObjectId;
   /** Points at a variant subdocument inside the product. */
   variantId: Types.ObjectId;

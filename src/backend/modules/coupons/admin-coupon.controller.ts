@@ -1,15 +1,16 @@
-const Coupon = require('./coupon.model');
+import type { Request, Response } from 'express';
+import Coupon from './coupon.model';
 
 
-const loadCouponPage = async (req, res) => {
+const loadCouponPage = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 8; // 12 coupons per page
-    const searchQuery = req.query.q || '';
-    const statusFilter = req.query.status || 'all';
+    const searchQuery = String(req.query.q || '');
+    const statusFilter = String(req.query.status || 'all');
     
     // Build query
-    let query = {};
+    let query: Record<string, any> = {};
     
     // Search filter
     if (searchQuery) {
@@ -48,7 +49,7 @@ const loadCouponPage = async (req, res) => {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
     
-    const pageNumbers = [];
+    const pageNumbers: any[] = [];
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
@@ -67,7 +68,7 @@ const loadCouponPage = async (req, res) => {
       nextPage: page + 1,
       pageNumbers
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading coupon page:', error);
     res.status(500).render('admin/error', {
       title: 'Error',
@@ -77,15 +78,15 @@ const loadCouponPage = async (req, res) => {
 };
 
 
-const getAllCouponsAPI = async (req, res) => {
+const getAllCouponsAPI = async (req: Request, res: Response) => {
     try {
-        const page = parseInt(req.query.page) || 1;
+        const page = parseInt(String(req.query.page)) || 1;
         const limit = 8;
-        const searchQuery = req.query.q || '';
-        const statusFilter = req.query.status || 'all';
+        const searchQuery = String(req.query.q || '');
+        const statusFilter = String(req.query.status || 'all');
         
         // Build query (same as loadCouponPage)
-        let query = {};
+        let query: Record<string, any> = {};
         
         // Search filter
         if (searchQuery) {
@@ -133,7 +134,7 @@ const getAllCouponsAPI = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching coupons via API:', error);
         res.status(500).json({
             success: false,
@@ -145,7 +146,7 @@ const getAllCouponsAPI = async (req, res) => {
 
 
 // create new coupon
-const createCoupon = async (req, res) => {
+const createCoupon = async (req: Request, res: Response) => {
     try {
         const {
             code,
@@ -233,7 +234,7 @@ const createCoupon = async (req, res) => {
         }
 
         // Create coupon object
-        const couponData = {
+        const couponData: Record<string, any> = {
             code: code.toUpperCase(),
             name,
             description,
@@ -245,7 +246,7 @@ const createCoupon = async (req, res) => {
             validFrom: fromDate,
             validTo: toDate,
             isActive: Boolean(isActive),
-            createdBy: req.user ? req.user._id : null
+            createdBy: req.user ? req.user!._id : null
         };
 
         if (usageLimit && usageLimit !== '' && !isNaN(usageLimit)) {
@@ -272,11 +273,11 @@ const createCoupon = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating coupon:', error);
 
         if (error.name === 'ValidationError') {
-            const errors = {};
+            const errors: Record<string, any> = {};
             for (let field in error.errors) {
                 errors[field] = error.errors[field].message;
             }
@@ -295,7 +296,7 @@ const createCoupon = async (req, res) => {
     }
 }
 
-const updateCoupon = async (req, res) => {
+const updateCoupon = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { 
@@ -314,7 +315,7 @@ const updateCoupon = async (req, res) => {
         } = req.body;
 
         // Validate objectID
-        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        if (!String(id).match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid coupon ID format'
@@ -407,7 +408,7 @@ const updateCoupon = async (req, res) => {
             }
         }
 
-        const updateData = {
+        const updateData: Record<string, any> = {
             code: codeUpperCase,
             name: name.trim(),
             description: description ? description.trim() : '',
@@ -437,7 +438,7 @@ const updateCoupon = async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        console.log('Coupon updated:', updatedCoupon.code);
+        console.log('Coupon updated:', updatedCoupon!.code);
 
         res.status(200).json({
             success: true,
@@ -447,11 +448,11 @@ const updateCoupon = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating coupon:', error);
 
         if (error.name === 'ValidationError') {
-            const errors = {};
+            const errors: Record<string, any> = {};
             for (let field in error.errors) {
                 errors[field] = error.errors[field].message;
             }
@@ -472,12 +473,12 @@ const updateCoupon = async (req, res) => {
 
 
 // get individual coupon details
-const getCouponById = async (req, res) => {
+const getCouponById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         // validate objectId
-        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        if (!String(id).match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid coupon ID format'
@@ -503,7 +504,7 @@ const getCouponById = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching coupon by ID:', error);
         res.status(500).json({
             success: false,
@@ -514,12 +515,12 @@ const getCouponById = async (req, res) => {
 };
 
 
-const toggleCouponStatus = async (req, res) => { 
+const toggleCouponStatus = async (req: Request, res: Response) => { 
     try {
         const { id } = req.params;
 
         // validate object id
-        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        if (!String(id).match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid coupon ID format'
@@ -554,7 +555,7 @@ const toggleCouponStatus = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error toggling coupon status:', error);
         return res.status(500).json({
             success: false,
@@ -564,7 +565,7 @@ const toggleCouponStatus = async (req, res) => {
     }
 }
 
-const deleteCoupon = async (req, res) => {
+const deleteCoupon = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
@@ -594,7 +595,7 @@ const deleteCoupon = async (req, res) => {
                 deletedCoupon: deletedCouponInfo
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error deleting coupon:', error);
 
         res.status(500).json({
@@ -605,7 +606,7 @@ const deleteCoupon = async (req, res) => {
     } 
 }
 
-module.exports = {
+export {
     loadCouponPage,
     getAllCouponsAPI,
     createCoupon,

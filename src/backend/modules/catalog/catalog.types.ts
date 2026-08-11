@@ -40,7 +40,8 @@ export type ProductStatus = 'Available' | 'Not Available';
 export type AppliedOfferType = 'none' | 'category' | 'brand' | 'product' | 'variant';
 
 export interface IProductVariant {
-  _id: Types.ObjectId;
+  /** Assigned by Mongoose when the subdocument is saved. */
+  _id?: Types.ObjectId;
   size: string;
   stock: number;
   basePrice: number;

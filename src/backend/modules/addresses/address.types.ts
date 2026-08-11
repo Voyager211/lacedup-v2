@@ -1,7 +1,8 @@
 import type { Document, Types } from 'mongoose';
 
 export interface IAddressEntry {
-  _id: Types.ObjectId;
+  /** Assigned by Mongoose when the subdocument is saved. */
+  _id?: Types.ObjectId;
   addressType: string;
   name: string;
   city: string;

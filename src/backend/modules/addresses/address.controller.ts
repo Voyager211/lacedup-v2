@@ -1,9 +1,10 @@
-const Address = require('./address.model');
-const User = require('../users/user.model');
+import type { Request, Response } from 'express';
+import Address from './address.model';
+import User from '../users/user.model';
 
-const addAddress = async (req, res) => {
+const addAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     
     if (!userId) {
       return res.status(401).json({
@@ -70,7 +71,7 @@ const addAddress = async (req, res) => {
       });
     }
 
-    const newAddress = {
+    const newAddress: any = {
       addressType: addressType,
       name: fullName.trim(),
       city: city.trim(),
@@ -115,7 +116,7 @@ const addAddress = async (req, res) => {
       message: 'Address added successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding address:', error);
     res.status(500).json({
       success: false,
@@ -124,9 +125,9 @@ const addAddress = async (req, res) => {
   }
 };
 
-const updateAddress = async (req, res) => {
+const updateAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -203,7 +204,7 @@ const updateAddress = async (req, res) => {
       });
     }
 
-    const addressIndex = userAddresses.address.findIndex(addr => addr._id.toString() === addressId);
+    const addressIndex = userAddresses.address.findIndex(addr => addr._id!.toString() === addressId);
 
     if (addressIndex === -1) {
       return res.status(404).json({
@@ -243,7 +244,7 @@ const updateAddress = async (req, res) => {
       message: 'Address updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating address:', error);
     res.status(500).json({
       success: false,
@@ -252,9 +253,9 @@ const updateAddress = async (req, res) => {
   }
 };
 
-const getAddresses = async (req, res) => {
+const getAddresses = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     
     if (!userId) {
       return res.status(401).json({
@@ -270,7 +271,7 @@ const getAddresses = async (req, res) => {
       success: true,
       addresses
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching addresses:', error);
     res.status(500).json({
       success: false,
@@ -279,9 +280,9 @@ const getAddresses = async (req, res) => {
   }
 };
 
-const getAddress = async (req, res) => {
+const getAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -300,7 +301,7 @@ const getAddress = async (req, res) => {
       });
     }
 
-    const address = userAddresses.address.find(addr => addr._id.toString() === addressId);
+    const address = userAddresses.address.find(addr => addr._id!.toString() === addressId);
 
     if (!address) {
       return res.status(404).json({
@@ -313,7 +314,7 @@ const getAddress = async (req, res) => {
       success: true,
       address
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching address:', error);
     res.status(500).json({
       success: false,
@@ -322,9 +323,9 @@ const getAddress = async (req, res) => {
   }
 };
 
-const deleteAddress = async (req, res) => {
+const deleteAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -343,7 +344,7 @@ const deleteAddress = async (req, res) => {
       });
     }
 
-    const addressIndex = userAddresses.address.findIndex(addr => addr._id.toString() === addressId);
+    const addressIndex = userAddresses.address.findIndex(addr => addr._id!.toString() === addressId);
 
     if (addressIndex === -1) {
       return res.status(404).json({
@@ -367,7 +368,7 @@ const deleteAddress = async (req, res) => {
       message: 'Address deleted successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting address:', error);
     res.status(500).json({
       success: false,
@@ -376,9 +377,9 @@ const deleteAddress = async (req, res) => {
   }
 };
 
-const setDefaultAddress = async (req, res) => {
+const setDefaultAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -397,7 +398,7 @@ const setDefaultAddress = async (req, res) => {
       });
     }
 
-    const addressIndex = userAddresses.address.findIndex(addr => addr._id.toString() === addressId);
+    const addressIndex = userAddresses.address.findIndex(addr => addr._id!.toString() === addressId);
 
     if (addressIndex === -1) {
       return res.status(404).json({
@@ -417,7 +418,7 @@ const setDefaultAddress = async (req, res) => {
       message: 'Default address updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error setting default address:', error);
     res.status(500).json({
       success: false,
@@ -426,9 +427,9 @@ const setDefaultAddress = async (req, res) => {
   }
 };
 
-const loadAddresses = async (req, res) => {
+const loadAddresses = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     
     if (!userId) {
       return res.redirect('/login');
@@ -439,7 +440,7 @@ const loadAddresses = async (req, res) => {
       return res.redirect('/login');
     }
 
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 2;
     const skip = (page - 1) * limit;
 
@@ -469,13 +470,13 @@ const loadAddresses = async (req, res) => {
       active: 'addresses',
       geoapifyApiKey: process.env.GEOAPIFY_API_KEY
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading addresses page:', error);
     res.status(500).render('error', { message: 'Error loading addresses page' });
   }
 };
 
-const getStatesAndDistricts = async (req, res) => {
+const getStatesAndDistricts = async (req: Request, res: Response) => {
   try {
     const stateDistrictData = {
       "andhra-pradesh": {
@@ -492,7 +493,7 @@ const getStatesAndDistricts = async (req, res) => {
       success: true,
       data: stateDistrictData
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching states and districts:', error);
     res.status(500).json({
       success: false,
@@ -501,9 +502,9 @@ const getStatesAndDistricts = async (req, res) => {
   }
 };
 
-const getAddressesPaginated = async (req, res) => {
+const getAddressesPaginated = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user._id);
+    const userId = req.session.userId || (req.user && req.user!._id);
     
     if (!userId) {
       return res.status(401).json({
@@ -512,7 +513,7 @@ const getAddressesPaginated = async (req, res) => {
       });
     }
 
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 2;
     const skip = (page - 1) * limit;
 
@@ -544,7 +545,7 @@ const getAddressesPaginated = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching paginated addresses:', error);
     res.status(500).json({
       success: false,
@@ -554,7 +555,7 @@ const getAddressesPaginated = async (req, res) => {
 };
 
 
-module.exports = {
+export {
   addAddress,
   updateAddress,
   getAddresses,

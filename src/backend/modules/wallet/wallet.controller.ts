@@ -1,14 +1,15 @@
-const Wallet = require('./wallet.model');
-const walletService = require('./wallet.service');
-const { getRazorpayInstance } = require('../payments/razorpay.provider');
-const crypto = require('crypto');
+import type { Request, Response } from 'express';
+import Wallet from './wallet.model';
+import * as walletService from './wallet.service';
+import { getRazorpayInstance } from '../payments/razorpay.provider';
+import crypto from 'crypto';
 
 
 /**
  * GET /wallet
  * Render wallet page with user's balance and transactions
  */
-const renderWalletPage = async (req, res) => {
+const renderWalletPage = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id || req.user?._id || req.session.userId;
     console.log(userId);
@@ -31,7 +32,7 @@ const renderWalletPage = async (req, res) => {
     const wallet = await walletService.getOrCreateWallet(userId);
 
     // Get pagination parameters
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
     // Get paginated transactions
@@ -56,7 +57,7 @@ const renderWalletPage = async (req, res) => {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
     
-    const pageNumbers = [];
+    const pageNumbers: any[] = [];
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
@@ -79,7 +80,7 @@ const renderWalletPage = async (req, res) => {
       layout: 'user/layouts/user-layout',
       active: 'wallet'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error rendering wallet page:', error);
     req.flash('error', 'Failed to load wallet');
     res.redirect('/');
@@ -91,10 +92,10 @@ const renderWalletPage = async (req, res) => {
  * GET /wallet/transactions/paginated
  * Get paginated transactions with optional filtering
  */
-const getPaginatedTransactionsAPI = async (req, res) => {
+const getPaginatedTransactionsAPI = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
-    const page = parseInt(req.query.page) || 1;
+    const userId = req.session.userId || req.user!._id;
+    const page = parseInt(String(req.query.page)) || 1;
     const type = req.query.type || null;
     const limit = 10;
 
@@ -104,7 +105,7 @@ const getPaginatedTransactionsAPI = async (req, res) => {
     }
 
     // Get paginated transactions
-    const data = await walletService.getPaginatedTransactions(userId, page, limit, type);
+    const data = await walletService.getPaginatedTransactions(userId, page, limit, type as any);
 
     // Calculate pagination metadata
     const { transactions, currentPage, totalPages, totalTransactions } = data;
@@ -122,7 +123,7 @@ const getPaginatedTransactionsAPI = async (req, res) => {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
     
-    const pageNumbers = [];
+    const pageNumbers: any[] = [];
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
@@ -141,7 +142,7 @@ const getPaginatedTransactionsAPI = async (req, res) => {
         pageNumbers
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching paginated transactions:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch transactions' });
   }
@@ -153,9 +154,9 @@ const getPaginatedTransactionsAPI = async (req, res) => {
  * POST /wallet/topup/create-order
  * Create a Razorpay order for wallet top-up
  */
-const createRazorpayOrderHandler = async (req, res) => {
+const createRazorpayOrderHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
+    const userId = req.session.userId || req.user!._id;
     const { amount, paymentMethod, description } = req.body;
 
     // Validation
@@ -219,7 +220,7 @@ const createRazorpayOrderHandler = async (req, res) => {
       razorpayOrderId: razorpayOrder.id,
       transactionId: transactionResult.transactionId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating Razorpay order:', error);
     res.status(500).json({
       success: false,
@@ -233,15 +234,15 @@ const createRazorpayOrderHandler = async (req, res) => {
  * POST /wallet/topup/verify-razorpay
  * Verify Razorpay payment and complete transaction
  */
-const verifyRazorpayPayment = async (req, res) => {
+const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
+    const userId = req.session.userId || req.user!._id;
     const { razorpayPaymentId, razorpayOrderId, razorpaysignature, transactionId } = req.body;
 
     // Validate signature
     const body = `${razorpayOrderId}|${razorpayPaymentId}`;
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET ?? '')
       .update(body)
       .digest('hex');
 
@@ -275,9 +276,9 @@ const verifyRazorpayPayment = async (req, res) => {
     res.json({
       success: true,
       message: 'Payment verified successfully',
-      newBalance: wallet.balance
+      newBalance: wallet!.balance
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error verifying Razorpay payment:', error);
     res.status(500).json({
       success: false,
@@ -291,9 +292,9 @@ const verifyRazorpayPayment = async (req, res) => {
  * POST /wallet/add-money (Legacy - for direct add)
  * Add money directly to wallet (for testing or other purposes)
  */
-const addMoney = async (req, res) => {
+const addMoney = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
+    const userId = req.session.userId || req.user!._id;
     const { amount, description } = req.body;
 
     // Validation
@@ -319,10 +320,10 @@ const addMoney = async (req, res) => {
     res.json({
       success: true,
       message: 'Money added to wallet',
-      newBalance: wallet.balance,
+      newBalance: wallet!.balance,
       transactionId: result.transactionId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding money:', error);
     res.status(500).json({
       success: false,
@@ -336,17 +337,17 @@ const addMoney = async (req, res) => {
  * GET /wallet/balance
  * Get current wallet balance
  */
-const getWalletBalance = async (req, res) => {
+const getWalletBalance = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
+    const userId = req.session.userId || req.user!._id;
 
     const wallet = await walletService.getOrCreateWallet(userId);
 
     res.json({
       success: true,
-      balance: wallet.balance
+      balance: wallet!.balance
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching balance:', error);
     res.status(500).json({
       success: false,
@@ -360,9 +361,9 @@ const getWalletBalance = async (req, res) => {
  * GET /wallet/stats
  * Get wallet statistics
  */
-const getWalletStatsAPI = async (req, res) => {
+const getWalletStatsAPI = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
+    const userId = req.session.userId || req.user!._id;
 
     const stats = await walletService.getWalletStats(userId);
 
@@ -370,7 +371,7 @@ const getWalletStatsAPI = async (req, res) => {
       success: true,
       stats
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching stats:', error);
     res.status(500).json({
       success: false,
@@ -384,10 +385,10 @@ const getWalletStatsAPI = async (req, res) => {
  * GET /wallet/transaction/:transactionId
  * Get specific transaction details
  */
-const getTransaction = async (req, res) => {
+const getTransaction = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
-    const { transactionId } = req.params;
+    const userId = req.session.userId || req.user!._id;
+    const transactionId = String(req.params.transactionId);
 
     const transaction = await walletService.getTransactionById(userId, transactionId);
 
@@ -402,7 +403,7 @@ const getTransaction = async (req, res) => {
       success: true,
       transaction
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching transaction:', error);
     res.status(500).json({
       success: false,
@@ -416,9 +417,9 @@ const getTransaction = async (req, res) => {
  * POST /wallet/debit (For order payments)
  * Debit from wallet for orders
  */
-const debitWallet = async (req, res) => {
+const debitWallet = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user._id;
+    const userId = req.session.userId || req.user!._id;
     const { amount, orderId, description } = req.body;
 
     // Validation
@@ -431,7 +432,7 @@ const debitWallet = async (req, res) => {
 
     // Check wallet balance
     const wallet = await walletService.getWallet(userId);
-    if (!wallet || wallet.balance < amount) {
+    if (!wallet || wallet!.balance < amount) {
       return res.status(400).json({
         success: false,
         message: 'Insufficient wallet balance'
@@ -454,10 +455,10 @@ const debitWallet = async (req, res) => {
     res.json({
       success: true,
       message: 'Debited from wallet',
-      newBalance: updatedWallet.balance,
+      newBalance: updatedWallet!.balance,
       transactionId: result.transactionId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error debiting wallet:', error);
     res.status(500).json({
       success: false,
@@ -467,10 +468,10 @@ const debitWallet = async (req, res) => {
 };
 
 
-module.exports = {
+export {
   renderWalletPage,
   getPaginatedTransactionsAPI,
-  createRazorpayOrder: createRazorpayOrderHandler,
+  createRazorpayOrderHandler as createRazorpayOrder,
   verifyRazorpayPayment,
   addMoney,
   getWalletBalance,

@@ -1,23 +1,39 @@
-const Coupon = require('./coupon.model');
-const Cart = require('../cart/cart.model');
-const Product = require('../catalog/product.model');
+import type { Request, Response } from 'express';
+import type { Types } from 'mongoose';
+import Coupon from './coupon.model';
+import Cart from '../cart/cart.model';
+import Product from '../catalog/product.model';
 
 // helper function to calculate variant specific final price
-const calculateVariantFinalPrice = (product, variant) => {
+const calculateVariantFinalPrice = (product: any, variant: any) => {
     try {
         if (typeof product.calculateVariantFinalPrice === 'function') {
             return product.calculateVariantFinalPrice(variant);
         }
         return variant.basePrice || product.regularPrice || 0;
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error calculating variant price:', error);
         return variant.basePrice || product.regularPrice || 0;   
     }
 };
 
 // calculate cart totals
-const calculateCartTotals = async (userId) => {
+export interface CartTotals {
+  subtotal: number;
+  totalDiscount: number;
+  amountAfterDiscount: number;
+  shipping: number;
+  total: number;
+  totalItemCount: number;
+  validItemsCount: number;
+}
+
+type CartTotalsResult =
+  | { success: true; totals: CartTotals; message?: string }
+  | { success: false; message: string; totals?: null };
+
+const calculateCartTotals = async (userId: string): Promise<CartTotalsResult> => {
     try {
         const cart = await Cart.findOne ({ userId })
             .populate({
@@ -37,13 +53,13 @@ const calculateCartTotals = async (userId) => {
         }
 
         // filter out unavailable items
-        const validItems = cart.items.filter(item => {
+        const validItems = cart.items.filter((item: any) => {
             if (!item.productId || !item.productId.isListed || item.productId.isDeleted) return false;
             if (item.productId.category && (item.productId.category.isListed === false || item.productId.category.isDeleted === true)) return false;
             if (item.productId.brand && (item.productId.brand.isActive === false || item.productId.brand.isDeleted === true)) return false;
 
             if (item.variantId) {
-                const variant = item.productId.variants.find(v => v._id.toString() === item.variantId.toString());
+                const variant = item.productId.variants.find((v: any) => v._id.toString() === item.variantId.toString());
                 if (!variant || variant.stock === 0 || variant.stock < item.quantity) return false;
             }
 
@@ -55,10 +71,10 @@ const calculateCartTotals = async (userId) => {
         let totalItemCount = 0;
 
         // calculate totals
-        validItems.forEach(item => {
+        validItems.forEach((item: any) => {
             const regularPrice = item.productId.regularPrice;
             const salePrice = item.variantId ?
-                calculateVariantFinalPrice(item.productId, item.productId.variants.find(v => v._id.toString() === item.variantId.toString())) :
+                calculateVariantFinalPrice(item.productId, item.productId.variants.find((v: any) => v._id.toString() === item.variantId.toString())) :
                 regularPrice;
 
             const quantity = item.quantity;
@@ -87,7 +103,7 @@ const calculateCartTotals = async (userId) => {
             }
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error calculating cart totals:', error);
         return {
             success: false,
@@ -97,7 +113,7 @@ const calculateCartTotals = async (userId) => {
     }
 };
 
-function validateCouponConditions  (coupon, orderTotal, userId, session) {
+function validateCouponConditions  (coupon: any, orderTotal: number, userId: string, session: any) {
     const currentDate = new Date();
 
     // check if coupon is expired
@@ -141,7 +157,7 @@ function validateCouponConditions  (coupon, orderTotal, userId, session) {
 
     // checkuser specific usage limit
     if (userId && coupon.userLimit) {
-        const userUsageCount = coupon.usedBy?.filter(usage => 
+        const userUsageCount = coupon.usedBy?.filter((usage: any) => 
             usage.user.toString() === userId.toString()
         ).length || 0;
 
@@ -160,7 +176,7 @@ function validateCouponConditions  (coupon, orderTotal, userId, session) {
 }
 
 //calculate discount amount
-function calculateDiscount(coupon, orderTotal) {
+function calculateDiscount(coupon: any, orderTotal: number) {
     let discountAmount = 0;
 
     if (coupon.discountType === 'percentage') {
@@ -188,7 +204,7 @@ function calculateDiscount(coupon, orderTotal) {
 }
 
 
-const renderCouponsPage = async (req, res) => {
+const renderCouponsPage = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.id || req.session.userId;
 
@@ -254,7 +270,7 @@ const renderCouponsPage = async (req, res) => {
             user: req.user || null
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error rendering coupons page:', error);
         req.flash('error', 'Error loading coupons. Please try again.');
         res.redirect('/');
@@ -262,7 +278,7 @@ const renderCouponsPage = async (req, res) => {
 };
 
 
-const getAvailableCoupons = async (req, res) => {
+const getAvailableCoupons = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.id || req.session.userId;
 
@@ -312,7 +328,7 @@ const getAvailableCoupons = async (req, res) => {
         console.log(`Found ${availableCoupons.length} available coupons`);
 
         const couponsToSend = availableCoupons.map(coupon => {
-            const couponObj = coupon.toObject();
+            const couponObj: Record<string, any> = coupon.toObject();
             delete couponObj.usedBy;
             return couponObj;
         });
@@ -326,7 +342,7 @@ const getAvailableCoupons = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching available coupons: ', error);
         res.status(500).json({
             success: false,
@@ -336,7 +352,7 @@ const getAvailableCoupons = async (req, res) => {
     }
 }
 
-const applyCoupon = async (req, res) => {
+const applyCoupon = async (req: Request, res: Response) => {
     try {
         const { couponCode, orderTotal } = req.body;
         const userId = req.user?.id || req.session.userId;
@@ -448,7 +464,7 @@ const applyCoupon = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error applying coupon:', error);
         res.status(500).json({
             success: false,
@@ -458,7 +474,7 @@ const applyCoupon = async (req, res) => {
     }
 };
 
-const removeCoupon = async (req, res) => {
+const removeCoupon = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.id || req.session.userId;
 
@@ -510,7 +526,7 @@ const removeCoupon = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error removing coupon:', error);
         res.status(500).json({
             success: false,
@@ -520,7 +536,7 @@ const removeCoupon = async (req, res) => {
     }
 }
 
-const updateCouponUsage = async (couponId, userId, orderId = null) => {
+const updateCouponUsage = async (couponId: string, userId: string, orderId = null) => {
     try {
         const coupon = await Coupon.findById(couponId);
 
@@ -535,9 +551,9 @@ const updateCouponUsage = async (couponId, userId, orderId = null) => {
         // add user to usedBy array
         if (userId) {
             coupon.usedBy.push({
-                userId: userId,
+                user: userId as unknown as Types.ObjectId,
                 usedAt: new Date(),
-                orderId: orderId
+                orderId: orderId ?? undefined
             });
         }
 
@@ -546,13 +562,13 @@ const updateCouponUsage = async (couponId, userId, orderId = null) => {
         console.log(`Updated coupon usage: ${coupon.code}, used count: ${coupon.usedCount}`);
         return true;
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating coupon usage', error);
         return false;
     }
 }
 
-module.exports = {
+export {
     renderCouponsPage,
     getAvailableCoupons,
     applyCoupon,

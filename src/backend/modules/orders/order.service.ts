@@ -293,7 +293,7 @@ const updateOrderStatus = async (orderId: string, newStatus: OrderStatus, notes 
  * @param {String} updatedBy - Who updated the status
  * @returns {Object} - Result object with updated order
  */
-const updateItemStatus = async (orderId: string, itemId: string, newStatus: OrderStatus, notes = '', updatedBy = null) => {
+const updateItemStatus = async (orderId: string, itemId: string, newStatus: OrderStatus, notes = '', updatedBy: string | null = null) => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
     if (!order) {
@@ -1149,7 +1149,7 @@ const requestItemReturn = async (orderId: string, itemId: string, reason = '', r
 };
 
 
-const approveItemReturn = async (returnId: string, approvedBy = null, customRefundAmount = null) => {
+const approveItemReturn = async (returnId: string, approvedBy: string | null = null, customRefundAmount: number | null = null) => {
   try {
     // 1. Get and validate return request
     const returnRequest = await Return.findById(returnId);
@@ -1228,7 +1228,7 @@ const approveItemReturn = async (returnId: string, approvedBy = null, customRefu
     const product = await Product.findById(returnRequest.productId);
     if (product) {
       const variant = product.variants.find(v => 
-        v._id.toString() === (item.variantId ? item.variantId.toString() : item.productId.toString())
+        v._id!.toString() === (item.variantId ? item.variantId.toString() : item.productId.toString())
       );
       
       if (variant) {
@@ -1264,7 +1264,7 @@ const approveItemReturn = async (returnId: string, approvedBy = null, customRefu
 
 
 //  ADD: Missing approveOrderReturn function
-const approveOrderReturn = async (orderId: string, approvedBy = null) => {
+const approveOrderReturn = async (orderId: string, approvedBy: string | null = null) => {
   try {
     // 1. Find all pending return requests for this order
     const returnRequests = await Return.find({
@@ -1310,7 +1310,7 @@ const approveOrderReturn = async (orderId: string, approvedBy = null) => {
       const product = await Product.findById(returnRequest.productId);
       if (product) {
         const variant = product.variants.find(v => 
-          v._id.toString() === (item.variantId ? item.variantId.toString() : item.productId.toString())
+          v._id!.toString() === (item.variantId ? item.variantId.toString() : item.productId.toString())
         );
         
         if (variant) {
@@ -1352,7 +1352,7 @@ const approveOrderReturn = async (orderId: string, approvedBy = null) => {
 };
 
 //  ADD: Missing rejectItemReturn function
-const rejectItemReturn = async (returnId: string, rejectedBy = null, rejectionReason = '') => {
+const rejectItemReturn = async (returnId: string, rejectedBy: string | null = null, rejectionReason: string = '') => {
   try {
     // 1. Get and validate return request
     const returnRequest = await Return.findById(returnId);
@@ -1420,7 +1420,7 @@ const rejectItemReturn = async (returnId: string, rejectedBy = null, rejectionRe
 };
 
 //  ADD: Missing rejectOrderReturn function
-const rejectOrderReturn = async (orderId: string, rejectedBy = null, rejectionReason = '') => {
+const rejectOrderReturn = async (orderId: string, rejectedBy: string | null = null, rejectionReason: string = '') => {
   try {
     // 1. Find all pending return requests for this order
     const returnRequests = await Return.find({

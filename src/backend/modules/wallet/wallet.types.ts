@@ -12,7 +12,8 @@ export type WalletPaymentMethod =
 export type WalletTransactionStatus = 'pending' | 'completed' | 'failed';
 
 export interface IWalletTransaction {
-  _id: Types.ObjectId;
+  /** Assigned by Mongoose when the subdocument is saved. */
+  _id?: Types.ObjectId;
   transactionId: string;
   type: WalletTransactionType;
   amount: number;

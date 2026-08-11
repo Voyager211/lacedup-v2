@@ -1,12 +1,13 @@
-const User = require('../users/user.model');
-const crypto = require('crypto');
-const sendOtp = require('../../common/utils/send-otp.util');
-const passport = require('passport');
-const { generateReferralCode } = require('../referrals/referral-code.util');
-const Wallet = require('../wallet/wallet.model');
-const walletService = require('../wallet/wallet.service'); 
+import type { Request, Response, NextFunction } from 'express';
+import User from '../users/user.model';
+import crypto from 'crypto';
+import sendOtp from '../../common/utils/send-otp.util';
+import passport from 'passport';
+import { generateReferralCode } from '../referrals/referral-code.util';
+import Wallet from '../wallet/wallet.model';
+import * as walletService from '../wallet/wallet.service'; 
 
-const getSignup = (req, res) => {
+const getSignup = (req: Request, res: Response) => {
   if (req.isAuthenticated()) return res.redirect('/home');
   res.render('user/auth/signup', {
     title: 'Sign Up',
@@ -14,7 +15,7 @@ const getSignup = (req, res) => {
   });
 };
 
-const postSignup = async (req, res) => {
+const postSignup = async (req: Request, res: Response) => {
   const { name, email, phone, password, confirmPassword, referralCode } = req.body;
 
   try {
@@ -67,7 +68,7 @@ const postSignup = async (req, res) => {
       redirect: `/verify-otp?email=${encodeURIComponent(email)}` 
     });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Signup Error:', err);
 
     if (err.message && err.message.includes('Email authentication failed')) {
@@ -85,12 +86,12 @@ const postSignup = async (req, res) => {
 };
 
 
-const getLogin = (req, res) => {
+const getLogin = (req: Request, res: Response) => {
   if (req.isAuthenticated()) return res.redirect('/home');
 
   let errorMessage = null;
   if (req.query.error) {
-    errorMessage = decodeURIComponent(req.query.error);
+    errorMessage = decodeURIComponent(String(req.query.error));
   }
 
   res.render('user/auth/login', {
@@ -100,8 +101,8 @@ const getLogin = (req, res) => {
   });
 };
 
-const postLogin = (req, res, next) => {
-  passport.authenticate('local', (err, user, info) => {
+const postLogin = (req: Request, res: Response, next: NextFunction) => {
+  passport.authenticate('local', (err: any, user: any, info: any) => {
     if (err) return res.status(500).json({ error: 'Something went wrong.' });
     if (!user) return res.status(401).json({ error: info.message || 'Invalid credentials.' });
 
@@ -112,7 +113,7 @@ const postLogin = (req, res, next) => {
   })(req, res, next);
 };
 
-const logout = (req, res) => {
+const logout = (req: Request, res: Response) => {
   req.logout(() => {
     req.session.destroy((err) => {
       if (err) {
@@ -125,7 +126,7 @@ const logout = (req, res) => {
   });
 };
 
-const getOtpPage = (req, res) => {
+const getOtpPage = (req: Request, res: Response) => {
   if (req.isAuthenticated()) return res.redirect('/home');
   const { email } = req.query;
 
@@ -138,7 +139,7 @@ const getOtpPage = (req, res) => {
   });
 };
 
-const postOtpVerification = async (req, res) => {
+const postOtpVerification = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
 
   try {
@@ -146,7 +147,7 @@ const postOtpVerification = async (req, res) => {
       const pendingUser = req.session.pendingUser;
       const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
 
-      const isExpired = pendingUser.otpExpiresAt < Date.now();
+      const isExpired = Number(pendingUser.otpExpiresAt) < Date.now();
       const isValid = pendingUser.otpHash === otpHash;
 
       if (isExpired) {
@@ -168,8 +169,8 @@ const postOtpVerification = async (req, res) => {
 
       newUser.referralCode = await generateReferralCode();
 
-      if (pendingUser.referrerId) {
-        newUser.referredBy = pendingUser.referrerId;
+      if ((pendingUser.referrerId as any)) {
+        newUser.referredBy = (pendingUser.referrerId as any);
         newUser.hasUsedReferralCode = true;
       }
 
@@ -177,7 +178,7 @@ const postOtpVerification = async (req, res) => {
 
       let newUserWalletAmount = 0;
       
-      if (pendingUser.referrerId) {
+      if ((pendingUser.referrerId as any)) {
         newUserWalletAmount = 100;
       }
 
@@ -188,7 +189,7 @@ const postOtpVerification = async (req, res) => {
           transactions: []
         });
 
-        if (pendingUser.referrerId) {
+        if ((pendingUser.referrerId as any)) {
           const timestamp = Date.now();
           const random = Math.floor(Math.random() * 10000);
           const transactionId = `TXN${timestamp}${random}`;
@@ -207,13 +208,13 @@ const postOtpVerification = async (req, res) => {
 
         await newUserWallet.save();
         console.log(`Wallet created for new user: ${newUser.email} (Balance: ₹${newUserWalletAmount})`);
-      } catch (walletError) {
+      } catch (walletError: any) {
         console.error('Error creating wallet for new user:', walletError);
       }
 
-      if (pendingUser.referrerId) {
+      if ((pendingUser.referrerId as any)) {
         try {
-          await walletService.addTransaction(pendingUser.referrerId, {
+          await walletService.addTransaction((pendingUser.referrerId as any), {
             type: 'credit',
             amount: 300,
             description: `Referral reward for inviting ${newUser.name}`,
@@ -221,15 +222,15 @@ const postOtpVerification = async (req, res) => {
             status: 'completed'
           });
 
-          await User.findByIdAndUpdate(pendingUser.referrerId, {
+          await User.findByIdAndUpdate((pendingUser.referrerId as any), {
             $inc: { referralCount: 1 }
           });
 
           console.log(`Referral rewards processed:
-            - ₹300 credited to referrer wallet (${pendingUser.referrerId})
+            - ₹300 credited to referrer wallet (${(pendingUser.referrerId as any)})
             - ₹100 credited to new user wallet (${newUser.email})`);
 
-        } catch (referralError) {
+        } catch (referralError: any) {
           console.error('Error processing referral reward:', referralError);
         }
       }
@@ -248,7 +249,7 @@ const postOtpVerification = async (req, res) => {
       }
 
       const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-      const isExpired = user.otpExpiresAt < Date.now();
+      const isExpired = user.otpExpiresAt!.getTime() < Date.now();
       const isValid = user.otpHash === otpHash;
 
       if (isExpired) {
@@ -269,7 +270,7 @@ const postOtpVerification = async (req, res) => {
       });
     }
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('OTP Verify Error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
@@ -279,7 +280,7 @@ const postOtpVerification = async (req, res) => {
 
 
 
-const resendOtp = async (req, res) => {
+const resendOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
 
   try {
@@ -309,14 +310,14 @@ const resendOtp = async (req, res) => {
       const otpExpiresAt = Date.now() + 60 * 1000;
 
       user.otpHash = otpHash;
-      user.otpExpiresAt = otpExpiresAt;
+      user.otpExpiresAt = new Date(otpExpiresAt);
       await user.save();
 
       await sendOtp(user, otp);
       return res.status(200).json({ success: true });
     }
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Resend OTP Error:', err);
 
     if (err.message && err.message.includes('Email authentication failed')) {
@@ -334,14 +335,14 @@ const resendOtp = async (req, res) => {
 };
 
 
-const getForgotPassword = (req, res) => {
+const getForgotPassword = (req: Request, res: Response) => {
   res.render('user/auth/forgot-password', {
     title: 'Forgot Password',
     layout: 'user/layouts/auth-layout'
   });
 };
 
-const sendResetOtp = async (req, res) => {
+const sendResetOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
 
   try {
@@ -354,7 +355,7 @@ const sendResetOtp = async (req, res) => {
     const otpExpiresAt = Date.now() + 60 * 1000;
 
     user.otpHash = otpHash;
-    user.otpExpiresAt = otpExpiresAt;
+    user.otpExpiresAt = new Date(otpExpiresAt);
     await user.save();
 
     await sendOtp(user, otp);
@@ -363,7 +364,7 @@ const sendResetOtp = async (req, res) => {
       success: true,
       redirect: `/reset-otp?email=${encodeURIComponent(email)}`
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Reset OTP Error:', err);
 
     if (err.message && err.message.includes('Email authentication failed')) {
@@ -380,7 +381,7 @@ const sendResetOtp = async (req, res) => {
   }
 };
 
-const getResetOtpPage = (req, res) => {
+const getResetOtpPage = (req: Request, res: Response) => {
   if (req.isAuthenticated()) return res.redirect('/home');
   const { email } = req.query;
   if (!email) return res.redirect('/forgot-password');
@@ -392,7 +393,7 @@ const getResetOtpPage = (req, res) => {
   });
 };
 
-const verifyResetOtp = async (req, res) => {
+const verifyResetOtp = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
 
   try {
@@ -402,7 +403,7 @@ const verifyResetOtp = async (req, res) => {
     }
 
     const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-    const isExpired = user.otpExpiresAt < Date.now();
+    const isExpired = user.otpExpiresAt!.getTime() < Date.now();
     const isValid = user.otpHash === otpHash;
 
     if (isExpired) {
@@ -415,13 +416,13 @@ const verifyResetOtp = async (req, res) => {
 
     return res.status(200).json({ success: true, redirect: `/reset-password?email=${encodeURIComponent(email)}` });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Verify Reset OTP Error:', err);
     res.status(500).json({ error: 'Verification failed.' });
   }
 };
 
-const getResetPasswordPage = (req, res) => {
+const getResetPasswordPage = (req: Request, res: Response) => {
   if (req.isAuthenticated()) return res.redirect('/home');
   const { email } = req.query;
   if (!email) return res.redirect('/forgot-password');
@@ -433,7 +434,7 @@ const getResetPasswordPage = (req, res) => {
   });
 };
 
-const resendResetOtp = async (req, res) => {
+const resendResetOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
 
   try {
@@ -446,13 +447,13 @@ const resendResetOtp = async (req, res) => {
     const otpExpiresAt = Date.now() + 60 * 1000;
 
     user.otpHash = otpHash;
-    user.otpExpiresAt = otpExpiresAt;
+    user.otpExpiresAt = new Date(otpExpiresAt);
     await user.save();
 
     await sendOtp(user, otp);
     return res.status(200).json({ success: true });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Resend Reset OTP Error:', err);
 
     if (err.message && err.message.includes('Email authentication failed')) {
@@ -469,7 +470,7 @@ const resendResetOtp = async (req, res) => {
   }
 };
 
-const resetPassword = async (req, res) => {
+const resetPassword = async (req: Request, res: Response) => {
   const { email, newPassword, confirmPassword } = req.body;
 
   try {
@@ -494,13 +495,13 @@ const resetPassword = async (req, res) => {
 
     return res.status(200).json({ success: true });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Password Reset Error:', err);
     res.status(500).json({ error: 'Failed to reset password.' });
   }
 };
 
-module.exports = {
+export {
   getSignup,
   postSignup,
   getLogin,

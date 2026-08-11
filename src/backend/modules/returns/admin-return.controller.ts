@@ -1,10 +1,11 @@
-const Return = require('./return.model');
-const Order = require('../orders/order.model');
-const User = require('../users/user.model');
-const Product = require('../catalog/product.model');
-const Wallet = require('../wallet/wallet.model');
-const orderService = require('../orders/order.service');
-const {
+import type { Request, Response } from 'express';
+import Return from './return.model';
+import Order from '../orders/order.model';
+import User from '../users/user.model';
+import Product from '../catalog/product.model';
+import Wallet from '../wallet/wallet.model';
+import * as orderService from '../orders/order.service';
+import {
   ORDER_STATUS,
   RETURN_STATUS,
   PAYMENT_STATUS,
@@ -12,7 +13,7 @@ const {
   getReturnReasonsArray,
   getOrderStatusArray,
   getPaymentStatusArray
-} = require('../../common/constants/order.constants');
+} from '../../common/constants/order.constants';
 
 const REFUND_STATUS = {
   PENDING: 'Pending',
@@ -21,21 +22,21 @@ const REFUND_STATUS = {
 }; 
 
 // Get all return requests for admin
-const getAllReturns = async (req, res) => {
+const getAllReturns = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 6;
+    const page = parseInt(String(req.query.page)) || 1;
+    const limit = parseInt(String(req.query.limit)) || 6;
     
     // Get filter parameters
-    const status = req.query.status || '';
-    const refundStatus = req.query.refundStatus || '';
-    const search = req.query.search || '';
-    const dateRange = req.query.dateRange || '';
-    const sortBy = req.query.sortBy || 'requestDate';
-    const sortOrder = req.query.sortOrder || 'desc';
+    const status = String(req.query.status || '');
+    const refundStatus = String(req.query.refundStatus || '');
+    const search = String(req.query.search || '');
+    const dateRange = String(req.query.dateRange || '');
+    const sortBy = String(req.query.sortBy || 'requestDate');
+    const sortOrder = String(req.query.sortOrder || 'desc');
 
     // Build filter query
-    let filterQuery = {};
+    let filterQuery: Record<string, any> = {};
     
     if (status) {
       filterQuery.status = status;
@@ -78,7 +79,7 @@ const getAllReturns = async (req, res) => {
     }
 
     // Build sort object
-    const sortObj = {};
+    const sortObj: Record<string, any> = {};
     sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     // Get returns with pagination
@@ -143,7 +144,7 @@ const getAllReturns = async (req, res) => {
       layout: 'admin/layout'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching returns:', error);
     res.status(500).render('admin/returns', {
       title: 'Return Management',
@@ -168,21 +169,21 @@ const getAllReturns = async (req, res) => {
   }
 };
 
-const getReturnsAPI = async (req, res) => {
+const getReturnsAPI = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(String(req.query.page)) || 1;
+    const limit = parseInt(String(req.query.limit)) || 10;
     
     // Get filter parameters (keep your existing filter logic)
-    const status = req.query.status || '';
-    const refundStatus = req.query.refundStatus || '';
-    const search = req.query.search || '';
-    const dateRange = req.query.dateRange || '';
-    const sortBy = req.query.sortBy || 'requestDate';
-    const sortOrder = req.query.sortOrder || 'desc';
+    const status = String(req.query.status || '');
+    const refundStatus = String(req.query.refundStatus || '');
+    const search = String(req.query.search || '');
+    const dateRange = String(req.query.dateRange || '');
+    const sortBy = String(req.query.sortBy || 'requestDate');
+    const sortOrder = String(req.query.sortOrder || 'desc');
 
     // Build filter query (keep your existing logic)
-    let filterQuery = {};
+    let filterQuery: Record<string, any> = {};
     
     if (status) {
       filterQuery.status = status;
@@ -225,7 +226,7 @@ const getReturnsAPI = async (req, res) => {
     }
 
     // Build sort object
-    const sortObj = {};
+    const sortObj: Record<string, any> = {};
     sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     // Get returns with pagination
@@ -282,7 +283,7 @@ const getReturnsAPI = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching returns API:', error);
     res.status(500).json({
       success: false,
@@ -293,15 +294,15 @@ const getReturnsAPI = async (req, res) => {
 
 
 // Approve return request
-const approveReturn = async (req, res) => {
+const approveReturn = async (req: Request, res: Response) => {
   try {
-    const { returnId } = req.params;
+    const returnId = String(req.params.returnId);
     const { refundAmount, notes } = req.body;
 
     // Use OrderService to approve return - handles everything automatically
     const result = await orderService.approveItemReturn(
       returnId,
-      req.user?._id || 'admin',
+      String(req.user?._id || 'admin'),
       refundAmount // Optional custom refund amount
     );
 
@@ -315,7 +316,7 @@ const approveReturn = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error approving return:', error);
     res.status(500).json({
       success: false,
@@ -326,14 +327,14 @@ const approveReturn = async (req, res) => {
 
 
 // Approving bulk order returns
-const approveOrderReturn = async (req, res) => {
+const approveOrderReturn = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
 
     // Use OrderService to approve all returns for the order
     const result = await orderService.approveOrderReturn(
       orderId,
-      req.user?._id || 'admin'
+      String(req.user?._id || 'admin')
     );
 
     res.json({
@@ -347,7 +348,7 @@ const approveOrderReturn = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error approving order return:', error);
     res.status(500).json({
       success: false,
@@ -357,9 +358,9 @@ const approveOrderReturn = async (req, res) => {
 };
 
 // Reject return request
-const rejectReturn = async (req, res) => {
+const rejectReturn = async (req: Request, res: Response) => {
   try {
-    const { returnId } = req.params;
+    const returnId = String(req.params.returnId);
     const { rejectionReason } = req.body;
 
     //Simple validation for rejection reason (admin-provided text)
@@ -378,7 +379,7 @@ const rejectReturn = async (req, res) => {
     // Use OrderService to reject return
     const result = await orderService.rejectItemReturn(
       returnId,
-      req.user?._id || 'admin',
+      String(req.user?._id || 'admin'),
       rejectionReason
     );
 
@@ -392,7 +393,7 @@ const rejectReturn = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error rejecting return:', error);
     res.status(500).json({
       success: false,
@@ -404,9 +405,9 @@ const rejectReturn = async (req, res) => {
 
 
 //Reject all return requests for an order
-const rejectOrderReturn = async (req, res) => {
+const rejectOrderReturn = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = String(req.params.orderId);
     const { rejectionReason } = req.body;
 
     // Simple validation for rejection reason (admin-provided text)
@@ -421,7 +422,7 @@ const rejectOrderReturn = async (req, res) => {
     // Use OrderService to reject all returns for the order
     const result = await orderService.rejectOrderReturn(
       orderId,
-      req.user?._id || 'admin',
+      String(req.user?._id || 'admin'),
       rejectionReason
     );
 
@@ -435,7 +436,7 @@ const rejectOrderReturn = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error rejecting order return:', error);
     res.status(500).json({
       success: false,
@@ -446,7 +447,7 @@ const rejectOrderReturn = async (req, res) => {
 
 
 // Get return statistics for dashboard
-const getReturnStatistics = async (req, res) => {
+const getReturnStatistics = async (req: Request, res: Response) => {
   try {
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -509,7 +510,7 @@ const getReturnStatistics = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching return statistics:', error);
     res.status(500).json({
       success: false,
@@ -520,16 +521,16 @@ const getReturnStatistics = async (req, res) => {
 
 
 // Export returns data (CSV)
-const exportReturns = async (req, res) => {
+const exportReturns = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, status } = req.query;
     
-    let filterQuery = {};
+    let filterQuery: Record<string, any> = {};
     
     if (startDate && endDate) {
       filterQuery.requestDate = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: new Date(String(startDate)),
+        $lte: new Date(String(endDate))
       };
     }
     
@@ -566,8 +567,8 @@ const exportReturns = async (req, res) => {
       const row = [
         returnItem.returnId,
         returnItem.orderId,
-        returnItem.userId?.name || 'N/A',
-        returnItem.userId?.email || 'N/A',
+        (returnItem.userId as any)?.name || 'N/A',
+        (returnItem.userId as any)?.email || 'N/A',
         returnItem.productName,
         returnItem.size,
         returnItem.quantity,
@@ -585,7 +586,7 @@ const exportReturns = async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=returns-export.csv');
     res.send(csvContent);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error exporting returns:', error);
     res.status(500).json({
       success: false,
@@ -595,7 +596,7 @@ const exportReturns = async (req, res) => {
 };
 
 
-module.exports = {
+export {
   getAllReturns,
   getReturnsAPI,
   approveReturn,
