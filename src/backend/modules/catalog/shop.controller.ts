@@ -1,23 +1,24 @@
-const Product = require('./product.model');
-const Review = require('../reviews/review.model'); 
-const Category = require('./category.model');
-const Brand = require('./brand.model');
-const Wishlist = require('../wishlist/wishlist.model');
-const { getPagination } = require('../../common/utils/pagination.util');
+import type { Request, Response } from 'express';
+import Product from './product.model';
+import Review from '../reviews/review.model'; 
+import Category from './category.model';
+import Brand from './brand.model';
+import Wishlist from '../wishlist/wishlist.model';
+import { getPagination } from '../../common/utils/pagination.util';
 
-const getProducts = async (req, res) => {
+const getProducts = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 12;
     const skip = (page - 1) * limit;
 
     // Extract query parameters (matching frontend parameter names)
     const search = req.query.q || req.query.search || '';
-    const category = req.query.category || '';
-    const brand = req.query.brand || '';
-    const sort = req.query.sort || 'newest';
-    const minPrice = parseFloat(req.query.minPrice || req.query.min) || 0;
-    const maxPrice = parseFloat(req.query.maxPrice || req.query.max) || 1e9;
+    const category = String(req.query.category || '');
+    const brand = String(req.query.brand || '');
+    const sort = String(req.query.sort || 'newest');
+    const minPrice = parseFloat(String(req.query.minPrice || req.query.min)) || 0;
+    const maxPrice = parseFloat(String(req.query.maxPrice || req.query.max)) || 1e9;
     const sizes = req.query.size ? (Array.isArray(req.query.size) ? req.query.size : [req.query.size]) : [];
     const stockStatus = req.query.stockStatus ? (Array.isArray(req.query.stockStatus) ? req.query.stockStatus : [req.query.stockStatus]) : [];
 
@@ -28,7 +29,7 @@ const getProducts = async (req, res) => {
     }).select('_id').lean();
     const activeCategoryIds = activeCategories.map(cat => cat._id);
 
-    const filter = {
+    const filter: Record<string, any> = {
       isDeleted: false,
       isListed: true,
       category: { $in: activeCategoryIds } // Only products from active categories
@@ -156,7 +157,7 @@ const getProducts = async (req, res) => {
       };
     }
 
-    const sortMap = {
+    const sortMap: Record<string, any> = {
       'priceLow': { regularPrice: 1 },
       'priceHigh': { regularPrice: -1 },
       'nameAZ': { productName: 1 },
@@ -172,7 +173,7 @@ const getProducts = async (req, res) => {
       'name-za': { productName: -1 }
     };
 
-    const sortQuery = sortMap[sort] || sortMap['newest'];
+    const sortQuery: any = sortMap[sort] || sortMap['newest'];
 
     const allProducts = await Product.find(filter)
       .populate({ 
@@ -226,7 +227,7 @@ const getProducts = async (req, res) => {
         return 0; // Keep original order
       }
       // In-stock products (totalStock > 0) come first
-      return (b.totalStock > 0) - (a.totalStock > 0);
+      return Number(b.totalStock > 0) - Number(a.totalStock > 0);
     });
 
     const totalProducts = filteredProducts.length;
@@ -241,12 +242,12 @@ const getProducts = async (req, res) => {
           : 0;
 
         // Convert to plain object - finalPrice is now stored in database
-        const productObj = product.toObject();
+        const productObj: Record<string, any> = product.toObject();
 
         // finalPrice is already stored in variants, just ensure backward compatibility
         if (productObj.variants && productObj.variants.length > 0) {
           // Ensure finalPrice exists for each variant (fallback for migration period)
-          productObj.variants = productObj.variants.map(variant => ({
+          productObj.variants = productObj.variants.map((variant: any) => ({
             ...variant,
             finalPrice: product.calculateVariantFinalPrice(variant)
           }));
@@ -278,13 +279,13 @@ const getProducts = async (req, res) => {
       },
       totalProductCount: totalProducts
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error in getProducts:', err);
     res.status(500).json({ success: false, message: 'Something went wrong' });
   }
 };
 
-const loadShopPage = async (req, res) => {
+const loadShopPage = async (req: Request, res: Response) => {
   try {
     const categories = await Category.find({ isDeleted: false, isActive: true }).lean();
 
@@ -304,9 +305,9 @@ const loadShopPage = async (req, res) => {
     }).sort({ name: 1 });
 
     // Get user's wishlist if authenticated
-    let userWishlistProductIds = [];
+    let userWishlistProductIds: any[] = [];
     if (req.user) {
-      const userWishlist = await Wishlist.findOne({ userId: req.user._id }).lean();
+      const userWishlist = await Wishlist.findOne({ userId: req.user!._id }).lean();
       if (userWishlist && userWishlist.products) {
         userWishlistProductIds = userWishlist.products.map(item => item.productId.toString());
       }
@@ -367,18 +368,18 @@ const loadShopPage = async (req, res) => {
     // Convert to a simple array of size strings for easier use in frontend
     const availableSizeList = availableSizes.map(item => item._id);
     
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 12;
 
     // Extract filter parameters from query
-    const selectedCategory = req.query.category || '';
+    const selectedCategory = String(req.query.category || '');
     const search = req.query.q || req.query.search || '';
-    const sortBy = req.query.sort || 'newest';
-    const minPrice = req.query.minPrice || '';
-    const maxPrice = req.query.maxPrice || '';
+    const sortBy = String(req.query.sort || 'newest');
+    const minPrice = String(req.query.minPrice || '');
+    const maxPrice = String(req.query.maxPrice || '');
 
     // Build filter based on query parameters
-    const filter = {
+    const filter: Record<string, any> = {
       isDeleted: false,
       isListed: true,
       category: { $in: activeCategoryIds }
@@ -406,7 +407,7 @@ const loadShopPage = async (req, res) => {
       filter.category = selectedCategory;
     }
 
-    const selectedBrand = req.query.brand;
+    const selectedBrand = req.query.brand as string | undefined;
     if (selectedBrand) {
       // Handle multiple brand IDs (comma-separated)
       if (selectedBrand.includes(',')) {
@@ -439,7 +440,7 @@ const loadShopPage = async (req, res) => {
     const maxPriceNum = maxPrice ? parseFloat(maxPrice) : 1e9;
 
     // Build sort query (note: price sorting will use regularPrice since variants have multiple prices)
-    const sortMap = {
+    const sortMap: Record<string, any> = {
       'priceLow': { regularPrice: 1 },
       'priceHigh': { regularPrice: -1 },
       'nameAZ': { productName: 1 },
@@ -449,7 +450,7 @@ const loadShopPage = async (req, res) => {
       'popularity': { sold: -1 },
       'rating': { averageRating: -1 }
     };
-    const sortQuery = sortMap[sortBy] || sortMap['newest'];
+    const sortQuery: any = sortMap[sortBy] || sortMap['newest'];
 
     // Get all products first, then apply price filtering
     const allProducts = await Product.find(filter)
@@ -490,7 +491,7 @@ const loadShopPage = async (req, res) => {
         return 0; // Keep original order
       }
       // In-stock products (totalStock > 0) come first
-      return (b.totalStock > 0) - (a.totalStock > 0);
+      return Number(b.totalStock > 0) - Number(a.totalStock > 0);
     });
 
     const totalProductCount = filteredProducts.length;
@@ -505,7 +506,7 @@ const loadShopPage = async (req, res) => {
     const nextPage = hasNextPage ? page + 1 : null;
 
     // Generate page numbers array (show up to 5 pages around current page)
-    const pageNumbers = [];
+    const pageNumbers: any[] = [];
     const maxPagesToShow = 5;
     let startPage = Math.max(1, page - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
@@ -571,16 +572,16 @@ const loadShopPage = async (req, res) => {
       totalProductCount,
       userWishlistProductIds
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error(' Error loading shop page:', err);
     res.status(500).send('Internal Server Error');
   }
 };
 
 // API: Get search suggestions for dropdown
-const getSearchSuggestions = async (req, res) => {
+const getSearchSuggestions = async (req: Request, res: Response) => {
   try {
-    const query = req.query.q || '';
+    const query = String(req.query.q || '');
 
     if (!query || query.length < 2) {
       return res.json({ success: true, suggestions: [] });
@@ -603,7 +604,7 @@ const getSearchSuggestions = async (req, res) => {
     const brandIds = matchingBrands.map(brand => brand._id);
 
     // Filter to only include products from active categories
-    const filter = {
+    const filter: Record<string, any> = {
       isDeleted: false,
       isListed: true,
       category: { $in: activeCategoryIds },
@@ -632,14 +633,14 @@ const getSearchSuggestions = async (req, res) => {
 
     // Only include products that have a category and brand, and add computed final prices
     const filteredSuggestions = suggestions
-      .filter(p => p.category && p.category.name && p.brand && p.brand.name)
-      .map(productData => {
+      .filter(p => p.category && (p.category as any).name && p.brand && (p.brand as any).name)
+      .map((productData: any) => {
         // Create a temporary Product instance to use model methods
         const tempProduct = new Product(productData);
 
         // finalPrice is now stored in database, ensure backward compatibility
         if (productData.variants && productData.variants.length > 0) {
-          productData.variants = productData.variants.map(variant => ({
+          productData.variants = (productData.variants as any[]).map((variant: any) => ({
             ...variant,
             finalPrice: tempProduct.calculateVariantFinalPrice(variant)
           }));
@@ -662,14 +663,14 @@ const getSearchSuggestions = async (req, res) => {
       query: query
     });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error in getSearchSuggestions:', err);
     res.status(500).json({ success: false, message: 'Something went wrong' });
   }
 };
 
 // Product details page
-const loadProductDetails = async (req, res) => {
+const loadProductDetails = async (req: Request, res: Response) => {
   try {
     const productSlug = req.params.slug;
 
@@ -699,7 +700,7 @@ const loadProductDetails = async (req, res) => {
     }
 
     // Check if product's category exists and is active
-    if (!product.category || product.category.isDeleted || !product.category.isActive) {
+    if (!product.category || (product.category as any).isDeleted || !(product.category as any).isActive) {
       return res.status(404).render('errors/404', {
         title: 'Product Not Available',
         message: 'This product is no longer available as its category has been disabled.',
@@ -709,7 +710,7 @@ const loadProductDetails = async (req, res) => {
     }
 
     // Check if product's brand exists and is active
-    if (!product.brand || product.brand.isDeleted || !product.brand.isActive) {
+    if (!product.brand || (product.brand as any).isDeleted || !(product.brand as any).isActive) {
       return res.status(404).render('errors/404', {
         title: 'Product Not Available',
         message: 'This product is no longer available as its brand has been disabled.',
@@ -727,10 +728,10 @@ const loadProductDetails = async (req, res) => {
       .lean();
 
     // Related products from same category (excluding current product)
-    let relatedProductsRaw = [];
-    if (product.category && product.category.isActive) {
+    let relatedProductsRaw: any[] = [];
+    if (product.category && (product.category as any).isActive) {
       relatedProductsRaw = await Product.find({
-        category: product.category._id,
+        category: (product.category as any)._id,
         _id: { $ne: product._id },
         isDeleted: false,
         isListed: true // Fixed: removed isBlocked which doesn't exist
@@ -762,11 +763,11 @@ const loadProductDetails = async (req, res) => {
           : 0;
 
         // Convert to plain object - finalPrice is now stored in database
-        const productObj = relatedProduct.toObject();
+        const productObj: Record<string, any> = relatedProduct.toObject();
 
         // finalPrice is already stored in variants, ensure backward compatibility
         if (productObj.variants && productObj.variants.length > 0) {
-          productObj.variants = productObj.variants.map(variant => ({
+          productObj.variants = productObj.variants.map((variant: any) => ({
             ...variant,
             finalPrice: relatedProduct.calculateVariantFinalPrice(variant)
           }));
@@ -791,8 +792,8 @@ const loadProductDetails = async (req, res) => {
     // Stats for current product
     const totalReviews = reviews.length;
     let averageRating = 0;
-    const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    const ratingBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const ratingCounts: Record<string | number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const ratingBreakdown: Record<string, any> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
     if (totalReviews > 0) {
       const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
@@ -811,14 +812,14 @@ const loadProductDetails = async (req, res) => {
     let averageFinalPrice;
     try {
       averageFinalPrice = product.getAverageFinalPrice();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error calculating average final price:', error);
       // Fallback calculation with category and brand offer logic
       if (product.variants && product.variants.length > 0) {
         const totalPrice = product.variants.reduce((sum, variant) => {
           const basePrice = variant.basePrice || product.regularPrice;
-          const categoryOffer = (product.category && product.category.categoryOffer) || 0;
-          const brandOffer = (product.brand && product.brand.brandOffer) || 0;
+          const categoryOffer = (product.category && (product.category as any).categoryOffer) || 0;
+          const brandOffer = (product.brand && (product.brand as any).brandOffer) || 0;
           const productOffer = product.productOffer || 0;
           const variantOffer = variant.variantSpecificOffer || 0;
           const maxOffer = Math.max(categoryOffer, brandOffer, productOffer, variantOffer);
@@ -832,9 +833,9 @@ const loadProductDetails = async (req, res) => {
 
     // Check if product is in user's wishlist and get wishlist product IDs for related products
     let isInWishlist = false;
-    let userWishlistProductIds = [];
+    let userWishlistProductIds: any[] = [];
     if (req.user) {
-      const userWishlist = await Wishlist.findOne({ userId: req.user._id }).lean();
+      const userWishlist = await Wishlist.findOne({ userId: req.user!._id }).lean();
       if (userWishlist && userWishlist.products) {
         userWishlistProductIds = userWishlist.products.map(item => item.productId.toString());
         isInWishlist = userWishlistProductIds.includes(product._id.toString());
@@ -857,7 +858,7 @@ const loadProductDetails = async (req, res) => {
       userWishlistProductIds
     });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error(' Error loading product details:', err);
     res.status(500).render('errors/server-error', {
       title: 'Server Error',
@@ -869,7 +870,7 @@ const loadProductDetails = async (req, res) => {
 }; 
 
 // API: Get available sizes with stock
-const getAvailableSizes = async (req, res) => {
+const getAvailableSizes = async (req: Request, res: Response) => {
   try {
     // Get active category IDs to filter products
     const activeCategories = await Category.find({
@@ -938,13 +939,13 @@ const getAvailableSizes = async (req, res) => {
       sizes: availableSizeList
     });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error in getAvailableSizes:', err);
     res.status(500).json({ success: false, message: 'Something went wrong' });
   }
 };
 
-module.exports = {
+export {
   getProducts,
   loadShopPage,
   getSearchSuggestions,

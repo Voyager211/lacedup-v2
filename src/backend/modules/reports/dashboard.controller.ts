@@ -1,17 +1,18 @@
-const Order = require('../orders/order.model');
-const User = require('../users/user.model');
-const Product = require('../catalog/product.model');
-const Category = require('../catalog/category.model');
-const Brand = require('../catalog/brand.model');
-const { startOfDay, endOfDay, startOfWeek, endOfWeek, 
+import type { Request, Response } from 'express';
+import Order from '../orders/order.model';
+import User from '../users/user.model';
+import Product from '../catalog/product.model';
+import Category from '../catalog/category.model';
+import Brand from '../catalog/brand.model';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, 
         startOfMonth, endOfMonth, startOfYear, endOfYear, 
-        subMonths, subWeeks, subYears } = require('date-fns');
-const PDFDocument = require('pdfkit');
+        subMonths, subWeeks, subYears } from 'date-fns';
+import PDFDocument from 'pdfkit';
 
 
 // HELPER: GET DATE RANGE BASED ON PERIOD
 
-const getDateRange = (period = 'monthly') => {
+const getDateRange = (period: string = 'monthly') => {
     const now = new Date();
     let startDate, endDate;
 
@@ -35,22 +36,22 @@ const getDateRange = (period = 'monthly') => {
 };
 
 // RENDER DASHBOARD PAGE
-const renderDashboard = async (req, res) => {
+const renderDashboard = async (req: Request, res: Response) => {
     try {
         res.render('admin/dashboard', {
             title: 'Admin Dashboard - LacedUp Co',
             layout: 'admin/layout'
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error rendering dashboard:', error);
         res.status(500).send('Error loading dashboard');
     }
 };
 
 // GET DASHBOARD STATISTICS (FILTERED BY PERIOD)
-const getDashboardStats = async (req, res) => {
+const getDashboardStats = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly' } = req.query;
+        const period = String(req.query.period ?? 'monthly');
         console.log('getDashboardStats called with period:', period);
         
         const { startDate, endDate } = getDateRange(period);
@@ -106,7 +107,7 @@ const getDashboardStats = async (req, res) => {
             success: true,
             data: responseData
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching dashboard stats:', error);
         res.status(500).json({
             success: false,
@@ -116,9 +117,9 @@ const getDashboardStats = async (req, res) => {
 };
 
 // GET SALES DATA (MONTHLY/WEEKLY/YEARLY)
-const getSalesData = async (req, res) => {
+const getSalesData = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly' } = req.query;
+        const period = String(req.query.period ?? 'monthly');
         console.log('getSalesData called with period:', period);
         
         let salesData, labels;
@@ -141,7 +142,7 @@ const getSalesData = async (req, res) => {
             success: true,
             data: { labels, salesData }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching sales data:', error);
         res.status(500).json({
             success: false,
@@ -152,8 +153,8 @@ const getSalesData = async (req, res) => {
 
 // HELPER: GET MONTHLY SALES (LAST 12 MONTHS)
 const getMonthlySales = async () => {
-    const months = [];
-    const labels = [];
+    const months: any[] = [];
+    const labels: any[] = [];
     const now = new Date();
 
     // Generate last 12 months
@@ -197,8 +198,8 @@ const getMonthlySales = async () => {
 
 // HELPER: GET WEEKLY SALES (LAST 12 WEEKS)
 const getWeeklySales = async () => {
-    const weeks = [];
-    const labels = [];
+    const weeks: any[] = [];
+    const labels: any[] = [];
     const now = new Date();
 
     for (let i = 11; i >= 0; i--) {
@@ -241,8 +242,8 @@ const getWeeklySales = async () => {
 
 // HELPER: GET YEARLY SALES (LAST 5 YEARS)
 const getYearlySales = async () => {
-    const years = [];
-    const labels = [];
+    const years: any[] = [];
+    const labels: any[] = [];
     const now = new Date();
 
     for (let i = 4; i >= 0; i--) {
@@ -284,9 +285,9 @@ const getYearlySales = async () => {
 };
 
 // GET REVENUE DISTRIBUTION BY PAYMENT METHOD (FILTERED)
-const getRevenueDistribution = async (req, res) => {
+const getRevenueDistribution = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly' } = req.query;
+        const period = String(req.query.period ?? 'monthly');
         console.log('getRevenueDistribution called with period:', period);
         
         const { startDate, endDate } = getDateRange(period);
@@ -330,7 +331,7 @@ const getRevenueDistribution = async (req, res) => {
             success: true,
             data: formattedData
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error(' Error fetching revenue distribution:', error);
         res.status(500).json({
             success: false,
@@ -340,10 +341,10 @@ const getRevenueDistribution = async (req, res) => {
 };
 
 // UPDATED: GET BEST SELLING PRODUCTS (WITH IMAGE)
-const getBestSellingProducts = async (req, res) => {
+const getBestSellingProducts = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly', limit = 5 } = req.query;
-        const limitNum = parseInt(limit) || 5;
+        const period = String(req.query.period ?? 'monthly');
+        const limitNum = parseInt(String(req.query.limit ?? 5)) || 5;
         
         console.log(` getBestSellingProducts called with period: ${period}, limit: ${limitNum}`);
         
@@ -406,7 +407,7 @@ const getBestSellingProducts = async (req, res) => {
             success: true,
             data: bestProducts
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error(' Error fetching best selling products:', error);
         res.status(500).json({
             success: false,
@@ -417,10 +418,10 @@ const getBestSellingProducts = async (req, res) => {
 
 
 //  UPDATED: GET BEST SELLING CATEGORIES (WITH IMAGE)
-const getBestSellingCategories = async (req, res) => {
+const getBestSellingCategories = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly', limit = 10 } = req.query;
-        const limitNum = parseInt(limit) || 10;
+        const period = String(req.query.period ?? 'monthly');
+        const limitNum = parseInt(String(req.query.limit ?? 10)) || 10;
         
         console.log(` getBestSellingCategories called with period: ${period}, limit: ${limitNum}`);
         
@@ -493,7 +494,7 @@ const getBestSellingCategories = async (req, res) => {
             success: true,
             data: bestCategories
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error(' Error fetching best selling categories:', error);
         res.status(500).json({
             success: false,
@@ -504,10 +505,10 @@ const getBestSellingCategories = async (req, res) => {
 
 
 //  UPDATED: GET BEST SELLING BRANDS (WITH IMAGE)
-const getBestSellingBrands = async (req, res) => {
+const getBestSellingBrands = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly', limit = 10 } = req.query;
-        const limitNum = parseInt(limit) || 10;
+        const period = String(req.query.period ?? 'monthly');
+        const limitNum = parseInt(String(req.query.limit ?? 10)) || 10;
         
         console.log(` getBestSellingBrands called with period: ${period}, limit: ${limitNum}`);
         
@@ -580,7 +581,7 @@ const getBestSellingBrands = async (req, res) => {
             success: true,
             data: bestBrands
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error(' Error fetching best selling brands:', error);
         res.status(500).json({
             success: false,
@@ -592,9 +593,9 @@ const getBestSellingBrands = async (req, res) => {
 
 
 // GET BEST SELLING CATEGORY (FILTERED)
-const getBestSellingCategory = async (req, res) => {
+const getBestSellingCategory = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly' } = req.query;
+        const period = String(req.query.period ?? 'monthly');
         console.log(' getBestSellingCategory called with period:', period);
         
         const { startDate, endDate } = getDateRange(period);
@@ -655,7 +656,7 @@ const getBestSellingCategory = async (req, res) => {
             success: true,
             data: bestCategory[0] || null
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error(' Error fetching best selling category:', error);
         res.status(500).json({
             success: false,
@@ -665,9 +666,9 @@ const getBestSellingCategory = async (req, res) => {
 };
 
 // GET BEST SELLING BRAND (FILTERED)
-const getBestSellingBrand = async (req, res) => {
+const getBestSellingBrand = async (req: Request, res: Response) => {
     try {
-        const { period = 'monthly' } = req.query;
+        const period = String(req.query.period ?? 'monthly');
         console.log(' getBestSellingBrand called with period:', period);
         
         const { startDate, endDate } = getDateRange(period);
@@ -735,7 +736,7 @@ const getBestSellingBrand = async (req, res) => {
             success: true,
             data: bestBrand[0] || null
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error(' Error fetching best selling brand:', error);
         res.status(500).json({
             success: false,
@@ -745,7 +746,7 @@ const getBestSellingBrand = async (req, res) => {
 };
 
 // EXPORT LEDGER REPORT AS PDF
-const exportLedgerPDF = async (req, res) => {
+const exportLedgerPDF = async (req: Request, res: Response) => {
     try {
         const { timePeriod = 'monthly', paymentMethod = 'all', orderStatus = 'all' } = req.query;
 
@@ -779,7 +780,7 @@ const exportLedgerPDF = async (req, res) => {
 
         // Finalize PDF
         doc.end();
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error exporting ledger PDF:', error);
         if (!res.headersSent) {
             res.status(500).json({
@@ -791,7 +792,7 @@ const exportLedgerPDF = async (req, res) => {
 };
 
 // EXPORTS
-module.exports = {
+export {
     renderDashboard,
     getDashboardStats,
     getSalesData,

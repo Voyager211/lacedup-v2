@@ -1,9 +1,10 @@
-const Order = require('../orders/order.model');
-const PDFDocument = require('pdfkit');
-const ExcelJS = require('exceljs');
+import type { Request, Response } from 'express';
+import Order from '../orders/order.model';
+import PDFDocument from 'pdfkit';
+import ExcelJS from 'exceljs';
 
 // Helper function to get date range based on time period
-function getDateRange(timePeriod, startDate, endDate) {
+function getDateRange(timePeriod: any, startDate: any, endDate: any) {
   const now = new Date();
   let start, end;
 
@@ -59,24 +60,24 @@ function getDateRange(timePeriod, startDate, endDate) {
 }
 
 // Get sales report page
-const getSalesReport = async (req, res) => {
+const getSalesReport = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
     const skip = (page - 1) * limit;
 
     // Get filter parameters
-    const timePeriod = req.query.timePeriod || 'monthly';
-    const paymentMethod = req.query.paymentMethod || 'all';
-    const orderStatus = req.query.orderStatus || 'all';
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+    const timePeriod = String(req.query.timePeriod || 'monthly');
+    const paymentMethod = String(req.query.paymentMethod || 'all');
+    const orderStatus = String(req.query.orderStatus || 'all');
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
 
     // Get date range
     const { start, end } = getDateRange(timePeriod, startDate, endDate);
 
     // Build match query
-    const matchQuery = {
+    const matchQuery: Record<string, any> = {
       createdAt: { $gte: start, $lte: end }
     };
 
@@ -166,7 +167,7 @@ const getSalesReport = async (req, res) => {
         month: 'short',
         year: 'numeric'
       }),
-      customer: order.user ? order.user.name : 'Guest',
+      customer: order.user ? (order.user as any).name : 'Guest',
       paymentMethod: order.paymentMethod,
       status: order.status,
       amount: order.subtotal || order.totalAmount,
@@ -197,7 +198,7 @@ const getSalesReport = async (req, res) => {
       layout: 'admin/layout'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching sales report:', error);
     res.render('admin/sales-report', {
       title: 'Sales Report',
@@ -232,17 +233,17 @@ const getSalesReport = async (req, res) => {
 };
 
 // Export sales report as PDF
-const exportPDF = async (req, res) => {
+const exportPDF = async (req: Request, res: Response) => {
   try {
-    const timePeriod = req.query.timePeriod || 'monthly';
-    const paymentMethod = req.query.paymentMethod || 'all';
-    const orderStatus = req.query.orderStatus || 'all';
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+    const timePeriod = String(req.query.timePeriod || 'monthly');
+    const paymentMethod = String(req.query.paymentMethod || 'all');
+    const orderStatus = String(req.query.orderStatus || 'all');
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
 
     const { start, end } = getDateRange(timePeriod, startDate, endDate);
 
-    const matchQuery = {
+    const matchQuery: Record<string, any> = {
       createdAt: { $gte: start, $lte: end }
     };
 
@@ -282,7 +283,7 @@ const exportPDF = async (req, res) => {
     doc.pipe(res);
 
     // Helper function to draw table
-    function drawTable(doc, startY) {
+    function drawTable(doc: any, startY: any) {
       const tableTop = startY;
       const tableLeft = 40;
       const rowHeight = 30;
@@ -377,7 +378,7 @@ const exportPDF = async (req, res) => {
         
         const rowData = [
           { text: order.orderId, col: columns[0] },
-          { text: order.user?.name || 'New User', col: columns[1] },
+          { text: (order.user as any)?.name || 'New User', col: columns[1] },
           { text: `₹${order.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: columns[2] },
           { text: order.status.charAt(0).toUpperCase() + order.status.slice(1), col: columns[3] }
         ];
@@ -477,7 +478,7 @@ const exportPDF = async (req, res) => {
 
     doc.end();
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating PDF:', error);
     res.status(500).json({ success: false, message: 'Error generating PDF' });
   }
@@ -486,17 +487,17 @@ const exportPDF = async (req, res) => {
 
 
 // Export sales report as Excel
-const exportExcel = async (req, res) => {
+const exportExcel = async (req: Request, res: Response) => {
   try {
-    const timePeriod = req.query.timePeriod || 'monthly';
-    const paymentMethod = req.query.paymentMethod || 'all';
-    const orderStatus = req.query.orderStatus || 'all';
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+    const timePeriod = String(req.query.timePeriod || 'monthly');
+    const paymentMethod = String(req.query.paymentMethod || 'all');
+    const orderStatus = String(req.query.orderStatus || 'all');
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
 
     const { start, end } = getDateRange(timePeriod, startDate, endDate);
 
-    const matchQuery = {
+    const matchQuery: Record<string, any> = {
       createdAt: { $gte: start, $lte: end }
     };
 
@@ -756,7 +757,7 @@ const exportExcel = async (req, res) => {
       ordersSheet.addRow({
         orderId: order.orderId,
         date: new Date(order.createdAt).toLocaleDateString('en-IN'),
-        customer: order.user?.name || 'Guest',
+        customer: (order.user as any)?.name || 'Guest',
         paymentMethod: order.paymentMethod.toUpperCase(),
         status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
         amount: order.subtotal || order.totalAmount,
@@ -788,7 +789,7 @@ const exportExcel = async (req, res) => {
         // Alternate row colors
         if ((rowNumber - 1) % 2 === 0) {
           row.eachCell((cell) => {
-            if (!cell.fill || !cell.fill.fgColor) {
+            if (!cell.fill || !(cell.fill as any).fgColor) {
               cell.fill = {
                 type: 'pattern',
                 pattern: 'solid',
@@ -807,14 +808,14 @@ const exportExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating Excel:', error);
     res.status(500).json({ success: false, message: 'Error generating Excel file' });
   }
 };
 
 
-module.exports = {
+export {
   getSalesReport,
   exportPDF,
   exportExcel

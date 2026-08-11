@@ -1,20 +1,21 @@
-const Product = require('./product.model');
-const Category = require('./category.model');
-const Brand = require('./brand.model');
-const { processImages } = require('../../common/utils/image-processor.util');
-const { getPagination } = require('../../common/utils/pagination.util');
-const { validateBase64Image, validateMultipleImageFiles } = require('../../common/utils/image-validation.util');
-const { getImagesToDelete, deleteFiles } = require('../../common/utils/file-cleanup.util');
-const sharp = require('sharp');
-const mongoose = require('mongoose');
+import type { Request, Response } from 'express';
+import Product from './product.model';
+import Category from './category.model';
+import Brand from './brand.model';
+import { processImages } from '../../common/utils/image-processor.util';
+import { getPagination } from '../../common/utils/pagination.util';
+import { validateBase64Image, validateMultipleImageFiles } from '../../common/utils/image-validation.util';
+import { getImagesToDelete, deleteFiles } from '../../common/utils/file-cleanup.util';
+import sharp from 'sharp';
+import mongoose from 'mongoose';
 
 // List all products (page render)
-const listProducts = async (req, res) => {
+const listProducts = async (req: Request, res: Response) => {
   try {
-    const q = req.query.q || '';
-    const page = parseInt(req.query.page) || 1;
+    const q = String(req.query.q || '');
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
-    const query = { productName: { $regex: q, $options: 'i' }, isDeleted: false };
+    const query: Record<string, any> = { productName: { $regex: q, $options: 'i' }, isDeleted: false };
 
     // Get total count of all non-deleted products
     const totalRecords = await Product.countDocuments({ isDeleted: false });
@@ -39,7 +40,7 @@ const listProducts = async (req, res) => {
       searchQuery: q,
       title: "Product Management"
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
     res.status(500).render('admin/products', {
       products: [],
@@ -56,7 +57,7 @@ const listProducts = async (req, res) => {
 }; 
 
 // Render product detail page
-const renderDetailPage = async (req, res) => {
+const renderDetailPage = async (req: Request, res: Response) => {
   try {
     const product = await Product.findById(req.params.id)
       .populate('category')
@@ -74,13 +75,13 @@ const renderDetailPage = async (req, res) => {
     // ============================================
     
     // Helper function to calculate variant final price
-    const calculateVariantFinalPrice = (variant, product) => {
+    const calculateVariantFinalPrice = (variant: any, product: any) => {
       const basePrice = variant.basePrice || 0;
       
       // Get all applicable offers
       const productOffer = product.productOffer || 0;
-      const brandOffer = product.brand?.brandOffer || 0;
-      const categoryOffer = product.category?.categoryOffer || 0;
+      const brandOffer = (product.brand as any)?.brandOffer || 0;
+      const categoryOffer = (product.category as any)?.categoryOffer || 0;
       const variantOffer = variant.variantSpecificOffer || 0;
       
       // Find the maximum offer
@@ -114,23 +115,23 @@ const renderDetailPage = async (req, res) => {
     // ============================================
     // ✅ COLLECT ACTIVE OFFERS FOR DISPLAY
     // ============================================
-    const activeOffers = [];
+    const activeOffers: any[] = [];
     
-    if (product.brand?.brandOffer && product.brand.brandOffer > 0) {
+    if ((product.brand as any)?.brandOffer && (product.brand as any).brandOffer > 0) {
       activeOffers.push({
         type: 'Brand',
-        name: product.brand.name,
-        value: product.brand.brandOffer,
-        label: `${product.brand.brandOffer}% off on all ${product.brand.name} products`
+        name: (product.brand as any).name,
+        value: (product.brand as any).brandOffer,
+        label: `${(product.brand as any).brandOffer}% off on all ${(product.brand as any).name} products`
       });
     }
     
-    if (product.category?.categoryOffer && product.category.categoryOffer > 0) {
+    if ((product.category as any)?.categoryOffer && (product.category as any).categoryOffer > 0) {
       activeOffers.push({
         type: 'Category',
-        name: product.category.name,
-        value: product.category.categoryOffer,
-        label: `${product.category.categoryOffer}% off on all ${product.category.name}`
+        name: (product.category as any).name,
+        value: (product.category as any).categoryOffer,
+        label: `${(product.category as any).categoryOffer}% off on all ${(product.category as any).name}`
       });
     }
     
@@ -158,7 +159,7 @@ const renderDetailPage = async (req, res) => {
       allImages,
       activeOffers  // ✅ Pass active offers to view
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Render Detail Error:', err);
     res.status(500).send("Error rendering product detail page");
   }
@@ -168,7 +169,7 @@ const renderDetailPage = async (req, res) => {
 
 
 // Render add product page
-const renderAddPage = async (req, res) => {
+const renderAddPage = async (req: Request, res: Response) => {
   const categories = await Category.find({ isDeleted: false, isActive: true });
   const brands = await Brand.find({ isDeleted: false, isActive: true }).sort({ name: 1 });
   res.render('admin/add-product', {
@@ -180,7 +181,7 @@ const renderAddPage = async (req, res) => {
 };
 
 // API: Create new product via base64 images (fetch-based)
-const apiSubmitNewProduct = async (req, res) => {
+const apiSubmitNewProduct = async (req: Request, res: Response) => {
   try {
     let base64Images = req.body.base64Images || [];
     if (!Array.isArray(base64Images)) base64Images = [base64Images];
@@ -201,10 +202,10 @@ const apiSubmitNewProduct = async (req, res) => {
     }
 
     // Parse and validate variants
-    let variants = [];
+    let variants: any[] = [];
     try {
       variants = JSON.parse(req.body.variants || '[]');
-    } catch (parseError) {
+    } catch (parseError: any) {
       return res.status(400).json({ success: false, message: 'Invalid variants data format.' });
     }
 
@@ -255,7 +256,7 @@ const apiSubmitNewProduct = async (req, res) => {
 
     const mainImageIndex = parseInt(req.body.mainImageIndex || '0', 10);
 
-    const saveBase64Image = async (base64, index) => {
+    const saveBase64Image = async (base64: any, index: number) => {
       const buffer = Buffer.from(base64.split(',')[1], 'base64');
       const filename = `${Date.now()}-${index}.webp`;
       const outputPath = `public/uploads/products/${filename}`;
@@ -282,32 +283,32 @@ const apiSubmitNewProduct = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Product added successfully!' });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ API Submit Error:', err);
     res.status(500).json({ success: false, message: 'Server error while adding product.' });
   }
 };
 
 // Soft delete a product (form submit)
-const softDeleteProduct = async (req, res) => {
+const softDeleteProduct = async (req: Request, res: Response) => {
   try {
     await Product.findByIdAndUpdate(req.params.id, { isDeleted: true });
     res.redirect('/admin/products');
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
     res.status(500).send("Error deleting Product");
   }
 };
 
 // API: List products (fetch)
-const apiProducts = async (req, res) => {
+const apiProducts = async (req: Request, res: Response) => {
   try {
-    const q = req.query.q || '';
-    const page = parseInt(req.query.page) || 1;
+    const q = String(req.query.q || '');
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
     // Build query object with advanced filters
-    const query = { isDeleted: false };
+    const query: Record<string, any> = { isDeleted: false };
 
     // Search filter
     if (q) {
@@ -317,32 +318,32 @@ const apiProducts = async (req, res) => {
     // Category filter
     if (req.query.category) {
       try {
-        query.category = new mongoose.Types.ObjectId(req.query.category);
-      } catch (error) {
+        query.category = new mongoose.Types.ObjectId(String(req.query.category));
+      } catch (error: any) {
         console.error(`Invalid category ID: ${req.query.category}`);
       }
     }
 
     // Brand filter
     if (req.query.brand) {
-      if (req.query.brand.includes(',')) {
-        const brandIds = req.query.brand.split(',').filter(id => id.trim());
-        const objectIds = brandIds.map(id => {
+      if (String(req.query.brand).includes(',')) {
+        const brandIds = String(req.query.brand).split(',').filter((id: any) => id.trim());
+        const objectIds = brandIds.map((id: any) => {
           try {
             return new mongoose.Types.ObjectId(id);
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Invalid brand ID: ${id}`);
             return null;
           }
-        }).filter(id => id !== null);
+        }).filter((id: any) => id !== null);
         
         if (objectIds.length > 0) {
           query.brand = { $in: objectIds };
         }
       } else {
         try {
-          query.brand = new mongoose.Types.ObjectId(req.query.brand);
-        } catch (error) {
+          query.brand = new mongoose.Types.ObjectId(String(req.query.brand));
+        } catch (error: any) {
           console.error(`Invalid brand ID: ${req.query.brand}`);
         }
       }
@@ -350,12 +351,12 @@ const apiProducts = async (req, res) => {
 
     // Price range filters
     if (req.query.minPrice || req.query.maxPrice) {
-      const priceFilter = {};
+      const priceFilter: Record<string, any> = {};
       if (req.query.minPrice) {
-        priceFilter.$gte = parseFloat(req.query.minPrice);
+        priceFilter.$gte = parseFloat(String(req.query.minPrice));
       }
       if (req.query.maxPrice) {
-        priceFilter.$lte = parseFloat(req.query.maxPrice);
+        priceFilter.$lte = parseFloat(String(req.query.maxPrice));
       }
       query.regularPrice = priceFilter;
     }
@@ -381,7 +382,7 @@ const apiProducts = async (req, res) => {
     }
 
     // Build sort object
-    let sortQuery = { createdAt: -1 }; // default sort
+    let sortQuery: any = { createdAt: -1 }; // default sort
     if (req.query.sort) {
       switch (req.query.sort) {
         case 'name-asc':
@@ -425,25 +426,25 @@ const apiProducts = async (req, res) => {
       currentPage: page, 
       totalRecords 
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Fetch Products Error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch products' });
   }
 };
 
 // API: Soft delete (fetch)
-const apiSoftDeleteProduct = async (req, res) => {
+const apiSoftDeleteProduct = async (req: Request, res: Response) => {
   try {
     await Product.findByIdAndUpdate(req.params.id, { isDeleted: true });
     res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Soft Delete Product Error:', err);
     res.status(500).json({ success: false });
   }
 };
 
 // API: Toggle product status (fetch)
-const apiToggleProductStatus = async (req, res) => {
+const apiToggleProductStatus = async (req: Request, res: Response) => {
   try {
     const product = await Product.findById(req.params.id);
     if (product) {
@@ -454,14 +455,14 @@ const apiToggleProductStatus = async (req, res) => {
     } else {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Toggle Product Status Error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
 // Render edit product page
-const renderEditPage = async (req, res) => {
+const renderEditPage = async (req: Request, res: Response) => {
   try {
     const product = await Product.findById(req.params.id).populate('category').populate('brand');
     
@@ -472,11 +473,11 @@ const renderEditPage = async (req, res) => {
     
     // If the product's current category is inactive, include it in the list so admin can see it
     // but mark it as inactive for UI indication
-    if (product.category && !product.category.isActive) {
-      const currentCategory = await Category.findById(product.category._id);
+    if (product.category && !(product.category as any).isActive) {
+      const currentCategory = await Category.findById((product.category as any)._id);
       if (currentCategory && !currentCategory.isDeleted) {
         // Add the inactive category to the list with a flag
-        currentCategory.isCurrentInactive = true;
+        (currentCategory as any).isCurrentInactive = true;
         categories.unshift(currentCategory);
       }
     }
@@ -486,11 +487,11 @@ const renderEditPage = async (req, res) => {
     
     // If the product's current brand is inactive, include it in the list so admin can see it
     // but mark it as inactive for UI indication
-    if (product.brand && !product.brand.isActive) {
-      const currentBrand = await Brand.findById(product.brand._id);
+    if (product.brand && !(product.brand as any).isActive) {
+      const currentBrand = await Brand.findById((product.brand as any)._id);
       if (currentBrand && !currentBrand.isDeleted) {
         // Add the inactive brand to the list with a flag
-        currentBrand.isCurrentInactive = true;
+        (currentBrand as any).isCurrentInactive = true;
         brands.unshift(currentBrand);
       }
     }
@@ -502,14 +503,14 @@ const renderEditPage = async (req, res) => {
       brands,
       message: req.flash('error')
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Render Edit Error:', err);
     res.status(500).send("Error rendering edit page");
   }
 };
 
 // API: Update product
-const apiUpdateProduct = async (req, res) => {
+const apiUpdateProduct = async (req: Request, res: Response) => {
   try {
     const base64Images = req.body.base64Images || [];
     const productId = req.params.id;
@@ -534,10 +535,10 @@ const apiUpdateProduct = async (req, res) => {
     }
 
     // Parse and validate variants
-    let variants = [];
+    let variants: any[] = [];
     try {
       variants = JSON.parse(req.body.variants || '[]');
-    } catch (parseError) {
+    } catch (parseError: any) {
       return res.status(400).json({ success: false, message: 'Invalid variants data format.' });
     }
 
@@ -588,7 +589,7 @@ const apiUpdateProduct = async (req, res) => {
 
     const mainImageIndex = parseInt(req.body.mainImageIndex || '0', 10);
 
-    const saveBase64Image = async (base64, index) => {
+    const saveBase64Image = async (base64: any, index: number) => {
       const buffer = Buffer.from(base64.split(',')[1], 'base64');
       const filename = `${Date.now()}-${index}.webp`;
       const outputPath = `public/uploads/products/${filename}`;
@@ -619,7 +620,7 @@ const apiUpdateProduct = async (req, res) => {
     
     // IMPORTANT: Preserve existing variant IDs to avoid breaking cart references
     // Instead of replacing the entire variants array, update existing variants and add new ones
-    const updatedVariants = [];
+    const updatedVariants: any[] = [];
     
     for (const newVariant of variants) {
       // Try to find existing variant by size (since size should be unique per product)
@@ -639,7 +640,7 @@ const apiUpdateProduct = async (req, res) => {
     }
     
     // Remove variants that are no longer in the update (sizes that were removed)
-    product.variants = updatedVariants;
+    product.variants = updatedVariants as any;
     
     product.mainImage = mainImage;
     product.subImages = subImages;
@@ -657,14 +658,14 @@ const apiUpdateProduct = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Product Edited Successfully!' });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error(' API Edit Error:', err);
     res.status(500).json({ success: false, message: 'Server error while editing product.' });
   }
 };
 
 
-module.exports = {
+export {
   listProducts,
   renderDetailPage,
   renderAddPage,
