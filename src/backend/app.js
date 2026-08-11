@@ -12,6 +12,7 @@ const methodOverride = require('method-override');
 const expressLayouts = require('express-ejs-layouts');
 const morgan = require('morgan');
 const morganBody = require('morgan-body');
+const swaggerUi = require('swagger-ui-express');
 
 // Middleware imports
 const { PUBLIC_DIR, VIEWS_DIR } = require('./config/paths');
@@ -164,6 +165,27 @@ const ROOT_ROUTES = [
   userAddressRoutes,
   userOrderRoutes
 ];
+
+// ---------------------------------------------------------------------------
+// API DOCS
+//
+// Mounted before the routers so /docs is never shadowed by a bare '/' mount.
+// The spec is built from @swagger JSDoc blocks in the route files.
+// ---------------------------------------------------------------------------
+const { swaggerSpec } = require('./config/swagger');
+
+app.get('/docs.json', (req, res) => {
+  res.json(swaggerSpec);
+});
+
+app.use(
+  '/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'LacedUp API docs',
+    swaggerOptions: { persistAuthorization: true, docExpansion: 'none' }
+  })
+);
 
 // Broad backstop across the API surface; page routes are left alone.
 app.use('/api', apiLimiter);

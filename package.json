@@ -48,7 +48,9 @@
     "pdfkit": "^0.17.2",
     "razorpay": "^2.9.6",
     "sharp": "^0.34.2",
-    "slugify": "^1.6.6"
+    "slugify": "^1.6.6",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -67,6 +69,8 @@
     "@types/paypal__checkout-server-sdk": "^1.0.8",
     "@types/pdfkit": "^0.17.6",
     "@types/supertest": "^7.2.1",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.1",
