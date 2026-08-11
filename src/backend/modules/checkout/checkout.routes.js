@@ -10,7 +10,9 @@ const requireAuth = (req, res, next) => {
     return next();
   }
   
-  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+  // req.headers.accept is absent when no Accept header is sent, which turned
+  // every unauthenticated hit into a 500 instead of a redirect to login.
+  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
     return res.status(401).json({
       success: false,
       message: 'You must be logged in to access this feature',

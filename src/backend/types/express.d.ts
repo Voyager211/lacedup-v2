@@ -47,6 +47,51 @@ declare module 'express-session' {
     } | null;
     /** Current email, mirrored into the session by the profile flow. */
     email?: string;
+
+    /**
+     * Cart snapshot held between creating a Razorpay order and verifying the
+     * payment. The order is only written to the database once payment
+     * succeeds, so this is the sole record of the basket in the interim.
+     */
+    pendingRazorpayOrder?: {
+      tempOrderId?: string;
+      userId?: unknown;
+      deliveryAddressId?: unknown;
+      addressIndex?: number;
+      cart?: any[];
+      totals?: {
+        subtotal?: number;
+        totalDiscount?: number;
+        amountAfterDiscount?: number;
+        shipping?: number;
+        total?: number;
+        totalItemCount?: number;
+        [key: string]: unknown;
+      };
+      couponDiscount?: number;
+      appliedCouponId?: unknown;
+      razorpayOrderId?: string;
+      amount?: number;
+      [key: string]: unknown;
+    } | null;
+
+    /** Details of the last failed payment, used to render the retry page. */
+    paymentFailure?: {
+      transactionId?: string;
+      reason?: string;
+      failedAt?: Date;
+      orderId?: unknown;
+      orderNumber?: string;
+      /**
+       * Snapshot of the attempted order (items, address, totals). Deliberately
+       * loose: it is rebuilt from several different code paths and is only
+       * used to re-render the retry page.
+       */
+      orderData?: any;
+      [key: string]: unknown;
+    } | null;
+
+    errorMessage?: string;
     /** Coupon applied to the current checkout, held until the order is placed. */
     appliedCoupon?: {
       code: string;
