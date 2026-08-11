@@ -166,7 +166,7 @@ const postOtpVerification = async (req, res) => {
         password: pendingUser.password
       });
 
-      newUser.referralCode = await generateReferralCode(newUser._id);
+      newUser.referralCode = await generateReferralCode();
 
       if (pendingUser.referrerId) {
         newUser.referredBy = pendingUser.referrerId;

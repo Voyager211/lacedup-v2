@@ -1,8 +1,19 @@
-const Product = require('./product.model');
-const Category = require('./category.model');
-const Brand = require('./brand.model');
+import Product from './product.model';
+import Category from './category.model';
+import Brand from './brand.model';
+import type { IProduct } from './catalog.types';
 
-async function getHomepageProducts() {
+export interface HomepageProducts {
+  newArrivals: IProduct[];
+  bestSellers: IProduct[];
+}
+
+/**
+ * The `match` on the populate means products in a deactivated category come
+ * back with `category === null`, which is why both lists are filtered
+ * afterwards rather than relying on the query alone.
+ */
+export async function getHomepageProducts(): Promise<HomepageProducts> {
   const newArrivals = await Product.find({
     isDeleted: false,
     isListed: true,
@@ -28,12 +39,12 @@ async function getHomepageProducts() {
     .limit(4);
 
   return {
-    newArrivals: newArrivals.filter(p => p.category),
-    bestSellers: bestSellers.filter(p => p.category)
+    newArrivals: newArrivals.filter((p) => p.category),
+    bestSellers: bestSellers.filter((p) => p.category)
   };
 }
 
-async function getActiveCategories() {
+export async function getActiveCategories() {
   return await Category.find({
     isActive: true,
     isDeleted: false
@@ -42,8 +53,7 @@ async function getActiveCategories() {
     .select('name slug image description');
 }
 
-// Add this new function
-async function getActiveBrands() {
+export async function getActiveBrands() {
   return await Brand.find({
     isActive: true,
     isDeleted: false,
@@ -52,9 +62,3 @@ async function getActiveBrands() {
     .sort({ name: 1 })
     .select('_id name slug image');
 }
-
-module.exports = { 
-  getHomepageProducts,
-  getActiveCategories,
-  getActiveBrands
-};

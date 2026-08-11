@@ -64,6 +64,7 @@
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/passport-local": "^1.0.38",
+    "@types/paypal__checkout-server-sdk": "^1.0.8",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint-config-prettier": "^10.1.5",

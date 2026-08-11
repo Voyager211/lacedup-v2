@@ -85,6 +85,12 @@ const orderSchema = new mongoose.Schema<IOrder>(
             },
             notes: {
               type: String
+            },
+            // Declared so admin attribution is actually persisted - the
+            // service has always written this, but without a schema field
+            // Mongoose dropped it silently.
+            updatedBy: {
+              type: String
             }
           }
         ],
@@ -190,6 +196,10 @@ const orderSchema = new mongoose.Schema<IOrder>(
           default: Date.now
         },
         notes: {
+          type: String
+        },
+        // See note on the item-level statusHistory above.
+        updatedBy: {
           type: String
         }
       }

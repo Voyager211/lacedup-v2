@@ -37,6 +37,22 @@ export interface IReturn extends Document {
   requestDate: Date;
   processedDate?: Date;
   processedBy?: Types.ObjectId;
+
+  /**
+   * Approval / rejection audit trail.
+   *
+   * order.service writes these in eight places, but the schema never declared
+   * them, so Mongoose silently discarded every value - admin attribution and
+   * timing for returns was lost entirely.
+   *
+   * NOTE: these overlap with processedDate/processedBy above, which the
+   * service never writes. Worth consolidating onto one pair later.
+   */
+  approvedAt?: Date;
+  approvedBy?: string;
+  rejectedAt?: Date;
+  rejectedBy?: string;
+  rejectionReason?: string;
   adminNotes?: string;
   refundAmount?: number;
   refundMethod: RefundMethod;

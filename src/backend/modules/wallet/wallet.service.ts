@@ -1,10 +1,64 @@
-const Wallet = require('./wallet.model');
-const mongoose = require('mongoose');
+import type { Types } from 'mongoose';
+import Wallet from './wallet.model';
+import type {
+  IWallet,
+  IWalletTransaction,
+  WalletPaymentMethod,
+  WalletTransactionStatus,
+  WalletTransactionType
+} from './wallet.types';
 
-/**
- * Get or create wallet for user
- */
-const getOrCreateWallet = async (userId) => {
+type UserId = Types.ObjectId | string;
+
+export interface AddTransactionInput {
+  type: WalletTransactionType;
+  amount: number;
+  description: string;
+  paymentMethod?: WalletPaymentMethod;
+  status?: WalletTransactionStatus;
+  orderId?: string | null;
+  returnId?: string | null;
+  razorpayOrderId?: string | null;
+  razorpayPaymentId?: string | null;
+}
+
+export interface AddTransactionResult {
+  transactionId: string;
+  wallet: IWallet;
+}
+
+/** Shape returned by the credit/debit helpers, which report failure rather than throw. */
+export interface WalletOperationResult {
+  success: boolean;
+  message: string;
+  transactionId?: string;
+  wallet?: IWallet;
+  newBalance?: number;
+  refundAmount?: number;
+  error?: string;
+}
+
+export interface PaginatedTransactions {
+  transactions: IWalletTransaction[];
+  currentPage: number;
+  totalPages: number;
+  totalTransactions: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface WalletStats {
+  balance: number;
+  totalCredits: number;
+  totalDebits: number;
+  transactionCount: number;
+  monthlyAdded: number;
+}
+
+const newTransactionId = () => `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+
+/** Get or create wallet for user. */
+export const getOrCreateWallet = async (userId: UserId): Promise<IWallet> => {
   let wallet = await Wallet.findOne({ userId });
 
   if (!wallet) {
@@ -14,22 +68,21 @@ const getOrCreateWallet = async (userId) => {
       transactions: []
     });
     await wallet.save();
-  } 
+  }
 
   return wallet;
 };
- 
-/**
- * Get wallet by userId
- */
-const getWallet = async (userId) => {
+
+/** Get wallet by userId. */
+export const getWallet = async (userId: UserId) => {
   return await Wallet.findOne({ userId }).lean();
 };
 
-/**
- * Add transaction to wallet
- */
-const addTransaction = async (userId, transactionData) => {
+/** Add a transaction to the wallet, adjusting the balance. */
+export const addTransaction = async (
+  userId: UserId,
+  transactionData: AddTransactionInput
+): Promise<AddTransactionResult> => {
   const wallet = await getOrCreateWallet(userId);
 
   // Validate transaction type
@@ -37,54 +90,48 @@ const addTransaction = async (userId, transactionData) => {
     throw new Error('Invalid transaction type');
   }
 
-  // Manually generate transactionId here
-  const transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+  const transactionId = newTransactionId();
 
-  // Create transaction object
-  const transaction = {
-    transactionId: transactionId, 
+  // Calculate balance after transaction
+  if (transactionData.type === 'credit') {
+    wallet.balance += transactionData.amount;
+  } else if (transactionData.type === 'debit') {
+    if (wallet.balance < transactionData.amount) {
+      throw new Error('Insufficient wallet balance');
+    }
+    wallet.balance -= transactionData.amount;
+  }
+
+  wallet.transactions.push({
+    transactionId,
     type: transactionData.type,
     amount: transactionData.amount,
     description: transactionData.description,
     paymentMethod: transactionData.paymentMethod || 'manual_credit',
     status: transactionData.status || 'completed',
-    orderId: transactionData.orderId || null,
-    returnId: transactionData.returnId || null,
-    razorpayOrderId: transactionData.razorpayOrderId || null,
-    razorpayPaymentId: transactionData.razorpayPaymentId || null,
-    date: new Date()
-  };
+    orderId: transactionData.orderId ?? undefined,
+    returnId: transactionData.returnId ?? undefined,
+    razorpayOrderId: transactionData.razorpayOrderId ?? undefined,
+    razorpayPaymentId: transactionData.razorpayPaymentId ?? undefined,
+    date: new Date(),
+    balanceAfter: wallet.balance
+  } as IWalletTransaction);
 
-  // Calculate balance after transaction
-  if (transaction.type === 'credit') {
-    wallet.balance += transaction.amount;
-  } else if (transaction.type === 'debit') {
-    if (wallet.balance < transaction.amount) {
-      throw new Error('Insufficient wallet balance');
-    }
-    wallet.balance -= transaction.amount;
-  }
-
-  // Set balance after transaction
-  transaction.balanceAfter = wallet.balance;
-
-  // Add transaction to wallet
-  wallet.transactions.push(transaction);
-
-  // Save wallet
   await wallet.save();
 
-  // Return transaction details
   return {
-    transactionId: transactionId,
-    wallet: wallet
+    transactionId,
+    wallet
   };
 };
 
-/**
- * Get paginated transactions for user
- */
-const getPaginatedTransactions = async (userId, page = 1, limit = 10, type = null) => {
+/** Get paginated completed transactions for a user. */
+export const getPaginatedTransactions = async (
+  userId: UserId,
+  page = 1,
+  limit = 10,
+  type: WalletTransactionType | null = null
+): Promise<PaginatedTransactions> => {
   const skip = (page - 1) * limit;
 
   try {
@@ -102,22 +149,18 @@ const getPaginatedTransactions = async (userId, page = 1, limit = 10, type = nul
     }
 
     // Filter transactions by type if provided
-    let transactions = wallet.transactions;
-    
+    let transactions = wallet.transactions.filter((t) => t.status === 'completed');
+
     if (type) {
-      transactions = transactions.filter(t => t.type === type && t.status === 'completed');
-    } else {
-      transactions = transactions.filter(t => t.status === 'completed');
+      transactions = transactions.filter((t) => t.type === type);
     }
 
     // Sort by date descending (newest first)
-    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    // Get total
     const totalTransactions = transactions.length;
     const totalPages = Math.ceil(totalTransactions / limit);
 
-    // Paginate
     const paginatedTransactions = transactions.slice(skip, skip + limit);
 
     return {
@@ -134,24 +177,25 @@ const getPaginatedTransactions = async (userId, page = 1, limit = 10, type = nul
   }
 };
 
-
-/**
- * Get transactions by type (credit/debit)
- */
-const getTransactionsByType = async (userId, type) => {
+/** Get completed transactions of a given type. */
+export const getTransactionsByType = async (
+  userId: UserId,
+  type: WalletTransactionType
+): Promise<IWalletTransaction[]> => {
   const wallet = await Wallet.findOne({ userId }).lean();
 
   if (!wallet) return [];
 
   return wallet.transactions
     .filter((t) => t.type === type && t.status === 'completed')
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
-/**
- * Get transaction by ID
- */
-const getTransactionById = async (userId, transactionId) => {
+/** Get a single transaction by its transactionId. */
+export const getTransactionById = async (
+  userId: UserId,
+  transactionId: string
+): Promise<IWalletTransaction | null> => {
   const wallet = await Wallet.findOne({
     userId,
     'transactions.transactionId': transactionId
@@ -159,13 +203,15 @@ const getTransactionById = async (userId, transactionId) => {
 
   if (!wallet) return null;
 
-  return wallet.transactions.find((t) => t.transactionId === transactionId);
+  return wallet.transactions.find((t) => t.transactionId === transactionId) ?? null;
 };
 
-/**
- * Update transaction status
- */
-const updateTransactionStatus = async (userId, transactionId, status) => {
+/** Update a transaction's status in place. */
+export const updateTransactionStatus = async (
+  userId: UserId,
+  transactionId: string,
+  status: WalletTransactionStatus
+) => {
   const result = await Wallet.findOneAndUpdate(
     {
       userId,
@@ -181,40 +227,46 @@ const updateTransactionStatus = async (userId, transactionId, status) => {
 };
 
 /**
- * Add pending transaction (for payment processing)
+ * Add a pending credit, used while a payment is being processed.
+ * The balance is not moved until completePendingTransaction runs.
  */
-const addPendingTransaction = async (userId, transactionData) => {
+export const addPendingTransaction = async (
+  userId: UserId,
+  transactionData: Pick<
+    AddTransactionInput,
+    'amount' | 'description' | 'paymentMethod' | 'razorpayOrderId' | 'razorpayPaymentId'
+  >
+): Promise<AddTransactionResult> => {
   const wallet = await getOrCreateWallet(userId);
 
-  // Manually generate transactionId here
-  const transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+  const transactionId = newTransactionId();
 
-  const transaction = {
-    transactionId: transactionId,
+  wallet.transactions.push({
+    transactionId,
     type: 'credit',
     amount: transactionData.amount,
     description: transactionData.description,
     paymentMethod: transactionData.paymentMethod,
     status: 'pending',
-    razorpayOrderId: transactionData.razorpayOrderId || null,
-    razorpayPaymentId: transactionData.razorpayPaymentId || null,
+    razorpayOrderId: transactionData.razorpayOrderId ?? undefined,
+    razorpayPaymentId: transactionData.razorpayPaymentId ?? undefined,
     date: new Date(),
     balanceAfter: wallet.balance
-  };
+  } as IWalletTransaction);
 
-  wallet.transactions.push(transaction);
   await wallet.save();
 
   return {
-    transactionId: transactionId,
-    wallet: wallet
+    transactionId,
+    wallet
   };
 };
 
-/**
- * Complete pending transaction
- */
-const completePendingTransaction = async (userId, transactionId) => {
+/** Mark a pending transaction completed and apply it to the balance. */
+export const completePendingTransaction = async (
+  userId: UserId,
+  transactionId: string
+): Promise<IWallet> => {
   const wallet = await Wallet.findOne({
     userId,
     'transactions.transactionId': transactionId
@@ -224,15 +276,11 @@ const completePendingTransaction = async (userId, transactionId) => {
     throw new Error('Transaction not found');
   }
 
-  const transactionIndex = wallet.transactions.findIndex(
-    (t) => t.transactionId === transactionId
-  );
+  const transaction = wallet.transactions.find((t) => t.transactionId === transactionId);
 
-  if (transactionIndex === -1) {
+  if (!transaction) {
     throw new Error('Transaction not found');
   }
-
-  const transaction = wallet.transactions[transactionIndex];
 
   // Update transaction status
   transaction.status = 'completed';
@@ -241,16 +289,16 @@ const completePendingTransaction = async (userId, transactionId) => {
   wallet.balance += transaction.amount;
   transaction.balanceAfter = wallet.balance;
 
-  // Save wallet
   await wallet.save();
 
   return wallet;
 };
 
-/**
- * Fail pending transaction
- */
-const failPendingTransaction = async (userId, transactionId) => {
+/** Mark a pending transaction failed without touching the balance. */
+export const failPendingTransaction = async (
+  userId: UserId,
+  transactionId: string
+): Promise<IWallet> => {
   const wallet = await Wallet.findOne({
     userId,
     'transactions.transactionId': transactionId
@@ -272,10 +320,8 @@ const failPendingTransaction = async (userId, transactionId) => {
   return wallet;
 };
 
-/**
- * Get wallet statistics
- */
-const getWalletStats = async (userId) => {
+/** Aggregate wallet figures for the wallet page. */
+export const getWalletStats = async (userId: UserId): Promise<WalletStats> => {
   const wallet = await Wallet.findOne({ userId });
 
   if (!wallet) {
@@ -310,15 +356,13 @@ const getWalletStats = async (userId) => {
   };
 };
 
-/**
- * Add credit to wallet (for cancellation refunds)
- * @param {String} userId - User ID
- * @param {Number} amount - Amount to credit
- * @param {String} description - Transaction description
- * @param {String} orderId - Order ID (optional)
- * @returns {Object} - Result object
- */
-const addCredit = async (userId, amount, description, orderId = null) => {
+/** Add credit to a wallet (used for cancellation refunds). */
+export const addCredit = async (
+  userId: UserId,
+  amount: number,
+  description: string,
+  orderId: string | null = null
+): Promise<WalletOperationResult> => {
   try {
     // Validate inputs
     if (!userId || !amount || amount <= 0) {
@@ -328,7 +372,6 @@ const addCredit = async (userId, amount, description, orderId = null) => {
       };
     }
 
-    // Use existing addTransaction method
     const result = await addTransaction(userId, {
       type: 'credit',
       amount: amount,
@@ -347,26 +390,23 @@ const addCredit = async (userId, amount, description, orderId = null) => {
       wallet: result.wallet,
       newBalance: result.wallet.balance
     };
-
   } catch (error) {
     console.error('Error adding credit:', error);
     return {
       success: false,
-      message: error.message || 'Failed to add credit',
-      error: error.message
+      message: (error as Error).message || 'Failed to add credit',
+      error: (error as Error).message
     };
   }
 };
 
-/**
- * Add return refund to wallet
- * @param {String} userId - User ID
- * @param {Number} amount - Refund amount
- * @param {String} orderId - Order ID
- * @param {String} returnId - Return request ID
- * @returns {Object} - Result object
- */
-const addReturnRefund = async (userId, amount, orderId, returnId) => {
+/** Credit a return refund to a wallet. */
+export const addReturnRefund = async (
+  userId: UserId,
+  amount: number,
+  orderId: string,
+  returnId: string
+): Promise<WalletOperationResult> => {
   try {
     // Validate inputs
     if (!userId || !amount || amount <= 0) {
@@ -376,9 +416,8 @@ const addReturnRefund = async (userId, amount, orderId, returnId) => {
       };
     }
 
-    // Use existing addTransaction method
     const description = `Refund for returned item in order ${orderId}`;
-    
+
     const result = await addTransaction(userId, {
       type: 'credit',
       amount: amount,
@@ -389,7 +428,9 @@ const addReturnRefund = async (userId, amount, orderId, returnId) => {
       returnId: returnId
     });
 
-    console.log(`Return refund processed: ₹${amount} credited to user ${userId} for order ${orderId}, return ${returnId}`);
+    console.log(
+      `Return refund processed: ₹${amount} credited to user ${userId} for order ${orderId}, return ${returnId}`
+    );
 
     return {
       success: true,
@@ -399,26 +440,23 @@ const addReturnRefund = async (userId, amount, orderId, returnId) => {
       newBalance: result.wallet.balance,
       refundAmount: amount
     };
-
   } catch (error) {
     console.error('Error processing return refund:', error);
     return {
       success: false,
-      message: error.message || 'Failed to process return refund',
-      error: error.message
+      message: (error as Error).message || 'Failed to process return refund',
+      error: (error as Error).message
     };
   }
 };
 
-/**
- * Deduct amount from wallet (for payments)
- * @param {String} userId - User ID
- * @param {Number} amount - Amount to deduct
- * @param {String} description - Transaction description
- * @param {String} orderId - Order ID (optional)
- * @returns {Object} - Result object
- */
-const deductAmount = async (userId, amount, description, orderId = null) => {
+/** Deduct an amount from a wallet (used when paying for an order). */
+export const deductAmount = async (
+  userId: UserId,
+  amount: number,
+  description: string,
+  orderId: string | null = null
+): Promise<WalletOperationResult> => {
   try {
     // Validate inputs
     if (!userId || !amount || amount <= 0) {
@@ -437,7 +475,6 @@ const deductAmount = async (userId, amount, description, orderId = null) => {
       };
     }
 
-    // Use existing addTransaction method
     const result = await addTransaction(userId, {
       type: 'debit',
       amount: amount,
@@ -456,31 +493,12 @@ const deductAmount = async (userId, amount, description, orderId = null) => {
       wallet: result.wallet,
       newBalance: result.wallet.balance
     };
-
   } catch (error) {
     console.error('Error deducting amount:', error);
     return {
       success: false,
-      message: error.message || 'Failed to deduct amount',
-      error: error.message
+      message: (error as Error).message || 'Failed to deduct amount',
+      error: (error as Error).message
     };
   }
-};
-
-
-module.exports = {
-  getOrCreateWallet,
-  getWallet,
-  addTransaction,
-  addCredit,
-  addReturnRefund,
-  deductAmount,
-  getPaginatedTransactions,
-  getTransactionsByType,
-  getTransactionById,
-  updateTransactionStatus,
-  addPendingTransaction,
-  completePendingTransaction,
-  failPendingTransaction,
-  getWalletStats
 };

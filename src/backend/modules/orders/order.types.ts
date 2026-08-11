@@ -11,6 +11,12 @@ export interface IOrderStatusHistoryEntry {
   status: OrderStatus;
   updatedAt: Date;
   notes?: string;
+  /**
+   * Who made the change - the admin controller passes the literal 'admin'.
+   * The schema previously did not declare this field, so every value written
+   * here was silently discarded by Mongoose.
+   */
+  updatedBy?: string;
 }
 
 export interface IOrderItem {

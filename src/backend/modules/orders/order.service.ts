@@ -1,20 +1,31 @@
-const Order = require('./order.model');
-const Return = require('../returns/return.model');
-const walletService = require('../wallet/wallet.service');
-const Product = require('../catalog/product.model');
-const mongoose = require('mongoose');
-const {
+import mongoose from 'mongoose';
+import paypal from '@paypal/checkout-server-sdk';
+
+import Order from './order.model';
+import Return from '../returns/return.model';
+import Product from '../catalog/product.model';
+import * as walletService from '../wallet/wallet.service';
+import { getPaypalClient } from '../payments/paypal.provider';
+
+import {
   ORDER_STATUS,
   PAYMENT_STATUS,
   getOrderStatusArray,
   getPaymentStatusArray,
   getCancellationReasonsArray,
-  getReturnReasonsArray,
+  getReturnReasonsArray
+} from '../../common/constants/order.constants';
 
-} = require('../../common/constants/order.constants');
+import type { IOrder, IOrderItem } from './order.types';
+import type {
+  CancellationReason,
+  OrderStatus,
+  PaymentStatus,
+  ReturnReason
+} from '../../common/constants/order.constants';
 
 
-const completePaymentOnDelivery = async (orderId) => {
+const completePaymentOnDelivery = async (orderId: string) => {
   try {
     const order = await Order.findOne({ orderId: orderId });
     if (!order) {
@@ -53,7 +64,7 @@ const completePaymentOnDelivery = async (orderId) => {
 };
 
 
-function calculateOrderStatus(items) {
+function calculateOrderStatus(items: IOrderItem[]) {
   // Counters (all start at 0)
   let pending = 0, processing = 0, shipped = 0, delivered = 0, 
       cancelled = 0, failed = 0, processingReturn = 0, returned = 0;
@@ -156,8 +167,8 @@ function calculateOrderStatus(items) {
 
  
 
-const isFinalStatus = (status) => {
-  const finalStatuses = [
+const isFinalStatus = (status: OrderStatus) => {
+  const finalStatuses: OrderStatus[] = [
     ORDER_STATUS.CANCELLED,
     ORDER_STATUS.RETURNED,
     ORDER_STATUS.FAILED
@@ -167,7 +178,7 @@ const isFinalStatus = (status) => {
 
 
 
-const updateOrderStatus = async (orderId, newStatus, notes = '') => {
+const updateOrderStatus = async (orderId: string, newStatus: OrderStatus, notes = '') => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
     if (!order) {
@@ -250,7 +261,7 @@ const updateOrderStatus = async (orderId, newStatus, notes = '') => {
         await order.save();
 
       } catch (codTxError) {
-        console.error(' Error recording COD completion:', codTxError.message);
+        console.error(' Error recording COD completion:', (codTxError as Error).message);
         // Don't throw - allow order status update to succeed even if this fails
       }
     }
@@ -282,7 +293,7 @@ const updateOrderStatus = async (orderId, newStatus, notes = '') => {
  * @param {String} updatedBy - Who updated the status
  * @returns {Object} - Result object with updated order
  */
-const updateItemStatus = async (orderId, itemId, newStatus, notes = '', updatedBy = null) => {
+const updateItemStatus = async (orderId: string, itemId: string, newStatus: OrderStatus, notes = '', updatedBy = null) => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
     if (!order) {
@@ -313,7 +324,7 @@ const updateItemStatus = async (orderId, itemId, newStatus, notes = '', updatedB
       status: newStatus,
       updatedAt: new Date(),
       notes: notes || `Item status updated from ${oldStatus} to ${newStatus}`,
-      updatedBy: updatedBy
+      updatedBy: updatedBy ?? undefined
     });
 
     //  AUTOMATED: Update item payment status using existing logic
@@ -327,7 +338,7 @@ const updateItemStatus = async (orderId, itemId, newStatus, notes = '', updatedB
         status: newOrderStatus,
         notes: `Order status updated due to item status change: ${oldStatus} → ${newStatus}`,
         updatedAt: new Date(),
-        updatedBy: updatedBy
+        updatedBy: updatedBy ?? undefined
       });
     }
 
@@ -368,9 +379,9 @@ const updateItemStatus = async (orderId, itemId, newStatus, notes = '', updatedB
  * @param {Object} order - Order object
  * @returns {Boolean} - Can cancel or not
  */
-const canCancelOrder = (order) => {
+const canCancelOrder = (order: IOrder) => {
   // Order can be cancelled if it's in Pending or Processing status
-  const cancellableStatuses = [ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING];
+  const cancellableStatuses: OrderStatus[] = [ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING];
   return cancellableStatuses.includes(order.status);
 };
 
@@ -381,7 +392,7 @@ const canCancelOrder = (order) => {
  * @param {String} cancelledBy - Who cancelled the order
  * @returns {Object} - Result object
  */
-const cancelOrder = async (orderId, reason = '', cancelledBy = null) => {
+const cancelOrder = async (orderId: string, reason = '', cancelledBy = null) => {
   try {
     const order = await Order.findOne({ orderId: orderId });
 
@@ -446,10 +457,10 @@ const cancelOrder = async (orderId, reason = '', cancelledBy = null) => {
     // Update items
     let updatedItemsCount = 0;
     order.items.forEach((item) => {
-      if ([ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING].includes(item.status)) {
+      if (([ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING] as OrderStatus[]).includes(item.status)) {
         item.status = ORDER_STATUS.CANCELLED;
         item.paymentStatus = newPaymentStatus;
-        item.cancellationReason = reason;
+        item.cancellationReason = reason as CancellationReason;
         item.cancellationDate = new Date();
         item.statusHistory.push({
           status: ORDER_STATUS.CANCELLED,
@@ -481,7 +492,7 @@ const cancelOrder = async (orderId, reason = '', cancelledBy = null) => {
 
 
 // Add Payment Status Calculation Method
-const calculatePaymentStatus = (order) => {
+const calculatePaymentStatus = (order: IOrder) => {
   const itemPaymentStatuses = order.items.map(item => item.paymentStatus);
   
   // All cancelled
@@ -516,7 +527,7 @@ const calculatePaymentStatus = (order) => {
 
 // Comprehensive automated payment status update
 //  FIXED: Separate logic for return request vs return approval
-const updateAutomatedPaymentStatus = (order, item, newItemStatus) => {
+const updateAutomatedPaymentStatus = (order: IOrder, item: IOrderItem, newItemStatus: OrderStatus) => {
   console.log(' Updating payment status automatically:', {
     itemId: item._id,
     newStatus: newItemStatus,
@@ -604,14 +615,14 @@ const updateAutomatedPaymentStatus = (order, item, newItemStatus) => {
  * @param {String} itemId - Item ID
  * @returns {Boolean} - Can cancel or not
  */
-const canCancelItem = (order, itemId) => {
+const canCancelItem = (order: IOrder, itemId: string) => {
   const item = order.items.id(itemId);
   if (!item) {
     return false;
   }
 
 // Item can be cancelled if it's in Pending or Processing status
-const cancellableStatuses = [ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING];
+const cancellableStatuses: OrderStatus[] = [ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING];
   return cancellableStatuses.includes(item.status);
 };
   
@@ -624,7 +635,7 @@ const cancellableStatuses = [ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING];
  * @param {String} cancelledBy - Who cancelled the item
  * @returns {Object} - Result object
  */
-const cancelItem = async (orderId, itemId, reason = '', notes = '', cancelledBy = null) => {
+const cancelItem = async (orderId: string, itemId: string, reason = '', notes = '', cancelledBy = null) => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
 
@@ -648,7 +659,7 @@ const cancelItem = async (orderId, itemId, reason = '', notes = '', cancelledBy 
 
     // Update item status
     item.status = ORDER_STATUS.CANCELLED;
-    item.cancellationReason = reason;
+    item.cancellationReason = reason as CancellationReason;
     item.cancellationDate = new Date();
 
     // AUTOMATED: Update payment status using new automated logic
@@ -696,15 +707,14 @@ const cancelItem = async (orderId, itemId, reason = '', notes = '', cancelledBy 
           const itemRefundAmountUSD = (item.totalPrice / 80).toFixed(2);
 
           // Process partial refund via PayPal
-          const paypal = require('@paypal/checkout-server-sdk');
-          const { getPaypalClient } = require('../payments/paypal.provider');
           const request = new paypal.payments.CapturesRefundRequest(captureId);
+          // The SDK typings require the full RequestData shape; only amount is needed here.
           request.requestBody({
             amount: {
               value: itemRefundAmountUSD,
               currency_code: 'USD'
             }
-          });
+          } as any);
 
           const refund = await getPaypalClient().execute(request);
           console.log(` PayPal partial refund successful for item ${itemId}:`, refund.result.id);
@@ -761,7 +771,7 @@ const cancelItem = async (orderId, itemId, reason = '', notes = '', cancelledBy 
  * @param {Object} order - Order object
  * @returns {Boolean} - Can return or not
  */
-const canReturnOrder = (order) => {
+const canReturnOrder = (order: IOrder) => {
   // Order can be returned if it's delivered
   return order.status === ORDER_STATUS.DELIVERED;
 };
@@ -773,7 +783,7 @@ const canReturnOrder = (order) => {
  * @param {String} reason - Return reason
  * @returns {Object} - Result object
  */
-const returnOrder = async (orderId, reason = '') => {
+const returnOrder = async (orderId: string, reason = '') => {
   try {
     const order = await Order.findOne({ orderId: orderId });
     if (!order) {
@@ -798,7 +808,7 @@ const returnOrder = async (orderId, reason = '') => {
     order.items.forEach(item => {
       if (item.status === ORDER_STATUS.DELIVERED) {
         item.status = ORDER_STATUS.RETURNED;  //  FIXED: Was 'Returned'
-        item.returnReason = reason;
+        item.returnReason = reason as ReturnReason;
         item.returnRequestDate = new Date();
         item.statusHistory.push({
           status: ORDER_STATUS.RETURNED,  //  FIXED: Was 'Returned'
@@ -834,7 +844,7 @@ const returnOrder = async (orderId, reason = '') => {
  * @param {String} returnedBy - Who initiated the return
  * @returns {Object} - Result object
  */
-const returnItem = async (orderId, itemId, reason = '', notes = '', returnedBy = null) => {
+const returnItem = async (orderId: string, itemId: string, reason = '', notes = '', returnedBy = null) => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
     if (!order) {
@@ -855,7 +865,7 @@ const returnItem = async (orderId, itemId, reason = '', notes = '', returnedBy =
     console.log('   Can Return Check:', canReturnItem(order, itemId));
 
     //  UPDATED: Allow returns from both Delivered and Processing Return status
-    const allowedStatusesForReturn = [ORDER_STATUS.DELIVERED, ORDER_STATUS.PROCESSING_RETURN];
+    const allowedStatusesForReturn: OrderStatus[] = [ORDER_STATUS.DELIVERED, ORDER_STATUS.PROCESSING_RETURN];
     
     if (!allowedStatusesForReturn.includes(item.status)) {
       console.log(` Item status validation failed. Current status: ${item.status}, Allowed: ${allowedStatusesForReturn.join(', ')}`);
@@ -874,7 +884,7 @@ const returnItem = async (orderId, itemId, reason = '', notes = '', returnedBy =
       item.status = ORDER_STATUS.PROCESSING_RETURN;
     }
     
-    item.returnReason = reason;
+    item.returnReason = reason as ReturnReason;
     item.returnRequestDate = new Date();
 
     //  AUTOMATED: Update payment status using new automated logic
@@ -921,7 +931,7 @@ const returnItem = async (orderId, itemId, reason = '', notes = '', returnedBy =
   }
 };
 
-const canReturnItem = (order, itemId) => {
+const canReturnItem = (order: IOrder, itemId: string) => {
   const item = order.items.id(itemId);
   if (!item) {
     console.log(' canReturnItem: Item not found');
@@ -929,7 +939,7 @@ const canReturnItem = (order, itemId) => {
   }
   
   //  UPDATED: Allow returns from both Delivered and Processing Return status
-  const allowedStatusesForReturn = [ORDER_STATUS.DELIVERED, ORDER_STATUS.PROCESSING_RETURN];
+  const allowedStatusesForReturn: OrderStatus[] = [ORDER_STATUS.DELIVERED, ORDER_STATUS.PROCESSING_RETURN];
   
   console.log('🔍 canReturnItem Debug:');
   console.log('   Item Status:', item.status);
@@ -942,7 +952,7 @@ const canReturnItem = (order, itemId) => {
 
 
 // Create return request for entire order
-const requestOrderReturn = async (orderId, reason = '', requestedBy = null) => {
+const requestOrderReturn = async (orderId: string, reason = '', requestedBy = null) => {
   try {
     const order = await Order.findOne({ orderId: orderId })
       .populate('user')
@@ -986,8 +996,8 @@ const requestOrderReturn = async (orderId, reason = '', requestedBy = null) => {
         itemId: item._id,
         userId: order.user._id,
         productId: item.productId ? item.productId._id : item.productId,
-        productName: item.productId ? item.productId.productName : 'Product Name',
-        productImage: item.productId ? item.productId.mainImage : null,
+        productName: item.productId ? (item.productId as any).productName : 'Product Name',
+        productImage: item.productId ? (item.productId as any).mainImage : null,
         sku: item.sku,
         size: item.size,
         quantity: item.quantity,
@@ -1002,7 +1012,7 @@ const requestOrderReturn = async (orderId, reason = '', requestedBy = null) => {
 
       // Update item status to 'Processing Return'
       item.status = ORDER_STATUS.PROCESSING_RETURN;  //  FIXED: Was 'Processing Return'
-      item.returnReason = reason;
+      item.returnReason = reason as ReturnReason;
       item.returnRequestDate = new Date();
       item.statusHistory.push({
         status: ORDER_STATUS.PROCESSING_RETURN,  //  FIXED: Was 'Processing Return'
@@ -1046,7 +1056,7 @@ const requestOrderReturn = async (orderId, reason = '', requestedBy = null) => {
  * @param {String} requestedBy - Who requested the return
  * @returns {Object} - Result object
  */
-const requestItemReturn = async (orderId, itemId, reason = '', requestedBy = null) => {
+const requestItemReturn = async (orderId: string, itemId: string, reason = '', requestedBy = null) => {
   try {
     const order = await Order.findOne({ orderId: orderId })
       .populate('user')
@@ -1086,8 +1096,8 @@ const requestItemReturn = async (orderId, itemId, reason = '', requestedBy = nul
       itemId: itemId,
       userId: order.user._id,
       productId: item.productId ? item.productId._id : item.productId,
-      productName: item.productId ? item.productId.productName : 'Product Name',
-      productImage: item.productId ? item.productId.mainImage : null,
+      productName: item.productId ? (item.productId as any).productName : 'Product Name',
+      productImage: item.productId ? (item.productId as any).mainImage : null,
       sku: item.sku,
       size: item.size,
       quantity: item.quantity,
@@ -1101,7 +1111,7 @@ const requestItemReturn = async (orderId, itemId, reason = '', requestedBy = nul
 
     // Update item status to 'Processing Return'
     item.status = ORDER_STATUS.PROCESSING_RETURN;  //  FIXED: Was 'Processing Return'
-    item.returnReason = reason;
+    item.returnReason = reason as ReturnReason;
     item.returnRequestDate = new Date();
     item.statusHistory.push({
       status: ORDER_STATUS.PROCESSING_RETURN,  //  FIXED: Was 'Processing Return'
@@ -1139,7 +1149,7 @@ const requestItemReturn = async (orderId, itemId, reason = '', requestedBy = nul
 };
 
 
-const approveItemReturn = async (returnId, approvedBy = null, customRefundAmount = null) => {
+const approveItemReturn = async (returnId: string, approvedBy = null, customRefundAmount = null) => {
   try {
     // 1. Get and validate return request
     const returnRequest = await Return.findById(returnId);
@@ -1171,7 +1181,7 @@ const approveItemReturn = async (returnId, approvedBy = null, customRefundAmount
       returnRequest.status = 'Approved';
       returnRequest.refundAmount = refundAmount;
       returnRequest.approvedAt = new Date();
-      returnRequest.approvedBy = approvedBy;
+      returnRequest.approvedBy = approvedBy ?? undefined;
       returnRequest.refundStatus = 'Processed';
       returnRequest.refundMethod = 'Wallet';
       await returnRequest.save();
@@ -1180,7 +1190,7 @@ const approveItemReturn = async (returnId, approvedBy = null, customRefundAmount
       await walletService.addReturnRefund(
         returnRequest.userId.toString(),
         refundAmount,
-        returnRequest.orderId,
+        returnRequest.orderId.toString(),
         returnRequest._id.toString()
       );
 
@@ -1199,9 +1209,9 @@ const approveItemReturn = async (returnId, approvedBy = null, customRefundAmount
     // 3. Use existing returnItem() function to complete the return
     const returnResult = await returnItem(
       returnRequest.orderId,
-      returnRequest.itemId,
+      returnRequest.itemId.toString(),
       returnRequest.reason,
-      approvedBy
+      approvedBy ?? undefined
     );
 
     // 4. Update Return document status
@@ -1209,7 +1219,7 @@ const approveItemReturn = async (returnId, approvedBy = null, customRefundAmount
     returnRequest.status = 'Approved';
     returnRequest.refundAmount = refundAmount;
     returnRequest.approvedAt = new Date();
-    returnRequest.approvedBy = approvedBy;
+    returnRequest.approvedBy = approvedBy ?? undefined;
     returnRequest.refundStatus = 'Processed';
     returnRequest.refundMethod = 'Wallet';
     await returnRequest.save();
@@ -1232,7 +1242,7 @@ const approveItemReturn = async (returnId, approvedBy = null, customRefundAmount
     await walletService.addReturnRefund(
       returnRequest.userId.toString(),
       refundAmount,
-      returnRequest.orderId,
+      returnRequest.orderId.toString(),
       returnRequest._id.toString()
     );
 
@@ -1254,7 +1264,7 @@ const approveItemReturn = async (returnId, approvedBy = null, customRefundAmount
 
 
 //  ADD: Missing approveOrderReturn function
-const approveOrderReturn = async (orderId, approvedBy = null) => {
+const approveOrderReturn = async (orderId: string, approvedBy = null) => {
   try {
     // 1. Find all pending return requests for this order
     const returnRequests = await Return.find({
@@ -1291,9 +1301,9 @@ const approveOrderReturn = async (orderId, approvedBy = null) => {
       returnRequest.status = 'Approved';
       returnRequest.refundAmount = refundAmount;
       returnRequest.approvedAt = new Date();
-      returnRequest.approvedBy = approvedBy;
+      returnRequest.approvedBy = approvedBy ?? undefined;
       returnRequest.refundStatus = 'Processed';
-      returnRequest.refundMethod = 'wallet';
+      returnRequest.refundMethod = 'Wallet';
       await returnRequest.save();
 
       // Restore product stock
@@ -1342,7 +1352,7 @@ const approveOrderReturn = async (orderId, approvedBy = null) => {
 };
 
 //  ADD: Missing rejectItemReturn function
-const rejectItemReturn = async (returnId, rejectedBy = null, rejectionReason = '') => {
+const rejectItemReturn = async (returnId: string, rejectedBy = null, rejectionReason = '') => {
   try {
     // 1. Get and validate return request
     const returnRequest = await Return.findById(returnId);
@@ -1368,7 +1378,7 @@ const rejectItemReturn = async (returnId, rejectedBy = null, rejectionReason = '
     // 3. Update Return document status to rejected
     returnRequest.status = 'Rejected';
     returnRequest.rejectedAt = new Date();
-    returnRequest.rejectedBy = rejectedBy;
+    returnRequest.rejectedBy = rejectedBy ?? undefined;
     returnRequest.rejectionReason = rejectionReason || 'Return request rejected by admin';
     await returnRequest.save();
 
@@ -1410,7 +1420,7 @@ const rejectItemReturn = async (returnId, rejectedBy = null, rejectionReason = '
 };
 
 //  ADD: Missing rejectOrderReturn function
-const rejectOrderReturn = async (orderId, rejectedBy = null, rejectionReason = '') => {
+const rejectOrderReturn = async (orderId: string, rejectedBy = null, rejectionReason = '') => {
   try {
     // 1. Find all pending return requests for this order
     const returnRequests = await Return.find({
@@ -1441,7 +1451,7 @@ const rejectOrderReturn = async (orderId, rejectedBy = null, rejectionReason = '
       // Update Return document to rejected
       returnRequest.status = 'Rejected';
       returnRequest.rejectedAt = new Date();
-      returnRequest.rejectedBy = rejectedBy;
+      returnRequest.rejectedBy = rejectedBy ?? undefined;
       returnRequest.rejectionReason = rejectionReason || 'Return request rejected by admin';
       await returnRequest.save();
 
@@ -1486,8 +1496,15 @@ const rejectOrderReturn = async (orderId, rejectedBy = null, rejectionReason = '
   }
 };
 
-const getValidTransitions = (currentStatus) => {
-  const transitions = {
+/**
+ * NOTE: this map deliberately has no entries for PARTIALLY_DELIVERED or
+ * PARTIALLY_RETURNED, so the `|| []` fallback below leaves orders in those
+ * states with no valid transitions at all. Behaviour preserved as-is during
+ * the TypeScript conversion - whether those states should be able to move
+ * on is a product decision, not a typing one.
+ */
+const getValidTransitions = (currentStatus: OrderStatus): OrderStatus[] => {
+  const transitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
     [ORDER_STATUS.PENDING]: [ORDER_STATUS.PROCESSING, ORDER_STATUS.CANCELLED],
     [ORDER_STATUS.PROCESSING]: [ORDER_STATUS.SHIPPED, ORDER_STATUS.CANCELLED],
     [ORDER_STATUS.SHIPPED]: [ORDER_STATUS.DELIVERED],
@@ -1501,7 +1518,7 @@ const getValidTransitions = (currentStatus) => {
   return transitions[currentStatus] || [];
 };
 
-const isValidStatusTransition = (currentStatus, newStatus) => {
+const isValidStatusTransition = (currentStatus: OrderStatus, newStatus: OrderStatus) => {
   const validTransitions = getValidTransitions(currentStatus);
   return validTransitions.includes(newStatus);
 };
@@ -1514,7 +1531,7 @@ const isValidStatusTransition = (currentStatus, newStatus) => {
  * @param {String} cancelledBy - Who cancelled the order
  * @returns {Object} - Result object
  */
-const adminCancelOrder = async (orderId, reason = 'Cancelled by admin', cancelledBy = 'admin') => {
+const adminCancelOrder = async (orderId: string, reason = 'Cancelled by admin', cancelledBy = 'admin') => {
   try {
     const order = await Order.findOne({ orderId: orderId }).populate('user');
 
@@ -1581,7 +1598,7 @@ const adminCancelOrder = async (orderId, reason = 'Cancelled by admin', cancelle
     // Update all cancellable items
     let updatedItemsCount = 0;
     order.items.forEach((item) => {
-      if ([ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING].includes(item.status)) {
+      if (([ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING] as OrderStatus[]).includes(item.status)) {
         item.status = ORDER_STATUS.CANCELLED;
         item.paymentStatus = newPaymentStatus;
         item.cancellationReason = 'Other'; // Admin cancellations use "Other"
@@ -1612,7 +1629,7 @@ const adminCancelOrder = async (orderId, reason = 'Cancelled by admin', cancelle
 };
 
 
-const adminCancelItem = async (orderId, itemId, reason = 'Cancelled by admin', cancelledBy = 'admin') => {
+const adminCancelItem = async (orderId: string, itemId: string, reason = 'Cancelled by admin', cancelledBy = 'admin') => {
   try {
     const order = await Order.findOne({ orderId }).populate('user');
     if (!order) {
@@ -1682,15 +1699,14 @@ const adminCancelItem = async (orderId, itemId, reason = 'Cancelled by admin', c
           const itemRefundAmountUSD = (item.totalPrice / 80).toFixed(2);
 
           // Process partial refund via PayPal
-          const paypal = require('@paypal/checkout-server-sdk');
-          const { getPaypalClient } = require('../payments/paypal.provider');
           const request = new paypal.payments.CapturesRefundRequest(captureId);
+          // The SDK typings require the full RequestData shape; only amount is needed here.
           request.requestBody({
             amount: {
               value: itemRefundAmountUSD,
               currency_code: 'USD'
             }
-          });
+          } as any);
 
           const refund = await getPaypalClient().execute(request);
           console.log(` Admin PayPal partial refund successful for item ${itemId}:`, refund.result.id);
@@ -1740,7 +1756,7 @@ const adminCancelItem = async (orderId, itemId, reason = 'Cancelled by admin', c
 
 
 
-const adminOrderReturnRequest = async (orderId, reason = 'Return requested by admin', requestedBy = 'admin') => {
+const adminOrderReturnRequest = async (orderId: string, reason = 'Return requested by admin', requestedBy = 'admin') => {
   try {
     const order = await Order.findOne({ orderId: orderId })
       .populate('user')
@@ -1775,8 +1791,8 @@ const adminOrderReturnRequest = async (orderId, reason = 'Return requested by ad
         itemId: item._id,
         userId: order.user._id,
         productId: item.productId ? item.productId._id : item.productId,
-        productName: item.productId ? item.productId.productName : 'Product Name',
-        productImage: item.productId ? item.productId.mainImage : null,
+        productName: item.productId ? (item.productId as any).productName : 'Product Name',
+        productImage: item.productId ? (item.productId as any).mainImage : null,
         sku: item.sku,
         size: item.size,
         quantity: item.quantity,
@@ -1835,7 +1851,7 @@ const adminOrderReturnRequest = async (orderId, reason = 'Return requested by ad
  * @param {String} requestedBy - Who requested the return
  * @returns {Object} - Result object
  */
-const adminItemReturnRequest = async (orderId, itemId, reason = 'Return requested by admin', requestedBy = 'admin') => {
+const adminItemReturnRequest = async (orderId: string, itemId: string, reason = 'Return requested by admin', requestedBy = 'admin') => {
   try {
     const order = await Order.findOne({ orderId: orderId })
       .populate('user')
@@ -1866,8 +1882,8 @@ const adminItemReturnRequest = async (orderId, itemId, reason = 'Return requeste
       itemId: itemId,
       userId: order.user._id,
       productId: item.productId ? item.productId._id : item.productId,
-      productName: item.productId ? item.productId.productName : 'Product Name',
-      productImage: item.productId ? item.productId.mainImage : null,
+      productName: item.productId ? (item.productId as any).productName : 'Product Name',
+      productImage: item.productId ? (item.productId as any).mainImage : null,
       sku: item.sku,
       size: item.size,
       quantity: item.quantity,
@@ -1921,7 +1937,7 @@ const adminItemReturnRequest = async (orderId, itemId, reason = 'Return requeste
 
 
 //  Complete COD payment with unified transaction logging
-const completeCODPaymentWithTransaction = async (orderId, deliveredBy = 'admin') => {
+const completeCODPaymentWithTransaction = async (orderId: string, deliveredBy = 'admin') => {
   try {
     const order = await Order.findOne({ orderId: orderId }).populate('user');
     if (!order) {
@@ -1979,12 +1995,11 @@ const completeCODPaymentWithTransaction = async (orderId, deliveredBy = 'admin')
 
 
 
-module.exports = {
+export {
   // Status Management Functions
   updateAutomatedPaymentStatus,
   calculateOrderStatus,
   calculatePaymentStatus,
-  completePaymentOnDelivery,
   updateOrderStatus,
   updateItemStatus,
 
@@ -2019,5 +2034,11 @@ module.exports = {
   isValidStatusTransition,
 
   completeCODPaymentWithTransaction,
-  completePaymentOnDelivery: completeCODPaymentWithTransaction
+
+  // NOTE: this export name does NOT refer to the completePaymentOnDelivery
+  // function defined at the top of this file. The original module.exports
+  // object listed the key twice - once as shorthand and once aliased to
+  // completeCODPaymentWithTransaction - so the alias silently won and the
+  // standalone function has never been reachable through this module.
+  completeCODPaymentWithTransaction as completePaymentOnDelivery
 };

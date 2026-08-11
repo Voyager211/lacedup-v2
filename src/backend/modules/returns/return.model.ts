@@ -73,6 +73,24 @@ const returnSchema = new mongoose.Schema<IReturn>(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     },
+
+    // Approval / rejection audit trail. order.service has always written
+    // these, but without schema fields Mongoose dropped them silently.
+    approvedAt: {
+      type: Date
+    },
+    approvedBy: {
+      type: String
+    },
+    rejectedAt: {
+      type: Date
+    },
+    rejectedBy: {
+      type: String
+    },
+    rejectionReason: {
+      type: String
+    },
     adminNotes: {
       type: String
     },
