@@ -1,4 +1,5 @@
-const getAbout = async (req, res) => {
+import type { Request, Response } from 'express';
+const getAbout = async (req: Request, res: Response) => {
   try {
     res.render('user/about', {
       title: 'About Us - LacedUp',
@@ -6,12 +7,12 @@ const getAbout = async (req, res) => {
       active: 'about',
       user: req.user || null
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('About Page Error:', err);
     res.status(500).send('Failed to load about page');
   }
 };
 
-module.exports = {
+export {
   getAbout
 };

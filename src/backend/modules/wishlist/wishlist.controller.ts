@@ -1,14 +1,15 @@
-const Wishlist = require('./wishlist.model');
-const Product = require('../catalog/product.model');
-const Category = require('../catalog/category.model');
-const Brand = require('../catalog/brand.model');
-const Cart = require('../cart/cart.model');
+import type { Request, Response } from 'express';
+import Wishlist from './wishlist.model';
+import Product from '../catalog/product.model';
+import Category from '../catalog/category.model';
+import Brand from '../catalog/brand.model';
+import Cart from '../cart/cart.model';
 
 // Get wishlist page
-const getWishlist = async (req, res) => {
+const getWishlist = async (req: Request, res: Response) => {
   try {
-    const userId = req.user._id;
-    const search = req.query.q || '';
+    const userId = req.user!._id;
+    const search = String(req.query.q || '');
 
     // Find user's wishlist and populate products with all necessary data
     let wishlist = await Wishlist.findOne({ userId })
@@ -20,18 +21,18 @@ const getWishlist = async (req, res) => {
         ]
       });
 
-    let products = [];
+    let products: any[] = [];
     
     if (wishlist && wishlist.products.length > 0) {
       // Filter out any null products (in case product was deleted)
       products = wishlist.products
         .filter(item => item.productId)
         .map(item => {
-          const product = item.productId;
+          const product: any = item.productId; // populated document
           
           // Calculate average final price for variants
           if (product.variants && product.variants.length > 0) {
-            const finalPrices = product.variants.map(variant => {
+            const finalPrices = product.variants.map((variant: any) => {
               const basePrice = variant.basePrice || product.regularPrice;
               const categoryOffer = (product.category && product.category.categoryOffer) || 0;
               const brandOffer = (product.brand && product.brand.brandOffer) || 0;
@@ -40,12 +41,12 @@ const getWishlist = async (req, res) => {
               const maxOffer = Math.max(categoryOffer, brandOffer, productOffer, variantOffer);
               return basePrice * (1 - maxOffer / 100);
             });
-            product.averageFinalPrice = finalPrices.reduce((sum, price) => sum + price, 0) / finalPrices.length;
+            product.averageFinalPrice = finalPrices.reduce((sum: number, price: number) => sum + price, 0) / finalPrices.length;
           }
 
           // Calculate total stock
           product.totalStock = product.variants ? 
-            product.variants.reduce((total, variant) => total + variant.stock, 0) : 0;
+            product.variants.reduce((total: number, variant: any) => total + variant.stock, 0) : 0;
 
           return product;
         });
@@ -75,7 +76,7 @@ const getWishlist = async (req, res) => {
       userWishlistProductIds
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching wishlist:', error);
     res.status(500).render('errors/server-error', {
       title: 'Server Error',
@@ -85,9 +86,9 @@ const getWishlist = async (req, res) => {
 };
 
 // Add product to wishlist
-const addToWishlist = async (req, res) => {
+const addToWishlist = async (req: Request, res: Response) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user!._id;
     const { productId } = req.body;
 
     // Check if product exists
@@ -128,7 +129,7 @@ const addToWishlist = async (req, res) => {
     }
 
     // Add product to wishlist
-    wishlist.products.push({ productId });
+    wishlist.products.push({ productId, addedAt: new Date() });
     await wishlist.save();
 
     res.json({
@@ -137,7 +138,7 @@ const addToWishlist = async (req, res) => {
       wishlistCount: wishlist.products.length
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding to wishlist:', error);
     res.status(500).json({
       success: false,
@@ -147,9 +148,9 @@ const addToWishlist = async (req, res) => {
 };
 
 // Remove product from wishlist
-const removeFromWishlist = async (req, res) => {
+const removeFromWishlist = async (req: Request, res: Response) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user!._id;
     const { productId } = req.params;
 
     const wishlist = await Wishlist.findOne({ userId });
@@ -174,7 +175,7 @@ const removeFromWishlist = async (req, res) => {
       wishlistCount: wishlist.products.length
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error removing from wishlist:', error);
     res.status(500).json({
       success: false,
@@ -184,10 +185,10 @@ const removeFromWishlist = async (req, res) => {
 };
 
 // Search wishlist products (AJAX endpoint)
-const searchWishlist = async (req, res) => {
+const searchWishlist = async (req: Request, res: Response) => {
   try {
-    const userId = req.user._id;
-    const search = req.query.q || '';
+    const userId = req.user!._id;
+    const search = String(req.query.q || '');
 
     // Find user's wishlist and populate products
     let wishlist = await Wishlist.findOne({ userId })
@@ -199,17 +200,17 @@ const searchWishlist = async (req, res) => {
         ]
       });
 
-    let products = [];
+    let products: any[] = [];
     
     if (wishlist && wishlist.products.length > 0) {
       products = wishlist.products
         .filter(item => item.productId)
         .map(item => {
-          const product = item.productId;
+          const product: any = item.productId; // populated document
           
           // Calculate average final price for variants
           if (product.variants && product.variants.length > 0) {
-            const finalPrices = product.variants.map(variant => {
+            const finalPrices = product.variants.map((variant: any) => {
               const basePrice = variant.basePrice || product.regularPrice;
               const categoryOffer = (product.category && product.category.categoryOffer) || 0;
               const brandOffer = (product.brand && product.brand.brandOffer) || 0;
@@ -218,12 +219,12 @@ const searchWishlist = async (req, res) => {
               const maxOffer = Math.max(categoryOffer, brandOffer, productOffer, variantOffer);
               return basePrice * (1 - maxOffer / 100);
             });
-            product.averageFinalPrice = finalPrices.reduce((sum, price) => sum + price, 0) / finalPrices.length;
+            product.averageFinalPrice = finalPrices.reduce((sum: number, price: number) => sum + price, 0) / finalPrices.length;
           }
 
           // Calculate total stock
           product.totalStock = product.variants ? 
-            product.variants.reduce((total, variant) => total + variant.stock, 0) : 0;
+            product.variants.reduce((total: number, variant: any) => total + variant.stock, 0) : 0;
 
           return product;
         });
@@ -245,7 +246,7 @@ const searchWishlist = async (req, res) => {
       totalCount: products.length
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error searching wishlist:', error);
     res.status(500).json({
       success: false,
@@ -254,7 +255,7 @@ const searchWishlist = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getWishlist,
   addToWishlist,
   removeFromWishlist,

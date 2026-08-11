@@ -1,20 +1,21 @@
-const Brand = require('./brand.model');
-const { getPagination } = require('../../common/utils/pagination.util');
-const { validateBase64Image } = require('../../common/utils/image-validation.util');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs').promises;
+import type { Request, Response } from 'express';
+import Brand from './brand.model';
+import { getPagination } from '../../common/utils/pagination.util';
+import { validateBase64Image } from '../../common/utils/image-validation.util';
+import sharp from 'sharp';
+import path from 'path';
+import { promises as fs } from 'fs';
 
 // List brands with search and filter
-const listBrands = async (req, res) => {
+const listBrands = async (req: Request, res: Response) => {
   try {
-    const searchQuery = req.query.q || '';
-    const statusFilter = req.query.status || 'all';
-    const page = parseInt(req.query.page) || 1;
+    const searchQuery = String(req.query.q || '');
+    const statusFilter = String(req.query.status || 'all');
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
     // Build filter query
-    const query = {
+    const query: Record<string, any> = {
       name: { $regex: searchQuery, $options: 'i' },
       isDeleted: false
     };
@@ -45,7 +46,7 @@ const listBrands = async (req, res) => {
       statusFilter,
       title: 'Brand Management'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error listing brands:', error);
     res.status(500).render('admin/brands', {
       brands: [],
@@ -61,15 +62,15 @@ const listBrands = async (req, res) => {
 };
 
 // Fetch-based brand listing
-const apiBrands = async (req, res) => {
+const apiBrands = async (req: Request, res: Response) => {
   try {
-    const searchQuery = req.query.q || '';
-    const statusFilter = req.query.status || 'all';
-    const page = parseInt(req.query.page) || 1;
+    const searchQuery = String(req.query.q || '');
+    const statusFilter = String(req.query.status || 'all');
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
     // Build filter query
-    const query = {
+    const query: Record<string, any> = {
       name: { $regex: searchQuery, $options: 'i' },
       isDeleted: false
     };
@@ -97,28 +98,28 @@ const apiBrands = async (req, res) => {
       totalPages,
       totalRecords
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error fetching brands:', err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
 // Get single brand
-const apiGetBrand = async (req, res) => {
+const apiGetBrand = async (req: Request, res: Response) => {
   try {
     const brand = await Brand.findById(req.params.id);
     if (!brand || brand.isDeleted) {
       return res.status(404).json({ success: false, message: 'Brand not found' });
     }
     res.json({ success: true, brand });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error fetching brand:', err);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 };
 
 // Add brand via fetch with image upload
-const apiCreateBrand = async (req, res) => {
+const apiCreateBrand = async (req: Request, res: Response) => {
   try {
     const { name, description, brandOffer, base64Image } = req.body;
 
@@ -181,7 +182,7 @@ const apiCreateBrand = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Brand created successfully' });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Create Error:', err);
 
     if (err.code === 11000) {
@@ -196,7 +197,7 @@ const apiCreateBrand = async (req, res) => {
 };
 
 // Update brand via fetch with image upload
-const apiUpdateBrand = async (req, res) => {
+const apiUpdateBrand = async (req: Request, res: Response) => {
   try {
     const { name, description, brandOffer, base64Image } = req.body;
     const brandId = req.params.id;
@@ -245,7 +246,7 @@ const apiUpdateBrand = async (req, res) => {
         const oldImagePath = path.join('public', brand.image);
         try {
           await fs.unlink(oldImagePath);
-        } catch (err) {
+        } catch (err: any) {
           console.log('Old image not found or already deleted:', err.message);
         }
       }
@@ -275,7 +276,7 @@ const apiUpdateBrand = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Brand updated successfully' });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Update Error:', err);
 
     if (err.code === 11000) {
@@ -290,7 +291,7 @@ const apiUpdateBrand = async (req, res) => {
 };
 
 // Toggle brand status
-const apiToggleStatus = async (req, res) => {
+const apiToggleStatus = async (req: Request, res: Response) => {
   try {
     const brand = await Brand.findById(req.params.id);
     if (!brand || brand.isDeleted) {
@@ -305,14 +306,14 @@ const apiToggleStatus = async (req, res) => {
       message: `Brand ${brand.isActive ? 'activated' : 'deactivated'} successfully`,
       isActive: brand.isActive
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Toggle Status Error:', err);
     res.status(500).json({ success: false, message: 'Failed to toggle status' });
   }
 };
 
 // Soft delete via fetch
-const apiSoftDeleteBrand = async (req, res) => {
+const apiSoftDeleteBrand = async (req: Request, res: Response) => {
   try {
     const brand = await Brand.findById(req.params.id);
     if (!brand || brand.isDeleted) {
@@ -321,13 +322,13 @@ const apiSoftDeleteBrand = async (req, res) => {
 
     await Brand.findByIdAndUpdate(req.params.id, { isDeleted: true });
     res.json({ success: true, message: 'Brand deleted successfully' });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Delete Error:', err);
     res.status(500).json({ success: false, message: 'Failed to delete brand' });
   }
 };
 
-module.exports = {
+export {
   listBrands,
   apiBrands,
   apiGetBrand,

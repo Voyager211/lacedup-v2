@@ -1,16 +1,19 @@
-const User = require('./user.model');
-const { getPagination } = require('../../common/utils/pagination.util');
+import type { Request, Response } from 'express';
+import type { FilterQuery } from 'mongoose';
+import type { IUser } from './user.types';
+import User from './user.model';
+import { getPagination } from '../../common/utils/pagination.util';
 
 
-const listUsers = async (req, res) => {
+const listUsers = async (req: Request, res: Response) => {
     try {
-        const q = req.query.q || '';
-        const status = req.query.status || 'all'; // all, blocked, unblocked
-        const page = parseInt(req.query.page) || 1;
+        const q = String(req.query.q || '');
+        const status = String(req.query.status || 'all'); // all, blocked, unblocked
+        const page = parseInt(String(req.query.page)) || 1;
         const limit = 10;
 
         // Build query with role filter
-        const query = { role: 'user' };
+        const query: FilterQuery<IUser> = { role: 'user' };
         
         // Add search filter
         if (q) {
@@ -48,7 +51,7 @@ const listUsers = async (req, res) => {
             totalUserCount,
             title: 'User Management'
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error in listUsers:', error);
         res.status(500).send('Internal Server Error');
     }
@@ -56,15 +59,15 @@ const listUsers = async (req, res) => {
 
 
 // AJAX rendering
-const apiUsers = async (req, res) => {
+const apiUsers = async (req: Request, res: Response) => {
     try {
         const q = req.query.q || '';
         const status = req.query.status || 'all'; // all, blocked, unblocked
-        const page = parseInt(req.query.page) || 1;
+        const page = parseInt(String(req.query.page)) || 1;
         const limit = 10;
 
         // Build query with role filter
-        const query = { role: 'user' };
+        const query: FilterQuery<IUser> = { role: 'user' };
         
         // Add search filter
         if (q) {
@@ -92,7 +95,7 @@ const apiUsers = async (req, res) => {
         );
 
         res.json({ users, currentPage: page, totalPages, statusFilter: status });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error fetching user data: ', err);
         res.status(500).json({ message: 'Internal Server Error' });
     }
@@ -100,35 +103,35 @@ const apiUsers = async (req, res) => {
 
 
 // AJAX blocking & unblocking
-const apiBlockUser = async (req, res) => {
+const apiBlockUser = async (req: Request, res: Response) => {
     try {
         await User.findByIdAndUpdate(req.params.id, {
             isBlocked: true,
             blockedAt: new Date()
         });
         res.json({ success: true });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error blocking user:', err);
         res.status(500).json({ success: false, message: 'Error blocking user' });
     }
 };
 
 
-const apiUnblockUser = async (req, res) => {
+const apiUnblockUser = async (req: Request, res: Response) => {
     try {
         await User.findByIdAndUpdate(req.params.id, {
             isBlocked: false,
             blockedAt: null
         });
         res.json({ success: true });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error unblocking user:', err);
         res.status(500).json({ success: false, message: 'Error unblocking user' });
     }
 };
 
 
-module.exports = {
+export {
     listUsers,
     apiUsers,
     apiBlockUser,

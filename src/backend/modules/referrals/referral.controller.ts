@@ -1,17 +1,18 @@
-const User = require('../users/user.model');
-const Wallet = require('../wallet/wallet.model');
+import type { Request, Response } from 'express';
+import User from '../users/user.model';
+import Wallet from '../wallet/wallet.model';
 
-const getReferralsPage = async (req, res) => {
+const getReferralsPage = async (req: Request, res: Response) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user!._id;
 
     // Get user's referral info
     const user = await User.findById(userId)
       .select('referralCode referralCount name email');
 
     //  Pagination parameters
-    const referralsPage = parseInt(req.query.referralsPage) || 1;
-    const earningsPage = parseInt(req.query.earningsPage) || 1;
+    const referralsPage = parseInt(String(req.query.referralsPage)) || 1;
+    const earningsPage = parseInt(String(req.query.earningsPage)) || 1;
     const limit = 10;
 
     //  Get total count of referred users
@@ -28,7 +29,7 @@ const getReferralsPage = async (req, res) => {
     const wallet = await Wallet.findOne({ userId: userId });
     const allReferralTransactions = wallet ? 
       wallet.transactions.filter(t => t.paymentMethod === 'referral_reward')
-        .sort((a, b) => new Date(b.date) - new Date(a.date)) : [];
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
 
     //  Paginate referral transactions
     const totalEarnings = allReferralTransactions.reduce(
@@ -57,7 +58,7 @@ const getReferralsPage = async (req, res) => {
       referralsStartPage = Math.max(1, referralsEndPage - maxPagesToShow + 1);
     }
     
-    const referralsPageNumbers = [];
+    const referralsPageNumbers: any[] = [];
     for (let i = referralsStartPage; i <= referralsEndPage; i++) {
       referralsPageNumbers.push(i);
     }
@@ -77,13 +78,13 @@ const getReferralsPage = async (req, res) => {
       earningsStartPage = Math.max(1, earningsEndPage - maxPagesToShow + 1);
     }
     
-    const earningsPageNumbers = [];
+    const earningsPageNumbers: any[] = [];
     for (let i = earningsStartPage; i <= earningsEndPage; i++) {
       earningsPageNumbers.push(i);
     }
 
     // Build referral link
-    const referralLink = `${req.protocol}://${req.get('host')}/signup?ref=${user.referralCode}`;
+    const referralLink = `${req.protocol}://${req.get('host')}/signup?ref=${user!.referralCode}`;
 
     res.render('user/referrals', {
       title: 'My Referrals',
@@ -114,7 +115,7 @@ const getReferralsPage = async (req, res) => {
       totalEarningsCount
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading referrals page:', error);
     res.status(500).render('user/error', { 
       title: 'Error',
@@ -123,10 +124,10 @@ const getReferralsPage = async (req, res) => {
   }
 };
 
-const getPaginatedReferrals = async (req, res) => {
+const getPaginatedReferrals = async (req: Request, res: Response) => {
   try {
-    const userId = req.user._id;
-    const page = parseInt(req.query.page) || 1;
+    const userId = req.user!._id;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
     const totalReferrals = await User.countDocuments({ referredBy: userId });
@@ -150,7 +151,7 @@ const getPaginatedReferrals = async (req, res) => {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
     
-    const pageNumbers = [];
+    const pageNumbers: any[] = [];
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
@@ -169,22 +170,22 @@ const getPaginatedReferrals = async (req, res) => {
         totalReferrals
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching paginated referrals:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch referrals' });
   }
 };
 
-const getPaginatedEarnings = async (req, res) => {
+const getPaginatedEarnings = async (req: Request, res: Response) => {
   try {
-    const userId = req.user._id;
-    const page = parseInt(req.query.page) || 1;
+    const userId = req.user!._id;
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
     const wallet = await Wallet.findOne({ userId: userId });
     const allReferralTransactions = wallet ? 
       wallet.transactions.filter(t => t.paymentMethod === 'referral_reward')
-        .sort((a, b) => new Date(b.date) - new Date(a.date)) : [];
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
 
     const totalEarningsCount = allReferralTransactions.length;
     const startIndex = (page - 1) * limit;
@@ -204,7 +205,7 @@ const getPaginatedEarnings = async (req, res) => {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
     
-    const pageNumbers = [];
+    const pageNumbers: any[] = [];
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
@@ -223,13 +224,13 @@ const getPaginatedEarnings = async (req, res) => {
         totalEarningsCount
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching paginated earnings:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch earnings' });
   }
 };
 
-module.exports = {
+export {
   getReferralsPage,
   getPaginatedReferrals,
   getPaginatedEarnings

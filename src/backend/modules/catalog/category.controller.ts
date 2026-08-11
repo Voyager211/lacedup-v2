@@ -1,19 +1,20 @@
-const Category = require('./category.model');
-const { getPagination } = require('../../common/utils/pagination.util');
-const { validateBase64Image } = require('../../common/utils/image-validation.util');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs').promises;
+import type { Request, Response } from 'express';
+import Category from './category.model';
+import { getPagination } from '../../common/utils/pagination.util';
+import { validateBase64Image } from '../../common/utils/image-validation.util';
+import sharp from 'sharp';
+import path from 'path';
+import { promises as fs } from 'fs';
 
 // List categories with search and filter
-const listCategories = async (req, res) => {
+const listCategories = async (req: Request, res: Response) => {
   try { 
-    const searchQuery = req.query.q || '';
-    const statusFilter = req.query.status || 'all';
-    const page = parseInt(req.query.page) || 1;
+    const searchQuery = String(req.query.q || '');
+    const statusFilter = String(req.query.status || 'all');
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
-    const query = {
+    const query: Record<string, any> = {
       name: { $regex: searchQuery, $options: 'i' },
       isDeleted: false
     };
@@ -43,7 +44,7 @@ const listCategories = async (req, res) => {
       statusFilter,
       title: 'Category Management'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error listing categories:', error);
     res.status(500).render('admin/categories', {
       categories: [],
@@ -59,14 +60,14 @@ const listCategories = async (req, res) => {
 };
 
 // Fetch-based category listing
-const apiCategories = async (req, res) => {
+const apiCategories = async (req: Request, res: Response) => {
   try {
-    const searchQuery = req.query.q || '';
-    const statusFilter = req.query.status || 'all';
-    const page = parseInt(req.query.page) || 1;
+    const searchQuery = String(req.query.q || '');
+    const statusFilter = String(req.query.status || 'all');
+    const page = parseInt(String(req.query.page)) || 1;
     const limit = 10;
 
-    const query = {
+    const query: Record<string, any> = {
       name: { $regex: searchQuery, $options: 'i' },
       isDeleted: false
     };
@@ -93,28 +94,28 @@ const apiCategories = async (req, res) => {
       totalPages,
       totalRecords
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error fetching categories:', err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
 // Get single category
-const apiGetCategory = async (req, res) => {
+const apiGetCategory = async (req: Request, res: Response) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category || category.isDeleted) {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
     res.json({ success: true, category });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error fetching category:', err);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 }; 
 
 // Add category via fetch with image upload
-const apiCreateCategory = async (req, res) => {
+const apiCreateCategory = async (req: Request, res: Response) => {
   try {
     const { name, description, categoryOffer, base64Image } = req.body;
 
@@ -177,7 +178,7 @@ const apiCreateCategory = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Category created successfully' });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Create Error:', err);
 
     if (err.code === 11000) {
@@ -192,7 +193,7 @@ const apiCreateCategory = async (req, res) => {
 };
 
 // Update category via fetch with image upload
-const apiUpdateCategory = async (req, res) => {
+const apiUpdateCategory = async (req: Request, res: Response) => {
   try {
     const { name, description, categoryOffer, base64Image } = req.body;
     const categoryId = req.params.id;
@@ -241,7 +242,7 @@ const apiUpdateCategory = async (req, res) => {
         const oldImagePath = path.join('public', category.image);
         try {
           await fs.unlink(oldImagePath);
-        } catch (err) {
+        } catch (err: any) {
           console.log('Old image not found or already deleted:', err.message);
         }
       }
@@ -271,7 +272,7 @@ const apiUpdateCategory = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Category updated successfully' });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Update Error:', err);
 
     if (err.code === 11000) {
@@ -286,7 +287,7 @@ const apiUpdateCategory = async (req, res) => {
 };
 
 // Toggle category status
-const apiToggleStatus = async (req, res) => {
+const apiToggleStatus = async (req: Request, res: Response) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category || category.isDeleted) {
@@ -301,14 +302,14 @@ const apiToggleStatus = async (req, res) => {
       message: `Category ${category.isActive ? 'activated' : 'deactivated'} successfully`,
       isActive: category.isActive
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Toggle Status Error:', err);
     res.status(500).json({ success: false, message: 'Failed to toggle status' });
   }
 };
 
 // Soft delete via fetch
-const apiSoftDeleteCategory = async (req, res) => {
+const apiSoftDeleteCategory = async (req: Request, res: Response) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category || category.isDeleted) {
@@ -317,13 +318,13 @@ const apiSoftDeleteCategory = async (req, res) => {
 
     await Category.findByIdAndUpdate(req.params.id, { isDeleted: true });
     res.json({ success: true, message: 'Category deleted successfully' });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Delete Error:', err);
     res.status(500).json({ success: false, message: 'Failed to delete category' });
   }
 };
 
-module.exports = {
+export {
   listCategories,
   apiCategories,
   apiGetCategory,

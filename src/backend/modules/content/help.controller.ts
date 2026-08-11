@@ -1,14 +1,15 @@
-const sendEmail = require('../../common/utils/send-email.util');
+import type { Request, Response } from 'express';
+import sendEmail from '../../common/utils/send-email.util';
 
 // GET Help Page
-const getHelpPage = (req, res) => {
+const getHelpPage = (req: Request, res: Response) => {
   try {
     res.render('user/help', {
       title: 'Help & Support - LacedUp',
       layout: 'user/layouts/user-layout',
       active: 'home',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error rendering help page:', error);
     res.status(500).render('error', { 
       message: 'Failed to load help page' 
@@ -17,7 +18,7 @@ const getHelpPage = (req, res) => {
 };
 
 // POST Contact Form
-const submitContactForm = async (req, res) => {
+const submitContactForm = async (req: Request, res: Response) => {
   try {
     const { name, email, subject, message } = req.body;
 
@@ -203,7 +204,7 @@ const submitContactForm = async (req, res) => {
 
       // Send notification to admin
       await sendEmail(
-        process.env.EMAIL_USER,
+        process.env.EMAIL_USER ?? '',
         `New Support Ticket from ${name} - ${subject}`,
         adminEmailHTML
       );
@@ -213,7 +214,7 @@ const submitContactForm = async (req, res) => {
         message: 'Message sent successfully! Check your email for confirmation.'
       });
 
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error('Email sending failed:', emailError);
       // Still return success to user if form was received
       res.json({
@@ -222,7 +223,7 @@ const submitContactForm = async (req, res) => {
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error handling contact form:', error);
     res.status(500).json({
       success: false,
@@ -231,7 +232,7 @@ const submitContactForm = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
     getHelpPage,
     submitContactForm
 }

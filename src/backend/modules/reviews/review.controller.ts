@@ -1,10 +1,11 @@
-const Review = require('./review.model');
-const Product = require('../catalog/product.model');
-const multer = require('multer');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
-const { isAuthenticated } = require('../../common/middlewares/auth.middleware');
+import type { Request, Response } from 'express';
+import Review from './review.model';
+import Product from '../catalog/product.model';
+import multer from 'multer';
+import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
+import { isAuthenticated } from '../../common/middlewares/auth.middleware';
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -19,7 +20,7 @@ const upload = multer({
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error('Only image files are allowed'));
     }
   }
 });
@@ -28,7 +29,7 @@ const upload = multer({
 const uploadReviewImages = upload.array('images', 5);
 
 // Submit a new review
-const submitReview = async (req, res) => {
+const submitReview = async (req: Request, res: Response) => {
   try {
     // Check if user is authenticated
     if (!req.isAuthenticated()) {
@@ -39,8 +40,8 @@ const submitReview = async (req, res) => {
     }
 
     const { productId, rating, title, content } = req.body;
-    const userId = req.user._id;
-    const images = req.files || [];
+    const userId = req.user!._id;
+    const images: any = req.files || [];
 
     // Validate required fields
     if (!productId || !rating || !title || !content) {
@@ -104,7 +105,7 @@ const submitReview = async (req, res) => {
     }
 
     // Process and save images locally if any
-    let imageUrls = [];
+    let imageUrls: any[] = [];
     if (images.length > 0) {
       try {
         // Ensure reviews upload directory exists
@@ -113,7 +114,7 @@ const submitReview = async (req, res) => {
           fs.mkdirSync(reviewsDir, { recursive: true });
         }
 
-        const processImagePromises = images.map(async (image, index) => {
+        const processImagePromises = images.map(async (image: any, index: number) => {
           const filename = `${Date.now()}-${index}-${Math.random().toString(36).substring(7)}.webp`;
           const outputPath = path.join(reviewsDir, filename);
 
@@ -130,7 +131,7 @@ const submitReview = async (req, res) => {
         });
 
         imageUrls = await Promise.all(processImagePromises);
-      } catch (uploadError) {
+      } catch (uploadError: any) {
         console.error('Image processing error:', uploadError);
         return res.status(500).json({
           success: false,
@@ -166,7 +167,7 @@ const submitReview = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Review submission error:', error);
     
     // Handle duplicate review error (in case the unique index catches it)
@@ -185,11 +186,11 @@ const submitReview = async (req, res) => {
 };
 
 // Get reviews for a product (optional - for AJAX loading)
-const getProductReviews = async (req, res) => {
+const getProductReviews = async (req: Request, res: Response) => {
   try {
     const { productId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(String(req.query.page)) || 1;
+    const limit = parseInt(String(req.query.limit)) || 10;
     const skip = (page - 1) * limit;
 
     const reviews = await Review.find({ 
@@ -221,7 +222,7 @@ const getProductReviews = async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get reviews error:', error);
     res.status(500).json({ 
       success: false, 
@@ -230,7 +231,7 @@ const getProductReviews = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   uploadReviewImages,
   submitReview,
   getProductReviews

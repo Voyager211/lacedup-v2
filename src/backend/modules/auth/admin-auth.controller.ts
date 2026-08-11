@@ -1,6 +1,7 @@
-const passport = require('passport');
+import type { Request, Response, NextFunction } from 'express';
+import passport from 'passport';
 
-const getLogin = (req, res) => {
+const getLogin = (req: Request, res: Response) => {
     try {
         if (req.isAuthenticated()) return res.redirect('/admin/dashboard');
         res.render('admin/login', {
@@ -9,13 +10,13 @@ const getLogin = (req, res) => {
             message: req.flash('error'),
             formData: req.flash('formData')[0] || {}
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error rendering login page:', error);
         res.status(500).send('Internal Server Error');
     }
 };
 
-const postLogin = (req, res, next) => {
+const postLogin = (req: Request, res: Response, next: NextFunction) => {
     try {
         // Server-side validation before authentication
         const validationResult = validateLoginForm(req.body);
@@ -25,8 +26,8 @@ const postLogin = (req, res, next) => {
             req.flash('formData', {
                 email: req.body.email ? req.body.email.trim() : '',
                 remember: req.body.remember || false
-            });
-            req.flash('error', validationResult.message);
+            } as unknown as string);
+            req.flash('error', validationResult.message ?? '');
             return res.redirect('/admin/login');
         }
 
@@ -39,7 +40,7 @@ const postLogin = (req, res, next) => {
             failureFlash: 'Invalid credentials'
         })(req, res, () => {
             try {
-                if (req.user.role !== 'admin') {
+                if (req.user!.role !== 'admin') {
                     req.logout((err) => {
                         if (err) {
                             console.error('Error logging out non-admin:', err);
@@ -61,12 +62,12 @@ const postLogin = (req, res, next) => {
 
                     res.redirect('/admin/dashboard');
                 }
-            } catch (innerErr) {
+            } catch (innerErr: any) {
                 console.error('Error during login post-auth callback:', innerErr);
                 res.status(500).send('Internal Server Error');
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error during postLogin handler:', error);
         next(error); // Let Express handle it or add custom fallback
     }
@@ -75,7 +76,7 @@ const postLogin = (req, res, next) => {
 
 
 
-const logout = (req, res) => {
+const logout = (req: Request, res: Response) => {
     try {
         req.logout((err) => {
             if (err) {
@@ -92,7 +93,7 @@ const logout = (req, res) => {
                 res.redirect('/admin/login');
             });
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Unexpected error in logout:', error);
         res.status(500).send('Internal Server Error');
     }
@@ -103,7 +104,7 @@ const logout = (req, res) => {
  * @param {Object} formData - The form data from request body
  * @returns {Object} - Validation result with isValid boolean and message
  */
-function validateLoginForm(formData) {
+function validateLoginForm(formData: { email?: string; password?: string; remember?: unknown }) {
     const { email, password } = formData;
 
     // Check if email is provided
@@ -133,7 +134,7 @@ function validateLoginForm(formData) {
     return { isValid: true };
 }
 
-module.exports = {
+export {
     getLogin,
     postLogin,
     logout

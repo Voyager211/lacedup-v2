@@ -1,12 +1,13 @@
-const { getHomepageProducts, getActiveCategories, getActiveBrands } = require('../catalog/product-sections.util');
+import type { Request, Response } from 'express';
+import { getHomepageProducts, getActiveCategories, getActiveBrands } from './product-sections.util';
 
-const showLanding = async (req, res) => {
+const getHome = async (req: Request, res: Response) => {
   try {
     const { newArrivals, bestSellers } = await getHomepageProducts();
     const categories = await getActiveCategories();
     const brands = await getActiveBrands(); // Add this
 
-    res.render('user/landing', {
+    res.render('user/home', {
       title: 'Welcome',
       layout: 'user/layouts/user-layout',
       active: 'home',
@@ -16,12 +17,12 @@ const showLanding = async (req, res) => {
       brands, // Add this
       user: req.user || null
     });
-  } catch (err) {
-    console.error('Landing Page Error:', err);
-    res.status(500).send('Failed to load landing page');
+  } catch (err: any) {
+    console.error('Home Page Error:', err);
+    res.status(500).send('Failed to load home page');
   }
 };
 
-module.exports = {
-  showLanding
+export {
+  getHome
 }
