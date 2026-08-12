@@ -1,9 +1,11 @@
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequireGuest } from './guards';
 import Placeholder from './Placeholder';
 import NotFound from './NotFound';
 import RootError from './RootError';
 import Gallery from './Gallery';
+import StorefrontLayout from '@/components/layout/StorefrontLayout';
+import AuthLayout from '@/components/layout/AuthLayout';
 
 /**
  * The route tree.
@@ -17,27 +19,18 @@ import Gallery from './Gallery';
  *    route 500s today - see docs/defects.md. Add it back when the page is
  *    actually built.
  *
- * Layouts are Outlet-only for now; the real shells land in step 2.
+ * The three shells live in components/layout. The admin one renders the login
+ * page without its chrome, since there is nobody signed in to show it to.
+ *
+ * The admin branch is code-split. Only a handful of people ever load it, while
+ * every shopper would otherwise pay for it on first paint - and it will grow
+ * to 14 pages including the largest in the app. Establishing the split now is
+ * far cheaper than retrofitting it once those pages exist; the same `lazy`
+ * shape applies to any page heavy enough to warrant its own chunk.
  */
-
-const StorefrontLayout = () => (
-  <div className="min-h-screen">
-    <Outlet />
-  </div>
-);
-
-const AuthLayout = () => (
-  <div className="flex min-h-screen items-center justify-center bg-card">
-    <Outlet />
-  </div>
-);
-
-const AdminLayout = () => (
-  <div className="min-h-screen">
-    <Outlet />
-  </div>
-);
-
+const lazyAdminLayout = async () => ({
+  Component: (await import('@/components/layout/AdminLayout')).default
+});
 export const router = createBrowserRouter([
   {
     errorElement: <RootError />,
@@ -97,7 +90,7 @@ export const router = createBrowserRouter([
       /* ---- Admin ------------------------------------------------------- */
       {
         path: 'admin',
-        element: <AdminLayout />,
+        lazy: lazyAdminLayout,
         children: [
           {
             element: <RequireGuest audience="admin" />,

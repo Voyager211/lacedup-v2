@@ -30,9 +30,9 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0 and 1 are complete** — the scaffold, and the shared primitives every page will
-build on. Every route in the tree resolves; unbuilt pages render a placeholder naming the
-step that will replace them. When nothing renders a placeholder, Phase 4 is done.
+**Steps 0–2 are complete** — the scaffold, the shared primitives, and the three shells.
+Every route in the tree resolves; unbuilt pages render a placeholder naming the step that
+will replace them. When nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
 tree-shaken out of the production bundle).
@@ -61,8 +61,17 @@ tree-shaken out of the production bundle).
 | `lib/schemas.ts` (Zod) | 3 competing validation systems with contradictory rules |
 | `lib/imageValidation.ts`, `lib/format.ts`, `lib/pricing.ts` | ported / newly centralised |
 
-**Next: step 2, the shells** — storefront layout (navbar, search typeahead, cart badge,
-footer, profile menu) and the modernized admin shell.
+### Step 2 — shells and the data layer
+
+| Built | Notes |
+|---|---|
+| RTK Query over the axios client | `src/api/api.ts` — a custom base query, so the refresh interceptor still applies |
+| `<StorefrontLayout>` | navbar, search typeahead, cart badge, account menu, mobile panel, footer |
+| `<AdminLayout>` | icon sidebar, active-route highlighting, derived breadcrumbs, identity menu |
+| `<AuthLayout>` | centred card, no chrome |
+| Route-level code splitting | the admin branch is its own chunk; vendor is separated for caching |
+
+**Next: step 3, auth** — six pages against a contract the guards already exercise.
 
 ### Notes on what these steps changed
 
@@ -79,6 +88,12 @@ footer, profile menu) and the modernized admin shell.
   the top of `src/lib/schemas.ts`.
 - **`exactOptionalPropertyTypes` is deliberately off** while the rest of `strict` is on. It
   fights React and RTK typings for little gain here; the reasoning is in `tsconfig.json`.
+- **The footer's dead links were resolved rather than ported.** 11 of the EJS footer's 15
+  links pointed at unmounted routes. Customer-service links now go to `/help`, which is the
+  page that actually holds the FAQ and contact form; shop links go to `/shop`. **Privacy
+  Policy, Terms of Service and Cookie Policy were removed** — no content exists behind them
+  anywhere in the codebase, and a link to a missing legal page is worse than no link. The
+  social icons were `href="#"` placeholders and are gone too. See the open items below.
 
 ---
 
@@ -175,6 +190,22 @@ gaps forward for no benefit.
 
 This README stays an overview; the inventory lives in `docs/`. One 1,000-line file would be
 unreadable and would produce noisy diffs every time a single page's spec changed.
+
+## Open items
+
+Decisions still needed, and things deliberately left out. The fuller list — including the
+pre-existing backend defects — is in [docs/defects.md](docs/defects.md).
+
+- **Legal pages don't exist.** Privacy Policy, Terms of Service and Cookie Policy were linked
+  from the EJS footer but never written. They are omitted from the React footer; add them
+  back once there is content. An ecommerce site arguably needs them.
+- **No social accounts.** The footer's social icons were `href="#"`. Supply real URLs and
+  they can come back.
+- **PayPal is inert** — the controller hardcodes an empty client id. Decide whether to
+  finish it or remove it before checkout (step 6).
+- **`/coupons` has no page**, and its route 500s. Absent from the router until someone
+  decides whether the page is wanted.
+- **The sales report needs a JSON endpoint** before step 11 — it scrapes its own HTML today.
 
 ---
 
@@ -281,7 +312,7 @@ resist the urge to start on pages before they're done.
 |---|---|---|
 | 0 | ~~**Scaffold + design system**~~ | ✅ done |
 | 1 | ~~**Primitives**~~ | ✅ done — except `<FilterBar>` and `<ImageUploader>`, deferred to the steps that first need them (9 and 8) |
-| 2 | **Shells** — storefront layout (navbar, search typeahead, cart badge, footer, profile menu) and the modernized admin shell | ~35 pages hang off these two |
+| 2 | ~~**Shells**~~ | ✅ done — plus the RTK Query data layer |
 | 3 | **Auth** — 6 pages, one layout, no shared state | validates the whole auth contract end to end |
 | 4 | **Storefront browse** — landing/home, shop, product details | `<ProductCard>` and the pricing logic land here |
 | 5 | **Cart & wishlist** | `cart.js` is 1,282 lines |
@@ -373,15 +404,15 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 107 tests. Frontend: 190.** Both suites pass and both typecheck clean under
+**Backend: 107 tests. Frontend: 218.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 
 The frontend tests target the pieces where a mistake is expensive and invisible: the refresh
 interceptor (including that concurrent 401s share **one** refresh — single-use rotation
 means three parallel refreshes would revoke each other), the route guards, the confirm
-promise plumbing, pagination windowing, the validation schemas, and the formatting and
-pricing helpers.
+promise plumbing, pagination windowing, the validation schemas, the shells' signed-in vs
+signed-out behaviour, and the formatting and pricing helpers.
 
 Still to add: MSW for network-level mocking, and Playwright for E2E. Priority journeys:
 

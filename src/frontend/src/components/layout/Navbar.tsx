@@ -1,0 +1,207 @@
+import { useEffect, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { BsHeart, BsList, BsX } from 'react-icons/bs';
+import { useAppSelector } from '@/app/store';
+import { selectSession } from '@/features/auth/authSlice';
+import { cn } from '@/lib/cn';
+import AccountMenu from './AccountMenu';
+import CartBadge from './CartBadge';
+import SearchTypeahead from './SearchTypeahead';
+
+/**
+ * The storefront navbar.
+ *
+ * Same four links as the EJS version, but every one of them now highlights -
+ * About and Help never did, because the old template only compared `active`
+ * against 'home' and 'shop'. NavLink derives it from the route instead, so a
+ * new link cannot forget to.
+ *
+ * The mobile menu is a real panel rather than a Bootstrap collapse that
+ * reflowed the same DOM.
+ */
+interface NavLinkItem {
+  to: string;
+  label: string;
+  /** Home would otherwise match every route, since every path starts with "/". */
+  end?: boolean;
+}
+
+const LINKS: NavLinkItem[] = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/shop', label: 'Shop' },
+  { to: '/about', label: 'About' },
+  { to: '/help', label: 'Help' }
+];
+
+const Navbar = () => {
+  const location = useLocation();
+  const { status } = useAppSelector(selectSession('user'));
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const signedIn = status === 'authenticated';
+
+  // Navigating with the mobile menu open should close it, or it covers the
+  // page that was just opened.
+  useEffect(() => setMenuOpen(false), [location.pathname]);
+
+  // The panel is fixed and full-height, so the page behind it must not scroll.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [menuOpen]);
+
+  const linkClasses = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'text-sm transition-colors hover:text-brand',
+      isActive ? 'font-semibold text-brand' : 'text-ink'
+    );
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-line bg-white">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={menuOpen}
+          className="rounded p-2 text-ink transition-colors hover:bg-card lg:hidden"
+        >
+          <BsList className="size-5" aria-hidden="true" />
+        </button>
+
+        <Link to="/" className="shrink-0 font-display text-2xl tracking-wide text-ink">
+          LACEDUP
+        </Link>
+
+        <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
+          {LINKS.map(({ to, label, end }) => (
+            <NavLink key={to} to={to} end={end} className={linkClasses}>
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <SearchTypeahead className="ml-auto hidden max-w-sm flex-1 md:block" />
+
+        <div className="ml-auto flex items-center gap-1 md:ml-0">
+          {signedIn ? (
+            <>
+              <Link
+                to="/wishlist"
+                aria-label="Wishlist"
+                className="hidden rounded-full p-2 text-ink transition-colors hover:bg-card sm:block"
+              >
+                <BsHeart className="size-5" aria-hidden="true" />
+              </Link>
+              <CartBadge enabled={signedIn} />
+              <AccountMenu />
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="rounded-md px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-card"
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/signup"
+                className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
+              >
+                Sign up
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-line px-4 py-2 md:hidden">
+        <SearchTypeahead />
+      </div>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          <nav
+            aria-label="Mobile"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
+          >
+            <div className="flex h-16 items-center justify-between border-b border-line px-4">
+              <span className="font-display text-xl tracking-wide text-ink">LACEDUP</span>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close menu"
+                className="rounded p-2 text-ink transition-colors hover:bg-card"
+              >
+                <BsX className="size-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-1 p-4">
+              {LINKS.map(({ to, label, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    cn(
+                      'rounded-md px-3 py-2.5 transition-colors',
+                      isActive ? 'bg-card font-semibold text-brand' : 'text-ink hover:bg-card'
+                    )
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+
+              {signedIn && (
+                <NavLink
+                  to="/wishlist"
+                  className={({ isActive }) =>
+                    cn(
+                      'rounded-md px-3 py-2.5 transition-colors',
+                      isActive ? 'bg-card font-semibold text-brand' : 'text-ink hover:bg-card'
+                    )
+                  }
+                >
+                  Wishlist
+                </NavLink>
+              )}
+            </div>
+
+            {!signedIn && (
+              <div className="mt-auto flex flex-col gap-2 border-t border-line p-4">
+                <Link
+                  to="/login"
+                  className="rounded-md border border-line px-4 py-2.5 text-center text-sm font-medium text-ink"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="rounded-md bg-brand px-4 py-2.5 text-center text-sm font-medium text-white"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
+          </nav>
+        </div>
+      )}
+    </header>
+  );
+};
+
+export default Navbar;

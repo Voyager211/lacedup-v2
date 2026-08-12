@@ -31,6 +31,32 @@ export default defineConfig({
     )
   },
 
+  build: {
+    /**
+     * Vite's default is 500kB, which the vendor chunk alone exceeds - React,
+     * Redux Toolkit, RTK Query, React Router, Radix, axios, zod and
+     * react-hook-form come to ~516kB minified (~166kB gzipped) before a single
+     * page exists. Raised just past that baseline so the warning still fires
+     * on a real regression instead of being ignored on every build.
+     */
+    chunkSizeWarningLimit: 600,
+
+    rollupOptions: {
+      output: {
+        /**
+         * Vendor code in its own chunk.
+         *
+         * It does not reduce what a first-time visitor downloads, but during a
+         * migration that rewrites 49 pages the app chunk changes constantly
+         * while these libraries barely move - so returning visitors re-fetch
+         * only the part that actually changed.
+         */
+        manualChunks: (id: string) =>
+          id.includes('node_modules') ? 'vendor' : undefined
+      }
+    }
+  },
+
   test: {
     environment: 'jsdom',
     globals: true,
