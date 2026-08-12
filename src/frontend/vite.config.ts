@@ -15,7 +15,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  */
 const BACKEND = 'http://localhost:3000';
 
-const proxied = ['/api', '/uploads', '/images'];
+/**
+ * `/google` is here because OAuth is a full browser navigation, not a fetch -
+ * the browser has to leave for Google and come back to the backend's callback.
+ * In production both live on one origin; proxying it keeps dev the same.
+ */
+const proxied = ['/api', '/uploads', '/images', '/google'];
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -32,27 +37,34 @@ export default defineConfig({
   },
 
   build: {
-    /**
-     * Vite's default is 500kB, which the vendor chunk alone exceeds - React,
-     * Redux Toolkit, RTK Query, React Router, Radix, axios, zod and
-     * react-hook-form come to ~516kB minified (~166kB gzipped) before a single
-     * page exists. Raised just past that baseline so the warning still fires
-     * on a real regression instead of being ignored on every build.
-     */
-    chunkSizeWarningLimit: 600,
-
+    // Vite's default 500kB warning is left in place: with the split below, the
+    // largest chunk is comfortably under it, so the warning stays meaningful
+    // rather than being something to raise every time a library is added.
     rollupOptions: {
       output: {
         /**
-         * Vendor code in its own chunk.
+         * Vendor code split by how often it changes and who needs it.
          *
-         * It does not reduce what a first-time visitor downloads, but during a
-         * migration that rewrites 49 pages the app chunk changes constantly
-         * while these libraries barely move - so returning visitors re-fetch
-         * only the part that actually changed.
+         * None of this reduces a first-time visit, but during a migration that
+         * rewrites 49 pages the app chunk changes constantly while these
+         * libraries barely move - so returning visitors re-fetch only what
+         * actually changed. Splitting the form stack out separately also keeps
+         * each chunk under the size budget rather than growing one monolith
+         * until the warning has to be raised again.
          */
-        manualChunks: (id: string) =>
-          id.includes('node_modules') ? 'vendor' : undefined
+        manualChunks: (id: string) => {
+          if (!id.includes('node_modules')) return undefined;
+
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/.test(id)) {
+            return 'react-vendor';
+          }
+
+          if (/[\\/]node_modules[\\/](zod|react-hook-form|@hookform)[\\/]/.test(id)) {
+            return 'form-vendor';
+          }
+
+          return 'vendor';
+        }
       }
     }
   },

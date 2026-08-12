@@ -83,6 +83,137 @@ describe('session introspection', () => {
     });
   });
 
+  /**
+   * The SPA sends everything through an /api base URL.
+   *
+   * This router is root-mounted and deliberately NOT dual-mounted in app.ts,
+   * so its routes only ever existed on their bare paths - the EJS forms post
+   * there. Every one of these was a 404 under /api until they were registered
+   * on both, which meant the React auth pages, and the refresh interceptor,
+   * could not reach the server at all.
+   *
+   * Mocked HTTP in the frontend tests cannot catch that: the mock answers
+   * whatever path it is given. Only asserting against the real router does.
+   */
+  describe('/api parity', () => {
+    it.each([
+      '/api/login',
+      '/api/signup',
+      '/api/verify-otp',
+      '/api/resend-otp',
+      '/api/forgot-password',
+      '/api/reset-otp',
+      '/api/resend-reset-otp',
+      '/api/reset-password',
+      '/api/auth/refresh'
+    ])('%s is routed', async (path) => {
+      const res = await request(app).post(path).send({});
+
+      // Status alone cannot distinguish these: several handlers answer 404
+      // themselves for an empty body - "No account with that email" is one.
+      // An unrouted path produces Express's own "Cannot POST /x", which it
+      // renders as HTML rather than JSON, so the raw text is what to check.
+      expect(res.text ?? '').not.toMatch(/Cannot POST/);
+    });
+
+    it('would notice an unrouted path (control for the assertion above)', async () => {
+      const res = await request(app).post('/api/definitely-not-routed').send({});
+      expect(res.text ?? '').toMatch(/Cannot POST/);
+    });
+
+    it('keeps the bare paths working for the EJS forms', async () => {
+      const res = await request(app)
+        .post('/login')
+        .type('form')
+        .send({ email: SHOPPER.email, password: SHOPPER.password });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('routes a real login through the /api path too', async () => {
+      const res = await request(app)
+        .post('/api/login')
+        .type('form')
+        .send({ email: SHOPPER.email, password: SHOPPER.password });
+
+      expect(res.status).toBe(200);
+      const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+      expect(cookies.some((c) => c.startsWith('user_at='))).toBe(true);
+    });
+  });
+
+  describe('POST /api/auth/logout', () => {
+    it('answers with JSON, not a redirect an XHR client would discard', async () => {
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const res = await request(app).post('/api/auth/logout').set('Cookie', cookies);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ success: true });
+    });
+
+    it('clears both cookies, so the browser stops sending them', async () => {
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const res = await request(app).post('/api/auth/logout').set('Cookie', cookies);
+
+      const cleared = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+      expect(cleared.some((c) => /^user_at=;/.test(c))).toBe(true);
+      expect(cleared.some((c) => /^user_rt=;/.test(c))).toBe(true);
+    });
+
+    /**
+     * Worth stating explicitly, because it is the one thing logout cannot do.
+     *
+     * A JWT cannot be un-issued. Logout revokes the refresh token row and
+     * clears the cookies, so a real browser is signed out immediately - but an
+     * access token captured beforehand stays valid until it expires. That is
+     * why shopper access tokens last 20 minutes rather than days, and why the
+     * refresh token is the thing that gets revoked.
+     */
+    it('cannot invalidate an access token that was already issued', async () => {
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+
+      await request(app).post('/api/auth/logout').set('Cookie', cookies);
+
+      // Replaying the cleared cookie still works until the token expires.
+      const replayed = await request(app).get('/api/auth/me').set('Cookie', cookies);
+      expect(replayed.status).toBe(200);
+
+      // But the refresh token is dead, so the session cannot be extended.
+      const refresh = await request(app).post('/auth/refresh').set('Cookie', cookies);
+      expect(refresh.status).toBe(401);
+    });
+
+    it('revokes the refresh token, so it cannot be replayed', async () => {
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+
+      await request(app).post('/api/auth/logout').set('Cookie', cookies);
+
+      const replay = await request(app).post('/auth/refresh').set('Cookie', cookies);
+      expect(replay.status).toBe(401);
+    });
+
+    it('is harmless when nobody is signed in', async () => {
+      const res = await request(app).post('/api/auth/logout');
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('POST /api/admin/auth/logout', () => {
+    it('ends the admin session and revokes its refresh token', async () => {
+      const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+
+      const res = await request(app).post('/api/admin/auth/logout').set('Cookie', cookies);
+      expect(res.status).toBe(200);
+
+      const cleared = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+      expect(cleared.some((c) => /^admin_at=;/.test(c))).toBe(true);
+      expect(cleared.some((c) => /^admin_rt=;/.test(c))).toBe(true);
+
+      const refresh = await request(app).post('/admin/auth/refresh').set('Cookie', cookies);
+      expect(refresh.status).toBe(401);
+    });
+  });
+
   describe('GET /api/admin/auth/me', () => {
     it('returns 401 when signed out', async () => {
       const res = await request(app).get('/api/admin/auth/me');

@@ -9,7 +9,7 @@ import {
   otpLimiter,
   passwordResetLimiter
 } from '../../common/middlewares/rate-limiting.middleware';
-import { issueSession, rotateSession } from './auth.session';
+import { endSession, issueSession, rotateSession } from './auth.session';
 import { publicUser } from '../users/user.serializer';
 
 const router = express.Router();
@@ -49,7 +49,16 @@ const router = express.Router();
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
 router.get('/signup', isGuest, preventBackNavigation, authController.getSignup);
-router.post('/signup', authLimiter, isGuest, authController.postSignup);
+/*
+ * Each of these is registered on its bare path and under /api.
+ *
+ * This router is root-mounted and deliberately not dual-mounted (app.ts), so
+ * only the bare path existed - the EJS forms post there. The SPA sends
+ * everything through an /api base URL, so without the second path every auth
+ * call from React 404s. Same reasoning as the other root-mounted routers,
+ * which already declare 47 of their own /api endpoints.
+ */
+router.post(['/signup', '/api/signup'], authLimiter, isGuest, authController.postSignup);
 
 /**
  * @swagger
@@ -87,7 +96,7 @@ router.post('/signup', authLimiter, isGuest, authController.postSignup);
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
 router.get('/verify-otp', isGuest, preventOtpBackNavigation, authController.getOtpPage);
-router.post('/verify-otp', otpLimiter, isGuest, authController.postOtpVerification);
+router.post(['/verify-otp', '/api/verify-otp'], otpLimiter, isGuest, authController.postOtpVerification);
 
 /**
  * @swagger
@@ -99,7 +108,7 @@ router.post('/verify-otp', otpLimiter, isGuest, authController.postOtpVerificati
  *       200: { description: OTP resent }
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
-router.post('/resend-otp', otpLimiter, isGuest, authController.resendOtp);
+router.post(['/resend-otp', '/api/resend-otp'], otpLimiter, isGuest, authController.resendOtp);
 
 /**
  * @swagger
@@ -132,7 +141,7 @@ router.post('/resend-otp', otpLimiter, isGuest, authController.resendOtp);
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
 router.get('/login', isGuest, preventBackNavigation, authController.getLogin);
-router.post('/login', authLimiter, isGuest, authController.postLogin);
+router.post(['/login', '/api/login'], authLimiter, isGuest, authController.postLogin);
 
 /**
  * @swagger
@@ -160,7 +169,7 @@ router.post('/login', authLimiter, isGuest, authController.postLogin);
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
 router.get('/forgot-password', isGuest, preventBackNavigation, authController.getForgotPassword);
-router.post('/forgot-password', passwordResetLimiter, isGuest, authController.sendResetOtp);
+router.post(['/forgot-password', '/api/forgot-password'], passwordResetLimiter, isGuest, authController.sendResetOtp);
 
 /**
  * @swagger
@@ -194,7 +203,7 @@ router.post('/forgot-password', passwordResetLimiter, isGuest, authController.se
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
 router.get('/reset-otp', isGuest, preventOtpBackNavigation, authController.getResetOtpPage);
-router.post('/reset-otp', otpLimiter, isGuest, authController.verifyResetOtp);
+router.post(['/reset-otp', '/api/reset-otp'], otpLimiter, isGuest, authController.verifyResetOtp);
 
 /**
  * @swagger
@@ -206,7 +215,7 @@ router.post('/reset-otp', otpLimiter, isGuest, authController.verifyResetOtp);
  *       200: { description: OTP resent }
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
-router.post('/resend-reset-otp', otpLimiter, isGuest, authController.resendResetOtp);
+router.post(['/resend-reset-otp', '/api/resend-reset-otp'], otpLimiter, isGuest, authController.resendResetOtp);
 
 /**
  * @swagger
@@ -241,7 +250,7 @@ router.post('/resend-reset-otp', otpLimiter, isGuest, authController.resendReset
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
 router.get('/reset-password', isGuest, preventOtpBackNavigation, authController.getResetPasswordPage);
-router.post('/reset-password', passwordResetLimiter, isGuest, authController.resetPassword);
+router.post(['/reset-password', '/api/reset-password'], passwordResetLimiter, isGuest, authController.resetPassword);
 
 /**
  * @swagger
@@ -308,7 +317,7 @@ router.get('/google/callback', (req: Request, res: Response, next: NextFunction)
  *       200: { description: New access and refresh cookies issued }
  *       401: { description: Refresh token missing, expired, already used, or revoked }
  */
-router.post('/auth/refresh', async (req: Request, res: Response) => {
+router.post(['/auth/refresh', '/api/auth/refresh'], async (req: Request, res: Response) => {
   const presented = req.cookies?.user_rt;
 
   if (!presented) {
@@ -375,6 +384,31 @@ router.get('/api/auth/me', (req: Request, res: Response) => {
   }
 
   return res.json({ success: true, user: publicUser(req.user) });
+});
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     tags: [Auth]
+ *     summary: End the shopper session (JSON)
+ *     description: >
+ *       The SPA counterpart of GET /logout. Same effect - the refresh token row
+ *       is revoked, both cookies are cleared and the session is destroyed - but
+ *       it answers with JSON instead of a 302 to an HTML page, which an XHR
+ *       client would only follow and discard.
+ *     responses:
+ *       200: { description: Session ended }
+ */
+router.post('/api/auth/logout', async (req: Request, res: Response) => {
+  await endSession(res, req.cookies?.user_rt, 'user');
+
+  // The session still carries transient state - the applied coupon, OTP flows,
+  // the Razorpay basket - so it goes too.
+  req.session.destroy(() => {
+    res.clearCookie('user.sid');
+    res.json({ success: true });
+  });
 });
 
 router.get('/logout', authController.logout);

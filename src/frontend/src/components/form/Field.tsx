@@ -29,13 +29,20 @@ const Field = ({ label, error, hint, required, className, children }: FieldProps
 
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label htmlFor={id} className="block text-sm font-medium text-ink">
-        {label}
-        {required && (
-          <span className="ml-0.5 text-danger" aria-hidden="true">
-            *
-          </span>
+      {/*
+        The required marker is a CSS pseudo-element, not a character in the
+        label. Put an asterisk in the text and the field's accessible name
+        becomes "Full name*", which screen readers read out as part of the
+        name. `required` on the control already conveys the constraint.
+      */}
+      <label
+        htmlFor={id}
+        className={cn(
+          'block text-sm font-medium text-ink',
+          required && "after:ml-0.5 after:text-danger after:content-['*']"
         )}
+      >
+        {label}
       </label>
 
       {children({ id, describedBy, invalid: Boolean(error) })}

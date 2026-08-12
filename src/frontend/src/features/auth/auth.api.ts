@@ -59,17 +59,26 @@ export const adminLogin = async (credentials: LoginCredentials): Promise<void> =
   } as never);
 };
 
+const LOGOUT_ENDPOINT: Record<Audience, string> = {
+  user: '/auth/logout',
+  admin: '/admin/auth/logout'
+};
+
 /**
  * Ends the session server-side, revoking the refresh token row and clearing
- * both cookies. Failure is swallowed deliberately: the client is signing out
- * either way, and stranding someone on a page they wanted to leave because the
- * request failed is worse than a stale server-side row.
+ * both cookies.
+ *
+ * These are the JSON endpoints, not the `GET /logout` the EJS layer uses -
+ * that one answers with a 302 to an HTML page, which an XHR client would only
+ * follow and discard.
+ *
+ * Failure is swallowed deliberately: the client is signing out either way, and
+ * stranding someone on a page they wanted to leave because the request failed
+ * is worse than a stale row on the server.
  */
 export const logout = async (audience: Audience): Promise<void> => {
   try {
-    await api.get(audience === 'admin' ? '/admin/logout' : '/logout', {
-      _skipAuthRefresh: true
-    } as never);
+    await api.post(LOGOUT_ENDPOINT[audience], null, { _skipAuthRefresh: true } as never);
   } catch {
     /* signing out locally regardless */
   }

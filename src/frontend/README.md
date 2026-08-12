@@ -16,7 +16,7 @@ npm run dev            # from the repo root — backend on :3000
 cd src/frontend && npm run dev   # SPA on :5173
 ```
 
-Open **http://localhost:5173**. Vite proxies `/api`, `/uploads` and `/images` to the backend
+Open **http://localhost:5173**. Vite proxies `/api`, `/uploads`, `/images` and `/google` to the backend
 so the browser sees one origin — which matters because auth is carried in httpOnly cookies,
 and a cross-origin setup would need CORS plus `SameSite=None` on every one of them.
 
@@ -30,9 +30,9 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–2 are complete** — the scaffold, the shared primitives, and the three shells.
-Every route in the tree resolves; unbuilt pages render a placeholder naming the step that
-will replace them. When nothing renders a placeholder, Phase 4 is done.
+**Steps 0–3 are complete** — the scaffold, the shared primitives, the three shells, and the
+six auth pages. Every route in the tree resolves; unbuilt pages render a placeholder naming
+the step that will replace them. When nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
 tree-shaken out of the production bundle).
@@ -71,7 +71,12 @@ tree-shaken out of the production bundle).
 | `<AuthLayout>` | centred card, no chrome |
 | Route-level code splitting | the admin branch is its own chunk; vendor is separated for caching |
 
-**Next: step 3, auth** — six pages against a contract the guards already exercise.
+### Step 3 — auth
+
+All six pages: sign in, create account, verify email, forgot password, verify reset code,
+set a new password. Google OAuth is a real navigation to `/google`, proxied in dev.
+
+**Next: step 4, storefront browse** — landing, shop, product details.
 
 ### Notes on what these steps changed
 
@@ -80,6 +85,16 @@ tree-shaken out of the production bundle).
   from a signed-out one except by firing a request and watching it fail. Both return 401
   rather than a null user, which keeps them on the same refresh-then-retry path as every
   other call. Covered by `src/backend/modules/auth/__tests__/session-me.test.ts`.
+- **The auth routes are now registered under `/api` as well as their bare paths.** This
+  router is root-mounted and deliberately not dual-mounted, so `/login`, `/signup`, the four
+  OTP endpoints, `/reset-password` and **`/auth/refresh`** existed only on their bare paths —
+  every one was a 404 under the `/api` base URL the client uses. Nothing in the frontend
+  test suite could catch it, because a mocked adapter answers whatever path it is given;
+  it only surfaced when the pages were exercised against the running server. There is now a
+  parity test with a negative control so it cannot come back.
+- **JSON logout endpoints were added** (`POST /api/auth/logout`, `POST /api/admin/auth/logout`).
+  The EJS `GET /logout` answers with a 302 to an HTML page, which an XHR client can only
+  follow and discard — and the shopper one was not reachable under `/api` at all.
 - **Three validation rules deliberately differ from the originals** — the email TLD
   allowlist is gone (it rejected `.io`, `.dev` and every newer TLD), names now allow
   apostrophes, hyphens and non-ASCII letters, and new passwords need 8 characters with a
@@ -313,7 +328,7 @@ resist the urge to start on pages before they're done.
 | 0 | ~~**Scaffold + design system**~~ | ✅ done |
 | 1 | ~~**Primitives**~~ | ✅ done — except `<FilterBar>` and `<ImageUploader>`, deferred to the steps that first need them (9 and 8) |
 | 2 | ~~**Shells**~~ | ✅ done — plus the RTK Query data layer |
-| 3 | **Auth** — 6 pages, one layout, no shared state | validates the whole auth contract end to end |
+| 3 | ~~**Auth**~~ | ✅ done |
 | 4 | **Storefront browse** — landing/home, shop, product details | `<ProductCard>` and the pricing logic land here |
 | 5 | **Cart & wishlist** | `cart.js` is 1,282 lines |
 | 6 | **Checkout** — Razorpay, wallet, COD, address dialog, coupons | riskiest step; `checkout.js` is 2,053 lines |
@@ -404,7 +419,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 107 tests. Frontend: 218.** Both suites pass and both typecheck clean under
+**Backend: 125 tests. Frontend: 238.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 

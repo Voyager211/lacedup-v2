@@ -4,7 +4,7 @@ import nocache from '../../common/middlewares/nocache.middleware';
 import isAdmin from '../../common/middlewares/is-admin.middleware';
 import * as authController from './admin-auth.controller';
 import * as dashboardController from '../reports/dashboard.controller';
-import { rotateSession } from './auth.session';
+import { endSession, rotateSession } from './auth.session';
 import { publicUser } from '../users/user.serializer';
 
 const router = express.Router();
@@ -107,6 +107,28 @@ router.get('/auth/me', (req: Request, res: Response) => {
   }
 
   return res.json({ success: true, user: publicUser(req.user) });
+});
+
+/**
+ * @swagger
+ * /admin/auth/logout:
+ *   post:
+ *     tags: [Admin]
+ *     summary: End the admin session (JSON)
+ *     description: >
+ *       The SPA counterpart of GET /admin/logout - same effect, but answering
+ *       with JSON rather than a 302 an XHR client would only follow and
+ *       discard.
+ *     responses:
+ *       200: { description: Session ended }
+ */
+router.post('/auth/logout', async (req: Request, res: Response) => {
+  await endSession(res, req.cookies?.admin_rt, 'admin');
+
+  req.session.destroy(() => {
+    res.clearCookie('admin.sid');
+    res.json({ success: true });
+  });
 });
 
 /**

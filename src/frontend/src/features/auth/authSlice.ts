@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import * as authApi from './auth.api';
+import { errorMessage } from '@/api/client';
 import type { Audience, User } from '@/types/domain';
 
 /**
@@ -45,17 +46,33 @@ export const bootstrapSession = createAsyncThunk(
   }
 );
 
-export const signIn = createAsyncThunk(
-  'auth/signIn',
-  async ({ audience, ...credentials }: authApi.LoginCredentials & { audience: Audience }) => {
+/**
+ * Signs in and reads the resulting session back.
+ *
+ * The rejection is converted to a message with `rejectWithValue` rather than
+ * left to throw. createAsyncThunk serialises a thrown error down to
+ * `{ name, message, stack }`, which discards the axios response - and with it
+ * the body the server explains itself in. Without this, every failed login
+ * would report "Request failed with status code 401" instead of "Invalid
+ * credentials", and a 429 would look like a server fault rather than a rate
+ * limit.
+ */
+export const signIn = createAsyncThunk<
+  { audience: Audience; user: User | null },
+  authApi.LoginCredentials & { audience: Audience },
+  { rejectValue: string }
+>('auth/signIn', async ({ audience, ...credentials }, { rejectWithValue }) => {
+  try {
     if (audience === 'admin') await authApi.adminLogin(credentials);
     else await authApi.login(credentials);
-
-    // The login routes set cookies but do not return the user, so read it back
-    // rather than guessing at the shape from the credentials.
-    return { audience, user: await authApi.fetchMe(audience) };
+  } catch (error) {
+    return rejectWithValue(errorMessage(error, 'Could not sign you in.'));
   }
-);
+
+  // The login routes set cookies but do not return the user, so read it back
+  // rather than guessing at the shape from the credentials.
+  return { audience, user: await authApi.fetchMe(audience) };
+});
 
 export const signOut = createAsyncThunk('auth/signOut', async (audience: Audience) => {
   await authApi.logout(audience);

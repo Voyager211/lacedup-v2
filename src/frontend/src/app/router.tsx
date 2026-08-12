@@ -6,6 +6,12 @@ import RootError from './RootError';
 import Gallery from './Gallery';
 import StorefrontLayout from '@/components/layout/StorefrontLayout';
 import AuthLayout from '@/components/layout/AuthLayout';
+import LoginPage from '@/features/auth/LoginPage';
+import SignupPage from '@/features/auth/SignupPage';
+import VerifyOtpPage from '@/features/auth/VerifyOtpPage';
+import ForgotPasswordPage from '@/features/auth/ForgotPasswordPage';
+import ResetOtpPage from '@/features/auth/ResetOtpPage';
+import ResetPasswordPage from '@/features/auth/ResetPasswordPage';
 
 /**
  * The route tree.
@@ -76,12 +82,12 @@ export const router = createBrowserRouter([
           {
             element: <RequireGuest audience="user" />,
             children: [
-              { path: 'login', element: <Placeholder title="Sign in" step={3} /> },
-              { path: 'signup', element: <Placeholder title="Create account" step={3} /> },
-              { path: 'verify-otp', element: <Placeholder title="Verify email" step={3} note="6-box OTP input — one of three copies in the current app." /> },
-              { path: 'forgot-password', element: <Placeholder title="Forgot password" step={3} /> },
-              { path: 'reset-otp', element: <Placeholder title="Verify reset code" step={3} /> },
-              { path: 'reset-password', element: <Placeholder title="Set a new password" step={3} /> }
+              { path: 'login', element: <LoginPage /> },
+              { path: 'signup', element: <SignupPage /> },
+              { path: 'verify-otp', element: <VerifyOtpPage /> },
+              { path: 'forgot-password', element: <ForgotPasswordPage /> },
+              { path: 'reset-otp', element: <ResetOtpPage /> },
+              { path: 'reset-password', element: <ResetPasswordPage /> }
             ]
           }
         ]
