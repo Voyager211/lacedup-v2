@@ -25,7 +25,7 @@ const COLUMNS = [
     heading: 'Shop',
     links: [
       { to: '/shop?sort=newest', label: 'New arrivals' },
-      { to: '/shop?sort=popular', label: 'Bestsellers' },
+      { to: '/shop?sort=popularity', label: 'Bestsellers' },
       { to: '/shop', label: 'All sneakers' }
     ]
   },

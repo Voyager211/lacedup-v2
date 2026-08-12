@@ -30,8 +30,8 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–3 are complete** — the scaffold, the shared primitives, the three shells, and the
-six auth pages. Every route in the tree resolves; unbuilt pages render a placeholder naming
+**Steps 0–4 are complete** — the scaffold, the primitives, the shells, the auth pages and
+storefront browse. Every route in the tree resolves; unbuilt pages render a placeholder naming
 the step that will replace them. When nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
@@ -76,7 +76,18 @@ tree-shaken out of the production bundle).
 All six pages: sign in, create account, verify email, forgot password, verify reset code,
 set a new password. Google OAuth is a real navigation to `/google`, proxied in dev.
 
-**Next: step 4, storefront browse** — landing, shop, product details.
+### Step 4 — storefront browse
+
+Landing, shop and product details, plus `<ProductCard>` and the catalog API slice.
+
+| Built | Notes |
+|---|---|
+| `<LandingPage>` | hero, new arrivals, best sellers, category and brand grids — one request |
+| `<ShopPage>` | filters, sort, pagination, all driven by the URL so a filtered view is linkable |
+| `<ProductDetailsPage>` | gallery, variant selector, stock states, reviews, related products |
+| `<ProductCard>` | shared by landing, shop, wishlist and related products |
+
+**Next: step 5, cart & wishlist** — `cart.js` is 1,282 lines.
 
 ### Notes on what these steps changed
 
@@ -95,6 +106,15 @@ set a new password. Google OAuth is a real navigation to `/google`, proxied in d
 - **JSON logout endpoints were added** (`POST /api/auth/logout`, `POST /api/admin/auth/logout`).
   The EJS `GET /logout` answers with a 302 to an HTML page, which an XHR client can only
   follow and discard — and the shopper one was not reachable under `/api` at all.
+- **Three catalog endpoints were added** — `GET /api/product/:slug`, `GET /api/catalog/filters`
+  and `GET /api/home-sections`. The product page, the filter panel and the landing sections
+  all received their data as EJS render locals, so none of them had an endpoint. The product
+  one shares its implementation with the HTML page (`buildProductDetails`), so the two cannot
+  show different prices.
+- **Sort values must match `sortMap` in `shop.controller.ts`.** An unrecognised key is not an
+  error there — it falls through to `newest`, so a wrong value produces a sort control that
+  silently does nothing. Three of the seven were wrong until they were checked against the
+  running server; there is now a test pinning them.
 - **Three validation rules deliberately differ from the originals** — the email TLD
   allowlist is gone (it rejected `.io`, `.dev` and every newer TLD), names now allow
   apostrophes, hyphens and non-ASCII letters, and new passwords need 8 characters with a
@@ -329,7 +349,7 @@ resist the urge to start on pages before they're done.
 | 1 | ~~**Primitives**~~ | ✅ done — except `<FilterBar>` and `<ImageUploader>`, deferred to the steps that first need them (9 and 8) |
 | 2 | ~~**Shells**~~ | ✅ done — plus the RTK Query data layer |
 | 3 | ~~**Auth**~~ | ✅ done |
-| 4 | **Storefront browse** — landing/home, shop, product details | `<ProductCard>` and the pricing logic land here |
+| 4 | ~~**Storefront browse**~~ | ✅ done |
 | 5 | **Cart & wishlist** | `cart.js` is 1,282 lines |
 | 6 | **Checkout** — Razorpay, wallet, COD, address dialog, coupons | riskiest step; `checkout.js` is 2,053 lines |
 | 7 | **Orders & returns** — list, details, invoices, cancel/return reason flows | |
@@ -419,7 +439,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 125 tests. Frontend: 238.** Both suites pass and both typecheck clean under
+**Backend: 125 tests. Frontend: 263.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 

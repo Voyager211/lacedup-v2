@@ -12,6 +12,9 @@ import VerifyOtpPage from '@/features/auth/VerifyOtpPage';
 import ForgotPasswordPage from '@/features/auth/ForgotPasswordPage';
 import ResetOtpPage from '@/features/auth/ResetOtpPage';
 import ResetPasswordPage from '@/features/auth/ResetPasswordPage';
+import LandingPage from '@/features/catalog/LandingPage';
+import ShopPage from '@/features/catalog/ShopPage';
+import ProductDetailsPage from '@/features/catalog/ProductDetailsPage';
 
 /**
  * The route tree.
@@ -45,10 +48,10 @@ export const router = createBrowserRouter([
       {
         element: <StorefrontLayout />,
         children: [
-          { index: true, element: <Placeholder title="Landing" step={4} note="Hero carousel, new arrivals, best sellers, category carousel, brand grid, testimonials." /> },
+          { index: true, element: <LandingPage /> },
           { path: 'home', element: <Navigate to="/" replace /> },
-          { path: 'shop', element: <Placeholder title="Shop" step={4} note="Filter, sort and paginate against GET /api/shop. 1,597 lines today." /> },
-          { path: 'product/:slug', element: <Placeholder title="Product details" step={4} note="Gallery, variant selector, reviews. The largest storefront view at 2,550 lines." /> },
+          { path: 'shop', element: <ShopPage /> },
+          { path: 'product/:slug', element: <ProductDetailsPage /> },
           { path: 'about', element: <Placeholder title="About" step={4} note="Static. 759 lines, no behaviour." /> },
           { path: 'help', element: <Placeholder title="Help" step={4} note="FAQ accordion plus POST /help/contact." /> },
 

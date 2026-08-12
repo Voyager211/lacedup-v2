@@ -1,0 +1,385 @@
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
+import MockAdapter from 'axios-mock-adapter';
+import { api as client } from '@/api/client';
+import { createStore } from '@/app/store';
+import ProductCard from './ProductCard';
+import ShopPage, { SORT_OPTIONS } from './ShopPage';
+import ProductDetailsPage from './ProductDetailsPage';
+import LandingPage from './LandingPage';
+import type { Product } from '@/types/catalog';
+
+const product = (overrides: Partial<Product> = {}): Product => ({
+  _id: 'p1',
+  productName: 'Air Max 90',
+  slug: 'air-max-90',
+  regularPrice: 2000,
+  variants: [
+    // Stock is comfortably above the low-stock threshold, so the default
+    // fixture exercises the plain "In stock" state.
+    { _id: 'v1', size: 'UK 8', stock: 12, basePrice: 2000, finalPrice: 1500 },
+    { _id: 'v2', size: 'UK 9', stock: 0, basePrice: 2000, finalPrice: 1500 }
+  ],
+  totalStock: 12,
+  mainImage: '/uploads/air-max-90.jpg',
+  brand: { _id: 'b1', name: 'Nike' },
+  category: { _id: 'c1', name: 'Running' },
+  averageFinalPrice: 1500,
+  averageRating: 4.5,
+  totalReviews: 12,
+  ...overrides
+});
+
+const renderAt = (element: React.ReactNode, entry = '/', path = '/') => {
+  const router = createMemoryRouter(
+    [
+      { path, element },
+      { path: '/shop', element: <p>shop page</p> },
+      { path: '/product/:slug', element: <p>product page</p> }
+    ],
+    { initialEntries: [entry] }
+  );
+
+  render(
+    <Provider store={createStore()}>
+      <RouterProvider router={router} />
+    </Provider>
+  );
+
+  return router;
+};
+
+let mock: MockAdapter;
+
+beforeEach(() => {
+  mock = new MockAdapter(client);
+});
+
+afterEach(() => mock.restore());
+
+describe('ProductCard', () => {
+  it('shows the server-computed price, not a recomputed one', () => {
+    // The EJS card recalculated the price in the template, which is how the
+    // displayed price could disagree with what the cart charged.
+    renderAt(<ProductCard product={product()} />);
+
+    expect(screen.getByText('₹1,500')).toBeInTheDocument();
+    expect(screen.getByText('₹2,000')).toBeInTheDocument();
+  });
+
+  it('derives the discount from the two prices', () => {
+    renderAt(<ProductCard product={product()} />);
+    expect(screen.getByText('25% off')).toBeInTheDocument();
+  });
+
+  it('shows no discount badge when there is no saving', () => {
+    renderAt(<ProductCard product={product({ averageFinalPrice: 2000 })} />);
+    expect(screen.queryByText(/% off/)).not.toBeInTheDocument();
+  });
+
+  it('marks a sold-out product and drops the discount badge', () => {
+    renderAt(<ProductCard product={product({ totalStock: 0 })} />);
+
+    expect(screen.getByText('Sold out')).toBeInTheDocument();
+    expect(screen.queryByText(/% off/)).not.toBeInTheDocument();
+  });
+
+  it('links to the product by slug', () => {
+    renderAt(<ProductCard product={product()} />);
+
+    expect(screen.getByRole('link', { name: 'Air Max 90' })).toHaveAttribute(
+      'href',
+      '/product/air-max-90'
+    );
+  });
+
+  it('hides the rating when nobody has reviewed it', () => {
+    renderAt(<ProductCard product={product({ totalReviews: 0, averageRating: 0 })} />);
+    expect(screen.queryByText('4.5')).not.toBeInTheDocument();
+  });
+});
+
+describe('ShopPage', () => {
+  const shopResponse = {
+    success: true,
+    products: [product()],
+    pagination: {
+      totalPages: 3,
+      totalProducts: 30,
+      currentPage: 1,
+      hasNextPage: true,
+      hasPrevPage: false
+    },
+    totalProductCount: 30
+  };
+
+  beforeEach(() => {
+    mock.onGet('/shop').reply(200, shopResponse);
+    mock.onGet('/catalog/filters').reply(200, {
+      success: true,
+      categories: [{ _id: 'c1', name: 'Running' }],
+      brands: [{ _id: 'b1', name: 'Nike' }],
+      sizes: ['UK 8', 'UK 9']
+    });
+  });
+
+  it('reads its filters from the URL, so a filtered view is linkable', async () => {
+    // The EJS page kept filters in a JS object and pushed nothing to the
+    // address bar - a filtered view could not be shared or bookmarked.
+    renderAt(<ShopPage />, '/shop?category=c1&sort=price-low', '/shop');
+
+    await screen.findByText('Air Max 90');
+
+    const request = mock.history.get.find((entry) => entry.url === '/shop');
+    expect(request?.params).toMatchObject({ category: 'c1', sort: 'price-low' });
+  });
+
+  it('omits empty filters from the request', async () => {
+    renderAt(<ShopPage />, '/shop', '/shop');
+    await screen.findByText('Air Max 90');
+
+    const request = mock.history.get.find((entry) => entry.url === '/shop');
+    expect(request?.params).not.toHaveProperty('category');
+    expect(request?.params).not.toHaveProperty('q');
+  });
+
+  it('writes a chosen filter into the URL', async () => {
+    const router = renderAt(<ShopPage />, '/shop', '/shop');
+    await screen.findByText('Air Max 90');
+
+    await userEvent.selectOptions(screen.getByLabelText('Brand'), 'b1');
+
+    await vi.waitFor(() => {
+      expect(router.state.location.search).toContain('brand=b1');
+    });
+  });
+
+  it('returns to page 1 when a filter changes', async () => {
+    // Page 4 of a different filter is meaningless.
+    const router = renderAt(<ShopPage />, '/shop?page=4', '/shop');
+    await screen.findByText('Air Max 90');
+
+    await userEvent.selectOptions(screen.getByLabelText('Category'), 'c1');
+
+    await vi.waitFor(() => {
+      expect(router.state.location.search).not.toContain('page=4');
+    });
+  });
+
+  it('shows the active filters as removable chips', async () => {
+    renderAt(<ShopPage />, '/shop?category=c1', '/shop');
+
+    expect(await screen.findByRole('button', { name: /Running/ })).toBeInTheDocument();
+  });
+
+  it('only offers sort values the backend actually understands', async () => {
+    // shop.controller.ts falls through to `newest` for an unrecognised key, so
+    // a wrong value produces a control that silently does nothing rather than
+    // an error. Three of these were wrong on the first pass.
+    const accepted = [
+      'newest',
+      'popularity',
+      'rating',
+      'priceLow',
+      'priceHigh',
+      'nameAZ',
+      'nameZA',
+      'featured',
+      'price-low',
+      'price-high',
+      'name-az',
+      'name-za'
+    ];
+
+    for (const option of SORT_OPTIONS) {
+      expect(accepted).toContain(option.value);
+    }
+  });
+
+  it('reports the total count', async () => {
+    renderAt(<ShopPage />, '/shop', '/shop');
+    expect(await screen.findByText('30 products')).toBeInTheDocument();
+  });
+
+  it('offers a way out when nothing matches', async () => {
+    mock.onGet('/shop').reply(200, {
+      ...shopResponse,
+      products: [],
+      pagination: { ...shopResponse.pagination, totalPages: 0, totalProducts: 0 }
+    });
+
+    renderAt(<ShopPage />, '/shop?q=zzz', '/shop');
+
+    expect(await screen.findByText(/nothing matched those filters/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /clear filters/i }).length).toBeGreaterThan(0);
+  });
+
+  it('surfaces a failed request instead of spinning forever', async () => {
+    mock.onGet('/shop').reply(500, { message: 'Something went wrong' });
+
+    renderAt(<ShopPage />, '/shop', '/shop');
+
+    expect(await screen.findByText(/didn't load/i)).toBeInTheDocument();
+  });
+});
+
+describe('ProductDetailsPage', () => {
+  const details = {
+    success: true,
+    product: product(),
+    reviews: [],
+    relatedProducts: [],
+    averageRating: 4.5,
+    totalReviews: 12,
+    ratingCounts: {},
+    ratingBreakdown: {},
+    averageFinalPrice: 1500,
+    isInWishlist: false,
+    userWishlistProductIds: []
+  };
+
+  it('opens on a size that can actually be bought', async () => {
+    // UK 9 is out of stock, so UK 8 must be the default - opening on a
+    // sold-out size shows "out of stock" for a product that is available.
+    mock.onGet('/product/air-max-90').reply(200, details);
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    expect(await screen.findByRole('button', { name: 'UK 8' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.getByText('In stock')).toBeInTheDocument();
+  });
+
+  it('disables a size with no stock', async () => {
+    mock.onGet('/product/air-max-90').reply(200, details);
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    expect(await screen.findByRole('button', { name: 'UK 9' })).toBeDisabled();
+  });
+
+  it('uses the selected variant price, which the server computed', async () => {
+    mock.onGet('/product/air-max-90').reply(200, {
+      ...details,
+      product: product({
+        variants: [
+          { _id: 'v1', size: 'UK 8', stock: 12, basePrice: 2000, finalPrice: 1500 },
+          { _id: 'v3', size: 'UK 10', stock: 8, basePrice: 2000, finalPrice: 1000 }
+        ]
+      })
+    });
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'UK 10' }));
+
+    expect(screen.getByText('₹1,000')).toBeInTheDocument();
+  });
+
+  it('warns when a size is nearly gone', async () => {
+    mock.onGet('/product/air-max-90').reply(200, {
+      ...details,
+      product: product({
+        variants: [{ _id: 'v1', size: 'UK 8', stock: 2, basePrice: 2000, finalPrice: 1500 }]
+      })
+    });
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    expect(await screen.findByText(/only 2 left/i)).toBeInTheDocument();
+  });
+
+  it('cannot add to cart when the selected size is gone', async () => {
+    mock.onGet('/product/air-max-90').reply(200, {
+      ...details,
+      product: product({
+        totalStock: 0,
+        variants: [{ _id: 'v2', size: 'UK 9', stock: 0, basePrice: 2000, finalPrice: 1500 }]
+      })
+    });
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    expect(await screen.findByRole('button', { name: 'Out of stock' })).toBeDisabled();
+  });
+
+  it('explains why a withdrawn product is unavailable', async () => {
+    // The endpoint answers 404 with a reason - withdrawn, or its category
+    // disabled - which the HTML page already distinguished.
+    mock.onGet('/product/gone').reply(404, {
+      success: false,
+      message: 'This product is no longer available as its category has been disabled.'
+    });
+
+    renderAt(<ProductDetailsPage />, '/product/gone', '/product/:slug');
+
+    expect(await screen.findByText(/category has been disabled/i)).toBeInTheDocument();
+  });
+});
+
+describe('LandingPage', () => {
+  it('renders each section from the single home request', async () => {
+    mock.onGet('/home-sections').reply(200, {
+      success: true,
+      newArrivals: [product()],
+      bestSellers: [product({ _id: 'p2', productName: 'Ultraboost', slug: 'ultraboost' })],
+      categories: [{ _id: 'c1', name: 'Running', image: '/img.jpg' }],
+      brands: [{ _id: 'b1', name: 'Nike' }]
+    });
+
+    renderAt(<LandingPage />, '/', '/');
+
+    expect(await screen.findByRole('heading', { name: 'New arrivals' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Best sellers' })).toBeInTheDocument();
+    expect(screen.getByText('Ultraboost')).toBeInTheDocument();
+  });
+
+  it('omits a section with nothing in it rather than showing an empty row', async () => {
+    mock.onGet('/home-sections').reply(200, {
+      success: true,
+      newArrivals: [product()],
+      bestSellers: [],
+      categories: [],
+      brands: []
+    });
+
+    renderAt(<LandingPage />, '/', '/');
+
+    await screen.findByRole('heading', { name: 'New arrivals' });
+    expect(screen.queryByRole('heading', { name: 'Best sellers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Shop by brand' })).not.toBeInTheDocument();
+  });
+
+  it('links category tiles into the shop with that filter applied', async () => {
+    mock.onGet('/home-sections').reply(200, {
+      success: true,
+      newArrivals: [],
+      bestSellers: [],
+      categories: [{ _id: 'c1', name: 'Running', image: '/img.jpg' }],
+      brands: []
+    });
+
+    renderAt(<LandingPage />, '/', '/');
+
+    const section = await screen.findByRole('heading', { name: 'Shop by category' });
+    const grid = section.parentElement as HTMLElement;
+    expect(within(grid).getByRole('link', { name: 'Running' })).toHaveAttribute(
+      'href',
+      '/shop?category=c1'
+    );
+  });
+
+  it('still shows the hero when the sections fail to load', async () => {
+    mock.onGet('/home-sections').reply(500, { message: 'nope' });
+
+    renderAt(<LandingPage />, '/', '/');
+
+    expect(screen.getByRole('link', { name: /shop the collection/i })).toBeInTheDocument();
+    expect(await screen.findByText(/didn't load/i)).toBeInTheDocument();
+  });
+});

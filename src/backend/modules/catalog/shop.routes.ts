@@ -159,4 +159,64 @@ router.get('/api/available-sizes', shopController.getAvailableSizes);
  */
 router.get('/product/:slug', ensureVisible, shopController.loadProductDetails);
 
+/**
+ * @swagger
+ * /api/product/{slug}:
+ *   get:
+ *     tags: [Shop]
+ *     summary: Product details as JSON
+ *     description: >
+ *       The same data the product page renders - the product with populated
+ *       category and brand, its reviews, related products, rating breakdown,
+ *       the computed average final price, and whether the signed-in shopper
+ *       has it in their wishlist. Both share one implementation, so the JSON
+ *       and the page cannot show different prices.
+ *
+ *       Answers 404 with the reason when the product is withdrawn, unlisted,
+ *       or its category or brand has been deactivated.
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema: { type: string }
+ *         example: air-max-90
+ *     responses:
+ *       200: { description: Product details }
+ *       404: { description: Product unavailable, with a message explaining why }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
+router.get('/api/product/:slug', shopController.getProductDetailsJSON);
+
+/**
+ * @swagger
+ * /api/catalog/filters:
+ *   get:
+ *     tags: [Shop]
+ *     summary: Filter options for the shop page
+ *     description: >
+ *       Active categories, active brands and the distinct sizes currently in
+ *       stock. The EJS page received these as render locals, so no endpoint
+ *       existed - all three come together because the filter panel needs them
+ *       together.
+ *     responses:
+ *       200: { description: Categories, brands and sizes }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
+router.get('/api/catalog/filters', shopController.getFilterOptions);
+
+/**
+ * @swagger
+ * /api/home-sections:
+ *   get:
+ *     tags: [Shop]
+ *     summary: Landing page sections
+ *     description: >
+ *       New arrivals, best sellers, active categories and active brands, using
+ *       the same helpers the landing controller calls.
+ *     responses:
+ *       200: { description: Landing sections }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
+router.get('/api/home-sections', shopController.getHomeSections);
+
 export = router;

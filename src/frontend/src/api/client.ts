@@ -130,22 +130,49 @@ interface ErrorBody {
   errors?: Array<{ msg?: string; message?: string }>;
 }
 
+/** The shape the RTK Query base query rejects with. */
+interface QueryLikeError {
+  status?: number;
+  data?: unknown;
+  message?: string;
+}
+
+const fromBody = (body: ErrorBody | undefined): string | undefined =>
+  body?.message ?? body?.error ?? body?.errors?.[0]?.msg ?? body?.errors?.[0]?.message;
+
 /**
  * A message worth showing a user.
  *
+ * Handles both error shapes the app produces, which is the point of it living
+ * in one place: axios rejections from direct calls, and the plain
+ * `{ status, data }` objects the RTK Query base query returns. Missing the
+ * second means every RTK Query failure falls back to a generic message and the
+ * server's own explanation is thrown away.
+ *
  * Controllers are inconsistent about the field they use - `message`, `error`,
  * or an express-validator `errors` array - so all three are checked. 429 gets
- * an explicit case because six routes are rate limited and the default body
- * reads like a server fault rather than "you did that too quickly".
+ * an explicit case because six routes are rate limited and the raw body reads
+ * like a server fault rather than "you did that too quickly".
  */
 export const errorMessage = (error: unknown, fallback = 'Something went wrong'): string => {
-  if (!axios.isAxiosError(error)) {
-    return error instanceof Error ? error.message : fallback;
+  if (axios.isAxiosError(error)) {
+    if (error.code === 'ERR_NETWORK') return 'Cannot reach the server. Check your connection.';
+    if (error.response?.status === 429) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+
+    return fromBody(error.response?.data as ErrorBody | undefined) ?? fallback;
   }
 
-  if (error.code === 'ERR_NETWORK') return 'Cannot reach the server. Check your connection.';
-  if (error.response?.status === 429) return 'Too many attempts. Please wait a moment and try again.';
+  if (error && typeof error === 'object' && ('status' in error || 'data' in error)) {
+    const queryError = error as QueryLikeError;
 
-  const body = error.response?.data as ErrorBody | undefined;
-  return body?.message ?? body?.error ?? body?.errors?.[0]?.msg ?? body?.errors?.[0]?.message ?? fallback;
+    if (queryError.status === 429) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+
+    return fromBody(queryError.data as ErrorBody | undefined) ?? queryError.message ?? fallback;
+  }
+
+  return error instanceof Error ? error.message : fallback;
 };

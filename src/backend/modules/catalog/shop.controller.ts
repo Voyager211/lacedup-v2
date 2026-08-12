@@ -5,6 +5,7 @@ import Category from './category.model';
 import Brand from './brand.model';
 import Wishlist from '../wishlist/wishlist.model';
 import { getPagination } from '../../common/utils/pagination.util';
+import { getActiveBrands, getActiveCategories, getHomepageProducts } from './product-sections.util';
 
 const getProducts = async (req: Request, res: Response) => {
   try {
@@ -670,56 +671,62 @@ const getSearchSuggestions = async (req: Request, res: Response) => {
 };
 
 // Product details page
-const loadProductDetails = async (req: Request, res: Response) => {
-  try {
-    const productSlug = req.params.slug;
+/**
+ * Everything the product page needs, independent of how it is rendered.
+ *
+ * Extracted from loadProductDetails so the EJS page and the SPA's JSON
+ * endpoint compute it once rather than twice. The pricing and rating
+ * arithmetic here is subtle enough that two copies would drift, and the JSON
+ * consumer must see exactly the prices the HTML page shows.
+ *
+ * Unavailability is returned rather than rendered, because the two callers
+ * answer it differently - one with a 404 page, the other with a 404 body.
+ */
+type ProductDetailsResult =
+  | { ok: false; title: string; message: string }
+  | { ok: true; data: Record<string, any> };
 
-    // Find product by slug and populate category with categoryOffer and brand with brandOffer
-    const product = await Product.findOne({ slug: productSlug })
-      .populate('category')
-      .populate('brand');
+const buildProductDetails = async (
+  slug: string,
+  userId?: string
+): Promise<ProductDetailsResult> => {
+  const product = await Product.findOne({ slug })
+    .populate('category')
+    .populate('brand');
 
-    // Check if product exists and is not deleted
-    if (!product || product.isDeleted) {
-      return res.status(404).render('errors/404', {
-        title: 'Product Not Found',
-        message: 'The product you are looking for does not exist or has been removed.',
-        layout: 'user/layouts/user-layout',
-        active: 'shop'
-      });
-    }
+  if (!product || product.isDeleted) {
+    return {
+      ok: false,
+      title: 'Product Not Found',
+      message: 'The product you are looking for does not exist or has been removed.'
+    };
+  }
 
-    // Check if product is blocked/unlisted
-    if (!product.isListed) {
-      return res.status(404).render('errors/404', {
-        title: 'Product Not Available',
-        message: 'This product is currently not available.',
-        layout: 'user/layouts/user-layout',
-        active: 'shop'
-      });
-    }
+  if (!product.isListed) {
+    return {
+      ok: false,
+      title: 'Product Not Available',
+      message: 'This product is currently not available.'
+    };
+  }
 
-    // Check if product's category exists and is active
-    if (!product.category || (product.category as any).isDeleted || !(product.category as any).isActive) {
-      return res.status(404).render('errors/404', {
-        title: 'Product Not Available',
-        message: 'This product is no longer available as its category has been disabled.',
-        layout: 'user/layouts/user-layout',
-        active: 'shop'
-      });
-    }
+  if (!product.category || (product.category as any).isDeleted || !(product.category as any).isActive) {
+    return {
+      ok: false,
+      title: 'Product Not Available',
+      message: 'This product is no longer available as its category has been disabled.'
+    };
+  }
 
-    // Check if product's brand exists and is active
-    if (!product.brand || (product.brand as any).isDeleted || !(product.brand as any).isActive) {
-      return res.status(404).render('errors/404', {
-        title: 'Product Not Available',
-        message: 'This product is no longer available as its brand has been disabled.',
-        layout: 'user/layouts/user-layout',
-        active: 'shop'
-      });
-    }
+  if (!product.brand || (product.brand as any).isDeleted || !(product.brand as any).isActive) {
+    return {
+      ok: false,
+      title: 'Product Not Available',
+      message: 'This product is no longer available as its brand has been disabled.'
+    };
+  }
 
-    const reviews = await Review.find({
+  const reviews = await Review.find({
       product: product._id,
       isHidden: false
     })
@@ -834,18 +841,17 @@ const loadProductDetails = async (req: Request, res: Response) => {
     // Check if product is in user's wishlist and get wishlist product IDs for related products
     let isInWishlist = false;
     let userWishlistProductIds: any[] = [];
-    if (req.user) {
-      const userWishlist = await Wishlist.findOne({ userId: req.user!._id }).lean();
+    if (userId) {
+      const userWishlist = await Wishlist.findOne({ userId }).lean();
       if (userWishlist && userWishlist.products) {
         userWishlistProductIds = userWishlist.products.map(item => item.productId.toString());
         isInWishlist = userWishlistProductIds.includes(product._id.toString());
       }
     }
 
-    res.render('user/product-details', {
-      title: product.productName,
-      layout: 'user/layouts/user-layout',
-      active: 'shop',
+  return {
+    ok: true,
+    data: {
       product,
       reviews,
       relatedProducts,
@@ -856,6 +862,31 @@ const loadProductDetails = async (req: Request, res: Response) => {
       averageFinalPrice,
       isInWishlist,
       userWishlistProductIds
+    }
+  };
+};
+
+const loadProductDetails = async (req: Request, res: Response) => {
+  try {
+    const result = await buildProductDetails(
+      String(req.params.slug),
+      req.user ? String(req.user._id) : undefined
+    );
+
+    if (!result.ok) {
+      return res.status(404).render('errors/404', {
+        title: result.title,
+        message: result.message,
+        layout: 'user/layouts/user-layout',
+        active: 'shop'
+      });
+    }
+
+    res.render('user/product-details', {
+      title: result.data.product.productName,
+      layout: 'user/layouts/user-layout',
+      active: 'shop',
+      ...result.data
     });
 
   } catch (err: any) {
@@ -867,7 +898,32 @@ const loadProductDetails = async (req: Request, res: Response) => {
       active: 'shop'
     });
   }
-}; 
+};
+
+/**
+ * The same page as JSON, for the SPA.
+ *
+ * Returns 404 with a message rather than an empty body, so the client can say
+ * *why* a product is unavailable - withdrawn, or its category disabled - which
+ * the HTML page already distinguished.
+ */
+const getProductDetailsJSON = async (req: Request, res: Response) => {
+  try {
+    const result = await buildProductDetails(
+      String(req.params.slug),
+      req.user ? String(req.user._id) : undefined
+    );
+
+    if (!result.ok) {
+      return res.status(404).json({ success: false, message: result.message });
+    }
+
+    return res.json({ success: true, ...result.data });
+  } catch (err: any) {
+    console.error('Error loading product details (JSON):', err);
+    return res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
+};
 
 // API: Get available sizes with stock
 const getAvailableSizes = async (req: Request, res: Response) => {
@@ -945,10 +1001,66 @@ const getAvailableSizes = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Filter options for the shop page.
+ *
+ * The EJS page received categories, brands and sizes as render locals, so no
+ * endpoint existed for them - the SPA had no way to populate its filter panel.
+ * All three in one response because the panel needs them together; three
+ * round trips to draw one sidebar would be silly.
+ */
+const getFilterOptions = async (_req: Request, res: Response) => {
+  try {
+    const [categories, brands, sizes] = await Promise.all([
+      getActiveCategories(),
+      getActiveBrands(),
+      Product.distinct('variants.size', { isDeleted: false, isListed: true })
+    ]);
+
+    return res.json({
+      success: true,
+      categories,
+      brands,
+      // Sizes are stored as strings but are numeric in practice, so a plain
+      // sort would put "10" before "9".
+      sizes: (sizes as string[])
+        .filter(Boolean)
+        .sort((a, b) => Number(a) - Number(b) || String(a).localeCompare(String(b)))
+    });
+  } catch (err: any) {
+    console.error('Error in getFilterOptions:', err);
+    return res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
+};
+
+/**
+ * The landing page's sections.
+ *
+ * Reuses the same helpers the EJS landing controller calls, so the two cannot
+ * show different "new arrivals".
+ */
+const getHomeSections = async (_req: Request, res: Response) => {
+  try {
+    const [{ newArrivals, bestSellers }, categories, brands] = await Promise.all([
+      getHomepageProducts(),
+      getActiveCategories(),
+      getActiveBrands()
+    ]);
+
+    return res.json({ success: true, newArrivals, bestSellers, categories, brands });
+  } catch (err: any) {
+    console.error('Error in getHomeSections:', err);
+    return res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
+};
+
 export {
   getProducts,
   loadShopPage,
   getSearchSuggestions,
   loadProductDetails,
-  getAvailableSizes
+  getProductDetailsJSON,
+  getAvailableSizes,
+  getFilterOptions,
+  getHomeSections
 }
