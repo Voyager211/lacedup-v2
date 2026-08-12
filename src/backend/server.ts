@@ -16,6 +16,7 @@ const start = async (): Promise<void> => {
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Docs available at: http://localhost:${PORT}/docs`)
   });
 };
 
