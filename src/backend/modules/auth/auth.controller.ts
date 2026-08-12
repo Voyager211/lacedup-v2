@@ -3,6 +3,7 @@ import User from '../users/user.model';
 import crypto from 'crypto';
 import sendOtp from '../../common/utils/send-otp.util';
 import passport from 'passport';
+import { issueSession, endSession } from './auth.session';
 import { generateReferralCode } from '../referrals/referral-code.util';
 import Wallet from '../wallet/wallet.model';
 import * as walletService from '../wallet/wallet.service'; 
@@ -106,23 +107,29 @@ const postLogin = (req: Request, res: Response, next: NextFunction) => {
     if (err) return res.status(500).json({ error: 'Something went wrong.' });
     if (!user) return res.status(401).json({ error: info.message || 'Invalid credentials.' });
 
-    req.login(user, (err) => {
-      if (err) return res.status(500).json({ error: 'Login failed.' });
-      return res.status(200).json({ success: true });
-    });
+    issueSession(res, user, 'user')
+      .then(() => res.status(200).json({ success: true }))
+      .catch((issueErr) => {
+        console.error('Failed to issue session:', issueErr);
+        return res.status(500).json({ error: 'Login failed.' });
+      });
   })(req, res, next);
 };
 
-const logout = (req: Request, res: Response) => {
-  req.logout(() => {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('Error destroying session:', err);
-        return res.redirect('/home');
-      }
-      res.clearCookie('connect.sid');
-      return res.redirect('/');
-    });
+const logout = async (req: Request, res: Response) => {
+  // Revoke the refresh token server-side before clearing cookies, so a captured
+  // token cannot be replayed after logout.
+  await endSession(res, req.cookies?.user_rt, 'user');
+
+  // The session still carries transient state (cart coupon, OTP flows), so it
+  // is destroyed too.
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Error destroying session:', err);
+      return res.redirect('/home');
+    }
+    res.clearCookie('connect.sid');
+    return res.redirect('/');
   });
 };
 
@@ -237,10 +244,8 @@ const postOtpVerification = async (req: Request, res: Response) => {
 
       delete req.session.pendingUser;
 
-      req.login(newUser, (err) => {
-        if (err) return res.status(500).json({ error: 'Account created but login failed.' });
-        return res.status(200).json({ success: true });
-      });
+      await issueSession(res, newUser, 'user');
+      return res.status(200).json({ success: true });
 
     } else {
       const user = await User.findOne({ email });
@@ -264,10 +269,8 @@ const postOtpVerification = async (req: Request, res: Response) => {
       user.otpExpiresAt = undefined;
       await user.save();
 
-      req.login(user, (err) => {
-        if (err) return res.status(500).json({ error: 'OTP verified but login failed.' });
-        return res.status(200).json({ success: true });
-      });
+      await issueSession(res, user, 'user');
+      return res.status(200).json({ success: true });
     }
 
   } catch (err: any) {

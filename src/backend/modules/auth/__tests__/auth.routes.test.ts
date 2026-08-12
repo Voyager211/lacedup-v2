@@ -1,5 +1,4 @@
 import request from 'supertest';
-import bcrypt from 'bcryptjs';
 import * as db from '../../../common/testing/db';
 import app from '../../../app';
 import User from '../../users/user.model';
@@ -28,7 +27,7 @@ describe('auth routes (HTTP)', () => {
     await User.create({
       name: SEEDED.name,
       email: SEEDED.email,
-      password: await bcrypt.hash(SEEDED.password, 10),
+      password: SEEDED.password, // hashed by the model pre-save hook
       isVerified: true
     });
   });

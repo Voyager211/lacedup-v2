@@ -9,6 +9,7 @@ import {
   otpLimiter,
   passwordResetLimiter
 } from '../../common/middlewares/rate-limiting.middleware';
+import { issueSession, rotateSession } from './auth.session';
 
 const router = express.Router();
 
@@ -281,14 +282,45 @@ router.get('/google/callback', (req: Request, res: Response, next: NextFunction)
       return res.redirect('/login?error=oauth_failed');
     }
 
-    req.login(user, (loginErr) => {
-      if (loginErr) {
-        console.error('Login error after OAuth:', loginErr);
+    // OAuth succeeded - issue the JWT pair rather than a passport session.
+    issueSession(res, user, 'user')
+      .then(() => res.redirect('/home'))
+      .catch((issueErr) => {
+        console.error('Login error after OAuth:', issueErr);
         return res.redirect('/login?error=login_failed');
-      }
-      return res.redirect('/home');
-    });
+      });
   })(req, res, next);
+});
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Exchange the refresh cookie for a new token pair
+ *     description: >
+ *       Rotates the refresh token: the presented one is revoked as part of the
+ *       exchange, so it is single-use. Replaying a captured token after the
+ *       legitimate client has refreshed finds it already revoked and fails.
+ *       Reads and sets httpOnly cookies - there is no request or response body.
+ *     responses:
+ *       200: { description: New access and refresh cookies issued }
+ *       401: { description: Refresh token missing, expired, already used, or revoked }
+ */
+router.post('/auth/refresh', async (req: Request, res: Response) => {
+  const presented = req.cookies?.user_rt;
+
+  if (!presented) {
+    return res.status(401).json({ success: false, message: 'No refresh token' });
+  }
+
+  const result = await rotateSession(res, presented, 'user');
+
+  if (!result.ok) {
+    return res.status(401).json({ success: false, message: result.reason });
+  }
+
+  return res.json({ success: true });
 });
 
 router.get('/logout', authController.logout);

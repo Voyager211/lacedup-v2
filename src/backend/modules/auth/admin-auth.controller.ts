@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
+import { issueSession, endSession } from './auth.session';
 
 const getLogin = (req: Request, res: Response) => {
     try {
@@ -35,38 +36,35 @@ const postLogin = (req: Request, res: Response, next: NextFunction) => {
         req.body.email = req.body.email.trim();
         req.body.password = req.body.password.trim();
 
-        passport.authenticate('local', {
-            failureRedirect: '/admin/login',
-            failureFlash: 'Invalid credentials'
-        })(req, res, () => {
+        // The custom-callback form of authenticate: it verifies the credentials
+        // but does not establish anything, leaving us to issue the JWT pair.
+        passport.authenticate('local', async (err: any, user: any, info: any) => {
             try {
-                if (req.user!.role !== 'admin') {
-                    req.logout((err) => {
-                        if (err) {
-                            console.error('Error logging out non-admin:', err);
-                            return res.status(500).send('Logout Error');
-                        }
-                        req.flash('error', 'Not authorized as admin');
-                        res.redirect('/admin/login');
-                    });
-                } else {
-                    req.session.role = 'admin';
-
-                    if (req.body.remember) {
-                        // Extended session for "Remember Me" - 30 days
-                        req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
-                    } else {
-                        // Standard admin session - 60 minutes
-                        req.session.cookie.maxAge = 60 * 60 * 1000;
-                    }
-
-                    res.redirect('/admin/dashboard');
+                if (err) {
+                    console.error('Admin authentication error:', err);
+                    return res.status(500).send('Internal Server Error');
                 }
+
+                if (!user) {
+                    req.flash('error', info?.message || 'Invalid credentials');
+                    return res.redirect('/admin/login');
+                }
+
+                // A valid shopper login must not become an admin session.
+                if (user.role !== 'admin') {
+                    req.flash('error', 'Not authorized as admin');
+                    return res.redirect('/admin/login');
+                }
+
+                await issueSession(res, user, 'admin');
+                req.session.role = 'admin';
+
+                return res.redirect('/admin/dashboard');
             } catch (innerErr: any) {
                 console.error('Error during login post-auth callback:', innerErr);
-                res.status(500).send('Internal Server Error');
+                return res.status(500).send('Internal Server Error');
             }
-        });
+        })(req, res, next);
     } catch (error: any) {
         console.error('Error during postLogin handler:', error);
         next(error); // Let Express handle it or add custom fallback
@@ -76,22 +74,18 @@ const postLogin = (req: Request, res: Response, next: NextFunction) => {
 
 
 
-const logout = (req: Request, res: Response) => {
+const logout = async (req: Request, res: Response) => {
     try {
-        req.logout((err) => {
-            if (err) {
-                console.error('Logout error:', err);
-                return res.status(500).send('Logout Error');
+        // Revoke the admin refresh token server-side, then clear both cookies.
+        await endSession(res, req.cookies?.admin_rt, 'admin');
+
+        req.session.destroy((destroyErr) => {
+            if (destroyErr) {
+                console.error('Session destroy error:', destroyErr);
+                return res.status(500).send('Session Error');
             }
 
-            req.session.destroy((destroyErr) => {
-                if (destroyErr) {
-                    console.error('Session destroy error:', destroyErr);
-                    return res.status(500).send('Session Error');
-                }
-
-                res.redirect('/admin/login');
-            });
+            res.redirect('/admin/login');
         });
     } catch (error: any) {
         console.error('Unexpected error in logout:', error);

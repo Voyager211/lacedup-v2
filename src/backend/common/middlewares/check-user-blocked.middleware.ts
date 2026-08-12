@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import User from '../../modules/users/user.model';
+import { endSession, revokeAllSessions } from '../../modules/auth/auth.session';
 
 /**
  * Helper to safely handle user logout with flash messages.
@@ -26,10 +27,17 @@ function handleUserLogout(req: Request, res: Response, errorMessage: string) {
       req.flash('error', errorMessage);
     }
 
-    // Logout and destroy session
-    req.logout((logoutErr) => {
-      if (logoutErr) {
-        console.error('Logout error:', logoutErr);
+    // Revoke every outstanding token for this user, then clear the cookies.
+    // A blocked user must not stay signed in until their access token expires,
+    // and must not be able to refresh into a new one.
+    void (async () => {
+      try {
+        if (req.user?._id) {
+          await revokeAllSessions(req.user._id);
+        }
+        await endSession(res, req.cookies?.user_rt, 'user');
+      } catch (revokeErr) {
+        console.error('Failed to revoke sessions for blocked user:', revokeErr);
       }
 
       // Destroy session safely
@@ -52,7 +60,7 @@ function handleUserLogout(req: Request, res: Response, errorMessage: string) {
         res.clearCookie('connect.sid');
         return res.redirect('/login?error=' + encodeURIComponent(errorMessage));
       }
-    });
+    })();
   } catch (error) {
     // Fallback for any unexpected errors
     console.error('Error in handleUserLogout:', error);

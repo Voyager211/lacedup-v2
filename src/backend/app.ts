@@ -9,6 +9,7 @@ import MongoStore from 'connect-mongo';
 import flash from 'connect-flash';
 import passport from 'passport';
 import methodOverride from 'method-override';
+import cookieParser from 'cookie-parser';
 import expressLayouts from 'express-ejs-layouts';
 import morgan from 'morgan';
 import morganBody from 'morgan-body';
@@ -19,6 +20,7 @@ import { PUBLIC_DIR, VIEWS_DIR } from './config/paths';
 import { apiLimiter } from './common/middlewares/rate-limiting.middleware';
 import { addUserContext } from './common/middlewares/user-context.middleware';
 import checkUserBlocked from './common/middlewares/check-user-blocked.middleware';
+import jwtAuth from './common/middlewares/jwt-auth.middleware';
 import { swaggerSpec } from './config/swagger';
 
 // Route imports
@@ -66,13 +68,22 @@ app.set('layout', 'admin/layout');
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.json({ limit: '50mb' }));
 app.use(methodOverride('_method'));
+app.use(cookieParser());
 app.use(express.static(PUBLIC_DIR));
 app.use(flash());
 
 /**
- * Session middleware, built per request so admin and shopper sessions can use
- * different cookie names and lifetimes: 60 minutes for /admin, 20 for everyone
- * else. Replaced by JWT cookies in Phase 3.
+ * Session middleware.
+ *
+ * Authentication no longer lives here - that moved to JWT cookies below. This
+ * remains because ~90 places still keep transient, non-auth state in the
+ * session: the signup and email-change OTP flows, the applied coupon, the
+ * Razorpay basket held between creating a payment and verifying it, the
+ * payment-failure record behind the retry page, and connect-flash messages.
+ * Migrating those is Phase 5 work, once the EJS layer goes.
+ *
+ * The per-request construction and the admin/shopper cookie split are kept so
+ * the two audiences stay separate, matching the JWT cookie pairs.
  */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const isAdminRoute = req.path.startsWith('/admin');
@@ -107,9 +118,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   sessionMiddleware(req, res, next);
 });
 
-// Passport
+// Passport is still used to verify credentials on the login routes, but no
+// longer to carry the login: passport.session() is gone, and req.user is
+// populated from the JWT cookie instead.
 app.use(passport.initialize());
-app.use(passport.session());
+
+app.use(jwtAuth);
 
 app.use(addUserContext);
 
