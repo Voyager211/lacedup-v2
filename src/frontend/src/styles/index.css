@@ -1,0 +1,117 @@
+@import 'tailwindcss';
+
+/**
+ * Design tokens.
+ *
+ * Every value here was read out of the stylesheets it replaces - see
+ * docs/design-tokens.md for where each one came from. Tailwind v4 is
+ * CSS-first, so this @theme block *is* the config: each entry generates the
+ * matching utilities (--color-brand -> bg-brand, text-brand, border-brand).
+ *
+ * The neutral scale is deliberately absent: design-system.css defined
+ * --gray-50..900 byte-identically to Tailwind's default gray, so redefining
+ * it would only risk drift.
+ */
+@theme {
+  /* Brand.
+     Two reds existed. user.css carried #E03A2F, which is what the storefront
+     actually rendered; design-system.css carried Bootstrap's #dc3545 for
+     badges. The first is the brand, the second stays as `danger` below, so a
+     destructive action never looks like a brand action. */
+  --color-brand: #e03a2f;
+  --color-brand-hover: #c22e24;
+
+  /* Surfaces and text - the "smoked concrete" palette from user.css */
+  --color-canvas: #fdf8f3;
+  --color-card: #f2f2f2;
+  --color-line: #d1d1d1;
+  --color-ink: #1a1a1a;
+  --color-ink-muted: #555555;
+  --color-accent: #3a7dff;
+
+  /* Semantic */
+  --color-success: #198754;
+  --color-success-hover: #157347;
+  --color-warning: #ffc107;
+  --color-warning-hover: #ffca2c;
+  --color-danger: #dc3545;
+  --color-danger-hover: #bb2d3b;
+  --color-info: #0dcaf0;
+  --color-info-hover: #31d2f2;
+  --color-purple: #6f42c1;
+
+  /* Badge tones - bold pairs (non-table badges) */
+  --color-tone-warning: #ffc107;
+  --color-tone-warning-fg: #000000;
+  --color-tone-primary: #0d6efd;
+  --color-tone-primary-fg: #ffffff;
+  --color-tone-info: #0dcaf0;
+  --color-tone-info-fg: #000000;
+  --color-tone-success: #198754;
+  --color-tone-success-fg: #ffffff;
+  --color-tone-danger: #dc3545;
+  --color-tone-danger-fg: #ffffff;
+  --color-tone-purple: #6f42c1;
+  --color-tone-purple-fg: #ffffff;
+  --color-tone-secondary: #6c757d;
+  --color-tone-secondary-fg: #ffffff;
+
+  /* Badge tones - light pairs (table badges) */
+  --color-tone-warning-soft: #fff3cd;
+  --color-tone-warning-soft-fg: #997404;
+  --color-tone-primary-soft: #cfe2ff;
+  --color-tone-primary-soft-fg: #084298;
+  --color-tone-info-soft: #cff4fc;
+  --color-tone-info-soft-fg: #055160;
+  --color-tone-success-soft: #d1e7dd;
+  --color-tone-success-soft-fg: #0f5132;
+  --color-tone-danger-soft: #f8d7da;
+  --color-tone-danger-soft-fg: #842029;
+  --color-tone-purple-soft: #e0cffc;
+  --color-tone-purple-soft-fg: #432874;
+  --color-tone-secondary-soft: #e2e3e5;
+  --color-tone-secondary-soft-fg: #41464b;
+
+  /* Typography.
+     No type scale existed - body was the system stack 'Segoe UI', Roboto and
+     five Google families were loaded ad hoc from inside three partials. These
+     are the intended families; the @fontsource imports land with the shell in
+     step 2, and until then the fallbacks render. */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Lexend', 'Inter', system-ui, sans-serif;
+  --font-display: 'League Gothic', Impact, sans-serif;
+  --font-mono: 'Courier New', ui-monospace, monospace;
+
+  /* Radii - the badge geometry from design-system.css */
+  --radius-badge: 6px;
+  --radius-pill: 12px;
+}
+
+/**
+ * Base layer.
+ *
+ * Deliberately thin: Tailwind's preflight already resets, and per-element
+ * styling belongs in components rather than here. This sets only what is
+ * genuinely global.
+ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Visible focus for keyboard users only. The old stylesheets removed focus
+     rings outright in several places, which is a genuine accessibility
+     regression worth not carrying forward. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}

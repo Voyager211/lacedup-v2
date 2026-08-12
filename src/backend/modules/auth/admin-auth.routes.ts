@@ -5,6 +5,7 @@ import isAdmin from '../../common/middlewares/is-admin.middleware';
 import * as authController from './admin-auth.controller';
 import * as dashboardController from '../reports/dashboard.controller';
 import { rotateSession } from './auth.session';
+import { publicUser } from '../users/user.serializer';
 
 const router = express.Router();
 
@@ -83,6 +84,29 @@ router.post('/auth/refresh', async (req: Request, res: Response) => {
   }
 
   return res.json({ success: true });
+});
+
+/**
+ * @swagger
+ * /admin/auth/me:
+ *   get:
+ *     tags: [Admin]
+ *     summary: The currently signed-in admin
+ *     description: >
+ *       The admin counterpart of /auth/me, reading the admin cookie pair. The
+ *       role check is what makes it distinct: a valid shopper session reaching
+ *       this route is not an admin, so it is refused rather than reported as a
+ *       signed-in user.
+ *     responses:
+ *       200: { description: The signed-in admin }
+ *       401: { description: No valid admin session }
+ */
+router.get('/auth/me', (req: Request, res: Response) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(401).json({ success: false, message: 'Not authenticated' });
+  }
+
+  return res.json({ success: true, user: publicUser(req.user) });
 });
 
 /**

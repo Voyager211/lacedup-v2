@@ -1,11 +1,61 @@
 # Frontend
 
-Not yet scaffolded. This is the Phase 4 specification: what to build, in what order, against
-which backend, with which design tokens.
+The Phase 4 app: what is built, what is next, and the specification for the rest.
 
 Phases 0–3 are done — the `src/` restructure, a 16-module modular monolith, 100% TypeScript,
-JWT auth, Swagger at `/docs`, 99 passing tests. **The backend is finished. Build against it
-as a stable API.**
+JWT auth, Swagger at `/docs`. **The backend is finished. Build against it as a stable API.**
+
+## Running it
+
+```bash
+# once
+cd src/frontend && npm install
+
+# two terminals
+npm run dev            # from the repo root — backend on :3000
+cd src/frontend && npm run dev   # SPA on :5173
+```
+
+Open **http://localhost:5173**. Vite proxies `/api`, `/uploads` and `/images` to the backend
+so the browser sees one origin — which matters because auth is carried in httpOnly cookies,
+and a cross-origin setup would need CORS plus `SameSite=None` on every one of them.
+
+| Script | Does |
+|---|---|
+| `npm run dev` | dev server on :5173 with the backend proxy |
+| `npm run build` | typecheck, then production build |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest |
+| `npm run test:watch` | Vitest in watch mode |
+
+## Status
+
+**Step 0 is complete** — scaffold, design tokens, store, API client, router and guards.
+Every route in the tree resolves; unbuilt pages render a placeholder naming the step that
+will replace them. When nothing renders a placeholder, Phase 4 is done.
+
+| Built | Where |
+|---|---|
+| Vite + React 19 + TS 7 + Tailwind 4 | `vite.config.ts`, `tsconfig.json` |
+| Design tokens as a Tailwind theme | `src/styles/index.css` |
+| axios client + refresh-on-401 interceptor | `src/api/client.ts` |
+| Redux store, dual-audience session state | `src/app/store.ts`, `src/features/auth/` |
+| Route tree, `RequireAuth` / `RequireGuest` | `src/app/router.tsx`, `src/app/guards.tsx` |
+| `formatINR`, `formatDate`, pricing helpers | `src/lib/` |
+| 62 tests | `*.test.ts(x)` |
+
+**Next: step 1, the shared primitives** — see the build list at the end of
+[docs/components.md](docs/components.md).
+
+### Two notes on what step 0 changed
+
+- **`GET /api/auth/me` and `GET /api/admin/auth/me` were added to the backend.** The SPA
+  cannot read httpOnly cookies, so without them it has no way to tell a signed-in visitor
+  from a signed-out one except by firing a request and watching it fail. Both return 401
+  rather than a null user, which keeps them on the same refresh-then-retry path as every
+  other call. Covered by `src/backend/modules/auth/__tests__/session-me.test.ts`.
+- **`exactOptionalPropertyTypes` is deliberately off** while the rest of `strict` is on. It
+  fights React and RTK typings for little gain here; the reasoning is in `tsconfig.json`.
 
 ---
 
@@ -206,7 +256,7 @@ resist the urge to start on pages before they're done.
 
 | # | Step | Notes |
 |---|---|---|
-| 0 | **Scaffold + design system** — Vite, TS, Tailwind theme, Redux store, axios client with the refresh-on-401 interceptor, router, auth guard | nothing else can start |
+| 0 | ~~**Scaffold + design system**~~ | ✅ done |
 | 1 | **Primitives** — `<Badge>`, `<Modal>`, `<Pagination>`, `<FilterBar>`, `<QueryBoundary>`, `<ImageUploader>`, `useToast`, `useConfirm`, `lib/format`, `lib/pricing` | full list at the end of [docs/components.md](docs/components.md) |
 | 2 | **Shells** — storefront layout (navbar, search typeahead, cart badge, footer, profile menu) and the modernized admin shell | ~35 pages hang off these two |
 | 3 | **Auth** — 6 pages, one layout, no shared state | validates the whole auth contract end to end |
@@ -300,11 +350,16 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-Backend currently: **99 tests, all passing**, `tsc --noEmit` clean under `strict`. Keep it
-that way — run `npm test` before and after touching anything shared.
+**Backend: 107 tests. Frontend: 62.** Both suites pass and both typecheck clean under
+`strict`. Keep it that way — run `npm test` on both sides before and after touching anything
+shared.
 
-For the frontend: Vitest + React Testing Library for components, MSW to mock the API at the
-network layer, Playwright for E2E. Priority journeys:
+The frontend tests so far cover the pieces where a mistake is expensive and invisible: the
+refresh interceptor (including that concurrent 401s share **one** refresh — single-use
+rotation means three parallel refreshes would revoke each other), the route guards, and the
+formatting and pricing helpers.
+
+Still to add: MSW for network-level mocking, and Playwright for E2E. Priority journeys:
 
 - browse → product → add to cart → checkout → COD order placed
 - signup with OTP → login → logout
@@ -331,9 +386,11 @@ src/frontend/
 │   └── types/        shared with backend where practical
 ├── docs/             this specification
 ├── index.html
-├── tailwind.config.ts
 └── vite.config.ts
 ```
+
+There is no `tailwind.config.ts`: Tailwind 4 is CSS-first, so the theme lives in the
+`@theme` block of `src/styles/index.css` — each token there generates its own utilities.
 
 Feature folders mirror the backend's 16 modules — `auth`, `users`, `catalog`, `reviews`,
 `cart`, `wishlist`, `addresses`, `checkout`, `orders`, `returns`, `coupons`, `wallet`,

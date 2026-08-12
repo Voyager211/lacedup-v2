@@ -1,0 +1,117 @@
+import request from 'supertest';
+import * as db from '../../../common/testing/db';
+import app from '../../../app';
+import User from '../../users/user.model';
+
+/**
+ * GET /api/auth/me and GET /api/admin/auth/me.
+ *
+ * These exist for the React client. Auth is carried in httpOnly cookies, so
+ * the browser cannot read its own session - without these the SPA could not
+ * tell a signed-in visitor from a signed-out one except by firing a request
+ * and watching it fail, which would make every guarded route flicker.
+ */
+
+const SHOPPER = {
+  name: 'Session Shopper',
+  email: 'session-shopper@example.com',
+  password: 'CorrectHorse1!'
+};
+
+const ADMIN = {
+  name: 'Session Admin',
+  email: 'session-admin@example.com',
+  password: 'CorrectHorse1!',
+  role: 'admin' as const
+};
+
+/** Logs in and returns the cookie jar as supertest wants it. */
+const signIn = async (path: string, email: string, password: string): Promise<string[]> => {
+  const res = await request(app).post(path).type('form').send({ email, password });
+  return ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+};
+
+describe('session introspection', () => {
+  beforeAll(async () => {
+    await db.connect();
+  });
+
+  afterAll(async () => {
+    await db.disconnect();
+  });
+
+  beforeEach(async () => {
+    await User.deleteMany({});
+    await User.create({ ...SHOPPER, isVerified: true });
+    await User.create({ ...ADMIN, isVerified: true });
+  });
+
+  describe('GET /api/auth/me', () => {
+    it('returns 401 rather than a null user when signed out', async () => {
+      // 401 keeps it on the same refresh-then-retry path as every other call.
+      const res = await request(app).get('/api/auth/me');
+
+      expect(res.status).toBe(401);
+      expect(res.body).toMatchObject({ success: false });
+    });
+
+    it('returns the signed-in shopper', async () => {
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const res = await request(app).get('/api/auth/me').set('Cookie', cookies);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user).toMatchObject({
+        name: SHOPPER.name,
+        email: SHOPPER.email,
+        role: 'user',
+        isBlocked: false
+      });
+    });
+
+    it('never sends the password or OTP fields', async () => {
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const res = await request(app).get('/api/auth/me').set('Cookie', cookies);
+
+      for (const field of ['password', 'otpHash', 'otpExpiresAt', 'googleId', 'facebookId']) {
+        expect(res.body.user).not.toHaveProperty(field);
+      }
+    });
+
+    it('is not served on the bare path - the SPA is the only caller', async () => {
+      const res = await request(app).get('/auth/me');
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/admin/auth/me', () => {
+    it('returns 401 when signed out', async () => {
+      const res = await request(app).get('/api/admin/auth/me');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns the signed-in admin', async () => {
+      const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+      const res = await request(app).get('/api/admin/auth/me').set('Cookie', cookies);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user).toMatchObject({ email: ADMIN.email, role: 'admin' });
+    });
+
+    it('refuses a shopper session', async () => {
+      // The two audiences are independent. A valid shopper cookie reaching an
+      // admin route is not an admin, and must not be reported as signed in.
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const res = await request(app).get('/api/admin/auth/me').set('Cookie', cookies);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('is also reachable on its historic mount', async () => {
+      // The admin router is dual-mounted, unlike the shopper auth router.
+      const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+      const res = await request(app).get('/admin/auth/me').set('Cookie', cookies);
+
+      expect(res.status).toBe(200);
+    });
+  });
+});

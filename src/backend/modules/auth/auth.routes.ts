@@ -10,6 +10,7 @@ import {
   passwordResetLimiter
 } from '../../common/middlewares/rate-limiting.middleware';
 import { issueSession, rotateSession } from './auth.session';
+import { publicUser } from '../users/user.serializer';
 
 const router = express.Router();
 
@@ -321,6 +322,59 @@ router.post('/auth/refresh', async (req: Request, res: Response) => {
   }
 
   return res.json({ success: true });
+});
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     tags: [Auth]
+ *     summary: The currently signed-in shopper
+ *     description: >
+ *       Reports who the access cookie belongs to. The SPA needs this because
+ *       the auth cookies are httpOnly and therefore invisible to JavaScript -
+ *       without it the client cannot tell a signed-in visitor from a signed-out
+ *       one except by making a request and watching it fail.
+ *
+ *       Returns 401 rather than a null user when there is no valid session, so
+ *       it goes through the same refresh-then-retry path as every other call.
+ *       The password and OTP fields are never included.
+ *     responses:
+ *       200:
+ *         description: The signed-in user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id: { type: string }
+ *                     name: { type: string }
+ *                     email: { type: string }
+ *                     phone: { type: string }
+ *                     profilePhoto: { type: string }
+ *                     role: { type: string, enum: [user, admin] }
+ *                     isBlocked: { type: boolean }
+ *                     referralCode: { type: string }
+ *                     referralCount: { type: integer }
+ *       401: { description: No valid session }
+ */
+/*
+ * Declared with the /api prefix in the path rather than relying on a mount.
+ * This router is root-mounted and deliberately not dual-mounted under /api -
+ * it declares its own /api/... endpoints internally, as the other root-mounted
+ * routers already do for their 47 JSON routes. There is no bare /auth/me
+ * because nothing but the SPA ever calls it.
+ */
+router.get('/api/auth/me', (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Not authenticated' });
+  }
+
+  return res.json({ success: true, user: publicUser(req.user) });
 });
 
 router.get('/logout', authController.logout);
