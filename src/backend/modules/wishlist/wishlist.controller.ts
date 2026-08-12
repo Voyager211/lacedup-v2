@@ -4,6 +4,7 @@ import Product from '../catalog/product.model';
 import Category from '../catalog/category.model';
 import Brand from '../catalog/brand.model';
 import Cart from '../cart/cart.model';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 // Get wishlist page
 const getWishlist = async (req: Request, res: Response) => {
@@ -65,6 +66,14 @@ const getWishlist = async (req: Request, res: Response) => {
     // Get wishlist product IDs for the template
     const userWishlistProductIds = products.map(p => p._id.toString());
 
+    // The SPA asks for the same data as JSON. `GET /wishlist` and
+    // `GET /api/wishlist` are the same route - this router is dual-mounted -
+    // so the response is chosen by what the caller asked for rather than by
+    // adding a second endpoint that would duplicate all of the above.
+    if (wantsJson(req)) {
+      return res.json({ success: true, products, search, userWishlistProductIds });
+    }
+
     res.render('user/wishlist', {
       title: 'My Wishlist',
       products,
@@ -78,6 +87,11 @@ const getWishlist = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error fetching wishlist:', error);
+
+    if (wantsJson(req)) {
+      return res.status(500).json({ success: false, message: 'Unable to load wishlist' });
+    }
+
     res.status(500).render('errors/server-error', {
       title: 'Server Error',
       message: 'Unable to load wishlist'

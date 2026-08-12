@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { wantsJson } from '../utils/wants-json.util';
 
 export const addUserContext = (req: Request, res: Response, next: NextFunction) => {
   res.locals.user = req.user || null;
@@ -17,18 +18,17 @@ export const ensureAuthenticated = (req: Request, res: Response, next: NextFunct
     return next();
   }
 
-  // If not authenticated, redirect to login
-  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
-    // For AJAX requests, return JSON error
+  // A request that arrived under /api wanted the API, whatever headers it
+  // sent - a 302 to an HTML login page gives an XHR caller nothing to act on.
+  if (wantsJson(req)) {
     return res.status(401).json({
       success: false,
       message: 'Authentication required',
       redirectUrl: '/login'
     });
-  } else {
-    // For regular requests, redirect to login
-    return res.redirect('/login');
   }
+
+  return res.redirect('/login');
 };
 
 // Middleware to ensure user is not authenticated (for login/register pages)

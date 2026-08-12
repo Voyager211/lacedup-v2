@@ -4,6 +4,7 @@ import Product from '../catalog/product.model';
 import User from '../users/user.model';
 import Wishlist from '../wishlist/wishlist.model';
 import * as walletService from '../wallet/wallet.service';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 // Helper function to calculate final price with offers
 const calculateFinalPrice = async (product: any) => {
@@ -252,15 +253,24 @@ const getCartCount = async (req: Request, res: Response) => {
 };
 
 // Load cart page
-const loadCart = async (req: Request, res: Response) => {
-  try {
-    const userId = req.user ? req.user!._id : req.session.userId;
-    
-    const user: any = await User.findById(userId).select('fullname email profilePhoto');
-    if (!user) {
-      return res.redirect('/login');
-    }
+/**
+ * The cart, partitioned and re-priced.
+ *
+ * Extracted from loadCart so the EJS page and the SPA's JSON endpoint compute
+ * it once. This is more than a read: it drops items whose product has been
+ * deleted, re-prices anything whose offer has moved since it was added, and
+ * splits what remains into available / out-of-stock / unavailable. Two copies
+ * of that would drift, and the JSON consumer must see the same prices and the
+ * same three buckets the page shows.
+ *
+ * Returns null when the user no longer exists - the callers answer that
+ * differently.
+ */
+const buildCart = async (userId: unknown) => {
+  const user: any = await User.findById(userId).select('fullname email profilePhoto');
+  if (!user) return null;
 
+  {
     const cart: any = await Cart.findOne({ userId })
       .populate({
         path: 'items.productId',
@@ -409,19 +419,64 @@ const loadCart = async (req: Request, res: Response) => {
 
     const allCartItems = [...availableCartItems, ...outOfStockCartItems, ...unavailableCartItems];
 
-    res.render('user/cart', {
+    return {
       user,
       cartItems: allCartItems,
       availableCartItems,
       outOfStockCartItems,
-      unavailableCartItems,
+      unavailableCartItems
+    };
+  }
+};
+
+/**
+ * The cart page, and the same cart as JSON.
+ *
+ * This router is dual-mounted, so `GET /cart` and `GET /api/cart` arrive here
+ * together - the first wanting a page, the second wanting data. Answering both
+ * from one handler avoids duplicating the assembly above into a second
+ * endpoint.
+ *
+ * The JSON keeps the three buckets separate as well as combined, because the
+ * page treats them differently: out-of-stock items block checkout and can be
+ * cleared in bulk, unavailable ones can only be removed.
+ */
+const loadCart = async (req: Request, res: Response) => {
+  try {
+    const result = await buildCart(req.user ? req.user!._id : req.session.userId);
+
+    if (!result) {
+      return wantsJson(req)
+        ? res.status(401).json({ success: false, message: 'Not authenticated' })
+        : res.redirect('/login');
+    }
+
+    if (wantsJson(req)) {
+      const { user: _user, ...cart } = result;
+      return res.json({ success: true, ...cart });
+    }
+
+    res.render('user/cart', {
+      ...result,
       title: 'My Cart',
       layout: 'user/layouts/user-layout',
       active: 'cart'
     });
   } catch (error: any) {
     console.error('Error loading cart:', error);
-    res.status(500).render('error', { message: 'Error loading cart' });
+
+    if (wantsJson(req)) {
+      return res.status(500).json({ success: false, message: 'Error loading cart' });
+    }
+
+    // errors/server-error, not 'error' - views/error.ejs has never existed, so
+    // the old path threw inside its own error handler (docs/defects.md).
+    res.status(500).render('errors/server-error', {
+      title: 'Server Error',
+      message: 'Error loading cart',
+      layout: 'user/layouts/user-layout',
+      active: 'cart'
+    });
   }
 };
 

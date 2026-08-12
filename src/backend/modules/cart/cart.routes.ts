@@ -1,11 +1,16 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import * as cartController from './cart.controller';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 const router = express.Router();
 
 /**
  * Page-level guard: redirects browsers, but answers JSON to API clients.
+ *
+ * The /api mount counts as an API client regardless of headers - a request
+ * that arrived under /api wanted the API, and answering it with a 302 to an
+ * HTML login page gives an XHR caller nothing it can act on.
  *
  * req.headers.accept is absent when no Accept header is sent, which used to
  * turn every unauthenticated /cart hit into a 500 rather than a redirect.
@@ -15,7 +20,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+  if (wantsJson(req)) {
     return res.status(401).json({
       success: false,
       message: 'You must be logged in to access this feature',

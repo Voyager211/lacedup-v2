@@ -30,8 +30,8 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–4 are complete** — the scaffold, the primitives, the shells, the auth pages and
-storefront browse. Every route in the tree resolves; unbuilt pages render a placeholder naming
+**Steps 0–5 are complete** — the scaffold, the primitives, the shells, auth, browse, and
+cart & wishlist. Every route in the tree resolves; unbuilt pages render a placeholder naming
 the step that will replace them. When nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
@@ -87,7 +87,16 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | `<ProductDetailsPage>` | gallery, variant selector, stock states, reviews, related products |
 | `<ProductCard>` | shared by landing, shop, wishlist and related products |
 
-**Next: step 5, cart & wishlist** — `cart.js` is 1,282 lines.
+### Step 5 — cart & wishlist
+
+| Built | Notes |
+|---|---|
+| `<CartPage>` | quantity steppers, the three server buckets, save-for-later, confirm-before-empty |
+| `<WishlistPage>` | debounced search, reuses `<ProductCard>` |
+| Add to cart / wishlist | wired into the product page — the button now works |
+
+**Next: step 6, checkout** — the riskiest step. Razorpay, wallet, COD, the address dialog,
+coupons, and the `pendingRazorpayOrder` decision below.
 
 ### Notes on what these steps changed
 
@@ -115,6 +124,15 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
   error there — it falls through to `newest`, so a wrong value produces a sort control that
   silently does nothing. Three of the seven were wrong until they were checked against the
   running server; there is now a test pinning them.
+- **Dual-mounted routes now answer by mount, not by header.** `GET /cart` and `GET /api/cart`
+  are the *same* route — one wanting a page, the other data. The handler picks using
+  `wantsJson(req)` (`common/utils/wants-json.util.ts`), which treats an `/api` request as an
+  API request whatever headers it sent. That also means an unauthenticated `/api/*` request
+  gets a 401 it can act on rather than a 302 to an HTML login page. Same for `/wishlist`.
+- **The cart is re-costed on every read.** `buildCart` drops items whose product was deleted,
+  re-prices anything whose offer moved since it was added, and splits the rest into
+  buyable / out-of-stock / unavailable. **Never cache a cart price client-side**, and total
+  only the buyable bucket — the other two cannot be checked out.
 - **Three validation rules deliberately differ from the originals** — the email TLD
   allowlist is gone (it rejected `.io`, `.dev` and every newer TLD), names now allow
   apostrophes, hyphens and non-ASCII letters, and new passwords need 8 characters with a
@@ -350,7 +368,7 @@ resist the urge to start on pages before they're done.
 | 2 | ~~**Shells**~~ | ✅ done — plus the RTK Query data layer |
 | 3 | ~~**Auth**~~ | ✅ done |
 | 4 | ~~**Storefront browse**~~ | ✅ done |
-| 5 | **Cart & wishlist** | `cart.js` is 1,282 lines |
+| 5 | ~~**Cart & wishlist**~~ | ✅ done |
 | 6 | **Checkout** — Razorpay, wallet, COD, address dialog, coupons | riskiest step; `checkout.js` is 2,053 lines |
 | 7 | **Orders & returns** — list, details, invoices, cancel/return reason flows | |
 | 8 | **Profile, addresses, wallet, referrals, coupons** | reuses the address dialog from step 6 |
@@ -439,7 +457,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 125 tests. Frontend: 263.** Both suites pass and both typecheck clean under
+**Backend: 136 tests. Frontend: 276.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 

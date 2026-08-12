@@ -1,11 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { BsStarFill, BsStar } from 'react-icons/bs';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { BsHeart, BsHeartFill, BsStarFill, BsStar } from 'react-icons/bs';
 import { useGetProductQuery } from './catalog.api';
 import ProductCard from './ProductCard';
 import Button from '@/components/Button';
 import QueryBoundary from '@/components/QueryBoundary';
 import { Skeleton } from '@/components/Skeleton';
+import { useToast } from '@/components/toast';
+import { useAddToCartMutation } from '@/features/cart/cart.api';
+import {
+  useAddToWishlistMutation,
+  useRemoveFromWishlistMutation
+} from '@/features/wishlist/wishlist.api';
+import { useAppSelector } from '@/app/store';
+import { selectSession } from '@/features/auth/authSlice';
 import { formatDate, formatINR } from '@/lib/format';
 import { discountPercent } from '@/lib/pricing';
 import { cn } from '@/lib/cn';
@@ -37,7 +45,15 @@ const Stars = ({ rating, className }: { rating: number; className?: string }) =>
 
 const ProductDetailsPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const toast = useToast();
+
   const { data, isLoading, error, refetch } = useGetProductQuery(slug ?? '', { skip: !slug });
+  const { status: sessionStatus } = useAppSelector(selectSession('user'));
+
+  const [addToCartMutation, { isLoading: isAdding }] = useAddToCartMutation();
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
 
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
@@ -64,6 +80,53 @@ const ProductDetailsPage = () => {
   );
   const discount = discountPercent(product?.regularPrice ?? 0, price);
   const inStock = (selectedVariant?.stock ?? 0) > 0;
+
+  /**
+   * Both actions require a session. Checking first sends the visitor to login
+   * with somewhere to come back to, rather than letting the request 401 and
+   * the interceptor bounce them with no memory of what they were doing.
+   */
+  const requireSignIn = (): boolean => {
+    if (sessionStatus === 'authenticated') return false;
+
+    toast.info('Sign in to continue');
+    navigate('/login', { state: { from: { pathname: `/product/${slug}` } } });
+    return true;
+  };
+
+  const addToCart = async () => {
+    if (requireSignIn() || !product || !selectedVariant) return;
+
+    try {
+      await addToCartMutation({
+        productId: product._id,
+        variantId: selectedVariant._id
+      }).unwrap();
+
+      toast.success('Added to your cart', `${product.productName} · Size ${selectedVariant.size}`);
+    } catch (caught) {
+      // The server distinguishes OUT_OF_STOCK, INSUFFICIENT_STOCK and
+      // CART_QUANTITY_LIMIT, and its message names the size and the number
+      // available - more useful than anything invented here.
+      toast.fromError(caught, 'Could not add that to your cart.');
+    }
+  };
+
+  const toggleWishlist = async () => {
+    if (requireSignIn() || !product) return;
+
+    try {
+      if (data?.isInWishlist) {
+        await removeFromWishlist(product._id).unwrap();
+        toast.success('Removed from your wishlist');
+      } else {
+        await addToWishlist(product._id).unwrap();
+        toast.success('Saved to your wishlist');
+      }
+    } catch (caught) {
+      toast.fromError(caught, 'Could not update your wishlist.');
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -213,10 +276,33 @@ const ProductDetailsPage = () => {
                   )}
                 </p>
 
-                {/* Adding to the cart lands in step 5, with the cart itself. */}
-                <Button className="mt-6" size="lg" fullWidth disabled={!inStock}>
-                  {inStock ? 'Add to cart' : 'Out of stock'}
-                </Button>
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    size="lg"
+                    fullWidth
+                    disabled={!inStock}
+                    loading={isAdding}
+                    onClick={addToCart}
+                  >
+                    {inStock ? 'Add to cart' : 'Out of stock'}
+                  </Button>
+
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    aria-label={
+                      data.isInWishlist ? 'Remove from your wishlist' : 'Save to your wishlist'
+                    }
+                    onClick={toggleWishlist}
+                    icon={
+                      data.isInWishlist ? (
+                        <BsHeartFill className="size-5 text-brand" aria-hidden="true" />
+                      ) : (
+                        <BsHeart className="size-5" aria-hidden="true" />
+                      )
+                    }
+                  />
+                </div>
 
                 {product.description && (
                   <section className="mt-8 border-t border-line pt-6">

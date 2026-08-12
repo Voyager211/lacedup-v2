@@ -125,7 +125,20 @@ describe('auth routes (HTTP)', () => {
       const prefixed = await request(app).get('/api/cart');
       expect(legacy.status).not.toBe(404);
       expect(prefixed.status).not.toBe(404);
-      expect(legacy.status).toBe(prefixed.status);
+    });
+
+    it('rejects an unauthenticated /api request with JSON, not a redirect', async () => {
+      // The two mounts deliberately answer differently. A browser hitting
+      // /cart should be sent to the login page; an XHR client hitting
+      // /api/cart can do nothing with a 302 to an HTML page, so it gets a 401
+      // it can act on - whatever headers it sent.
+      const legacy = await request(app).get('/cart');
+      expect(legacy.status).toBe(302);
+      expect(legacy.headers.location).toContain('/login');
+
+      const prefixed = await request(app).get('/api/cart');
+      expect(prefixed.status).toBe(401);
+      expect(prefixed.headers['content-type']).toMatch(/json/);
     });
 
     // Regression guard: cart's auth guard read req.headers.accept without a

@@ -15,6 +15,8 @@ import ResetPasswordPage from '@/features/auth/ResetPasswordPage';
 import LandingPage from '@/features/catalog/LandingPage';
 import ShopPage from '@/features/catalog/ShopPage';
 import ProductDetailsPage from '@/features/catalog/ProductDetailsPage';
+import CartPage from '@/features/cart/CartPage';
+import WishlistPage from '@/features/wishlist/WishlistPage';
 
 /**
  * The route tree.
@@ -59,8 +61,8 @@ export const router = createBrowserRouter([
           {
             element: <RequireAuth audience="user" />,
             children: [
-              { path: 'cart', element: <Placeholder title="Cart" step={5} note="Behaviour lives in cart.js — 1,282 lines." /> },
-              { path: 'wishlist', element: <Placeholder title="Wishlist" step={5} /> },
+              { path: 'cart', element: <CartPage /> },
+              { path: 'wishlist', element: <WishlistPage /> },
               { path: 'checkout', element: <Placeholder title="Checkout" step={6} note="Riskiest page: Razorpay, wallet, COD, addresses, coupons. checkout.js is 2,053 lines." /> },
               { path: 'checkout/order-success/:orderId', element: <Placeholder title="Order placed" step={6} /> },
               { path: 'checkout/order-failure/:transactionId', element: <Placeholder title="Payment failed" step={6} /> },
