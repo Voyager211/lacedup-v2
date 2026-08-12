@@ -7,6 +7,8 @@ import { store } from './app/store';
 import { router } from './app/router';
 import { setSessionExpiredHandler } from './api/client';
 import { sessionExpired } from './features/auth/authSlice';
+import { ConfirmProvider } from './components/confirm/ConfirmProvider';
+import { Toaster } from './components/toast';
 import './styles/index.css';
 
 /**
@@ -29,7 +31,10 @@ if (!container) {
 createRoot(container).render(
   <StrictMode>
     <Provider store={store}>
-      <RouterProvider router={router} />
+      <ConfirmProvider>
+        <RouterProvider router={router} />
+        <Toaster />
+      </ConfirmProvider>
     </Provider>
   </StrictMode>
 );

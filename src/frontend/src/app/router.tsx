@@ -3,6 +3,7 @@ import { RequireAuth, RequireGuest } from './guards';
 import Placeholder from './Placeholder';
 import NotFound from './NotFound';
 import RootError from './RootError';
+import Gallery from './Gallery';
 
 /**
  * The route tree.
@@ -123,6 +124,11 @@ export const router = createBrowserRouter([
           }
         ]
       },
+
+      /* The shared-component gallery. Dev only - it is not in the production
+         bundle at all, because the condition is statically false after Vite
+         replaces import.meta.env.DEV and the branch is dropped. */
+      ...(import.meta.env.DEV ? [{ path: '_gallery', element: <Gallery /> }] : []),
 
       { path: '*', element: <NotFound /> }
     ]
