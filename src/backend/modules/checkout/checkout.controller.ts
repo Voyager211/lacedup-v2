@@ -7,6 +7,8 @@ import Order from '../orders/order.model';
 import Coupon from '../coupons/coupon.model';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
+import PendingOrder from './pending-order.model';
+import { wantsJson } from '../../common/utils/wants-json.util';
 import * as razorpayService from '../payments/razorpay.provider';
 import * as walletService from '../wallet/wallet.service';
 
@@ -308,8 +310,7 @@ const loadCheckout = async (req: Request, res: Response) => {
       console.error('Error fetching wallet balance:', error);
     }
 
-    res.render('user/checkout', {
-      user,
+    const checkout = {
       cartItems,
       addresses,
       addressDocumentId: userAddresses?._id || null,
@@ -321,7 +322,18 @@ const loadCheckout = async (req: Request, res: Response) => {
       appliedCoupon,
       shipping: totals.shipping,
       total: Math.round(finalTotal),
-      walletBalance: walletBalance,
+      walletBalance
+    };
+
+    // The SPA asks for the same data under /api. paypalClientId is not sent:
+    // it was always the empty string, so the PayPal button could never work.
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...checkout });
+    }
+
+    res.render('user/checkout', {
+      user,
+      ...checkout,
       paypalClientId: '',
       title: 'Checkout',
       layout: 'user/layouts/user-layout',
@@ -330,7 +342,19 @@ const loadCheckout = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error loading checkout:', error);
-    res.status(500).render('error', { message: 'Error loading checkout page' });
+
+    if (wantsJson(req)) {
+      return res.status(500).json({ success: false, message: 'Error loading checkout page' });
+    }
+
+    // errors/server-error, not 'error' - that view has never existed, so the
+    // old path threw inside its own error handler (docs/defects.md).
+    res.status(500).render('errors/server-error', {
+      title: 'Server Error',
+      message: 'Error loading checkout page',
+      layout: 'user/layouts/user-layout',
+      active: 'checkout'
+    });
   }
 };
 
@@ -988,7 +1012,16 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
 
     console.log(`Razorpay order created: ${razorpayOrder.id}`);
 
-    req.session.pendingRazorpayOrder = {
+    /*
+     * The snapshot is stored server-side, keyed by the Razorpay order id.
+     *
+     * It used to live in req.session, which meant a session lost between here
+     * and verification left the customer charged with no order. Razorpay hands
+     * this id back in the callback, so verification can find the snapshot
+     * without any session or client state.
+     */
+    await PendingOrder.create({
+      razorpayOrderId: razorpayOrder.id,
       tempOrderId,
       userId,
       deliveryAddressId,
@@ -997,9 +1030,8 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
       totals,
       couponDiscount,
       appliedCouponId,
-      razorpayOrderId: razorpayOrder.id,
       amount: finalTotal
-    };
+    });
 
     return res.json({
       success: true,
@@ -1062,13 +1094,28 @@ const verifyRazorpayPayment = async (req: Request, res: Response) => {
 
     console.log(' Signature verified');
 
-    const pendingOrder = req.session.pendingRazorpayOrder;
+    /*
+     * Found by the Razorpay order id, not the session. The signature has
+     * already been verified above, so this id is proven to have come from
+     * Razorpay rather than the caller.
+     */
+    const pendingOrder = await PendingOrder.findOne({ razorpayOrderId }).lean();
 
     if (!pendingOrder) {
       return res.status(400).json({
         success: false,
         message: 'No pending order found',
         code: 'NO_PENDING_ORDER'
+      });
+    }
+
+    // The snapshot belongs to whoever created it. Verifying that here stops a
+    // signed-in shopper completing someone else's payment.
+    if (String(pendingOrder.userId) !== String(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'This payment belongs to a different account',
+        code: 'PENDING_ORDER_MISMATCH'
       });
     }
 
@@ -1199,8 +1246,9 @@ const verifyRazorpayPayment = async (req: Request, res: Response) => {
         console.error(' Error clearing cart:', cartError);
       }
 
-      // Step 6: Clear session data
-      delete req.session.pendingRazorpayOrder;
+      // Step 6: the snapshot has served its purpose, and the coupon is now
+      // recorded on the order itself.
+      await PendingOrder.deleteOne({ razorpayOrderId });
       delete req.session.appliedCoupon;
 
       return res.json({
@@ -1276,8 +1324,11 @@ const handlePaymentFailure = async (req: Request, res: Response) => {
       });
     }
 
-    const pendingOrder = req.session.pendingRazorpayOrder;
-    
+    // Same server-side lookup as verification - a failed payment must still be
+    // recordable when the session is gone, which is precisely when a customer
+    // most needs the failure page to explain itself.
+    const pendingOrder = await PendingOrder.findOne({ razorpayOrderId }).lean();
+
     if (!pendingOrder) {
       return res.status(400).json({
         success: false,
@@ -1378,7 +1429,7 @@ const handlePaymentFailure = async (req: Request, res: Response) => {
         }
       };
 
-      delete req.session.pendingRazorpayOrder;
+      await PendingOrder.deleteOne({ razorpayOrderId });
       delete req.session.appliedCoupon;
 
       return res.json({
@@ -1889,10 +1940,13 @@ const createRazorpayOrderForRetry = async (req: Request, res: Response) => {
 
     console.log(` Razorpay order created for retry: ${razorpayOrder.id}`);
 
-    // Store retry order data in session
-    req.session.pendingRazorpayOrder = {
-      isRetry: true,  //  Mark as retry
-      failedOrderId: paymentFailure.orderId,
+    // Same server-side snapshot as the first attempt, with retryOrderId set so
+    // verification knows it is paying for an order row that already exists
+    // rather than creating a new one.
+    await PendingOrder.create({
+      razorpayOrderId: razorpayOrder.id,
+      tempOrderId: `RETRY-${paymentFailure.orderNumber}`,
+      retryOrderId: paymentFailure.orderId,
       userId,
       deliveryAddressId: orderData.deliveryAddressId,
       addressIndex: orderData.addressIndex,
@@ -1906,9 +1960,8 @@ const createRazorpayOrderForRetry = async (req: Request, res: Response) => {
       },
       couponDiscount: orderData.couponDiscount,
       appliedCouponId: orderData.appliedCouponId,
-      razorpayOrderId: razorpayOrder.id,
       amount: finalTotal
-    };
+    });
 
     return res.json({
       success: true,

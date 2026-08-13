@@ -48,32 +48,13 @@ declare module 'express-session' {
     /** Current email, mirrored into the session by the profile flow. */
     email?: string;
 
-    /**
-     * Cart snapshot held between creating a Razorpay order and verifying the
-     * payment. The order is only written to the database once payment
-     * succeeds, so this is the sole record of the basket in the interim.
+    /*
+     * `pendingRazorpayOrder` used to live here - the snapshot held between
+     * creating a Razorpay order and verifying the payment. It now lives in the
+     * PendingOrder collection, keyed by the Razorpay order id, so verification
+     * no longer depends on the session surviving the trip to the payment
+     * provider and back. See modules/checkout/pending-order.model.ts.
      */
-    pendingRazorpayOrder?: {
-      tempOrderId?: string;
-      userId?: unknown;
-      deliveryAddressId?: unknown;
-      addressIndex?: number;
-      cart?: any[];
-      totals?: {
-        subtotal?: number;
-        totalDiscount?: number;
-        amountAfterDiscount?: number;
-        shipping?: number;
-        total?: number;
-        totalItemCount?: number;
-        [key: string]: unknown;
-      };
-      couponDiscount?: number;
-      appliedCouponId?: unknown;
-      razorpayOrderId?: string;
-      amount?: number;
-      [key: string]: unknown;
-    } | null;
 
     /** Details of the last failed payment, used to render the retry page. */
     paymentFailure?: {

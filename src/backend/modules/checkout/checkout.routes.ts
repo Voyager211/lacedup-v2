@@ -5,6 +5,8 @@ import * as addressController from '../addresses/address.controller';
 import * as couponController from '../coupons/coupon.controller';
 import { couponRateLimit } from '../../common/middlewares/rate-limiting.middleware';
 
+import { wantsJson } from '../../common/utils/wants-json.util';
+
 const router = express.Router();
 
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
@@ -12,9 +14,9 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  // req.headers.accept is absent when no Accept header is sent, which turned
-  // every unauthenticated hit into a 500 instead of a redirect to login.
-  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+  // A request that arrived under /api wanted the API, whatever headers it
+  // sent - a 302 to an HTML login page gives an XHR caller nothing to act on.
+  if (wantsJson(req)) {
     return res.status(401).json({
       success: false,
       message: 'You must be logged in to access this feature',
@@ -186,8 +188,14 @@ router.post('/place-order', requireAuthAPI, checkoutController.placeOrderWithVal
  *     tags: [Checkout]
  *     summary: Create a Razorpay order for the cart
  *     description: >
- *       The basket is held in the session until payment is verified - no order
- *       row exists until then, so abandoning payment leaves nothing behind.
+ *       Snapshots the cart, totals, coupon and address into a PendingOrder
+ *       record keyed by the Razorpay order id, with a 30-minute TTL. No order
+ *       row exists until payment verifies, so abandoning payment leaves only
+ *       that record, which expires on its own.
+ *
+ *       The snapshot is keyed on the Razorpay id rather than held in the
+ *       session so that verification cannot fail because a session was lost -
+ *       which previously left customers charged with no order.
  *     security: [{ sessionCookie: [] }]
  *     requestBody:
  *       required: true
