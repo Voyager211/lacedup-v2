@@ -1566,6 +1566,10 @@ const loadOrderSuccess = async (req: Request, res: Response) => {
       createdAt: order.createdAt
     };
 
+    if (wantsJson(req)) {
+      return res.json({ success: true, orderData });
+    }
+
     res.render('user/order-success', {
       user,
       orderData,
@@ -1721,13 +1725,21 @@ const loadOrderFailure = async (req: Request, res: Response) => {
       paymentMethod: failedOrder.paymentMethod || 'upi'
     };
 
-    return res.render('user/order-failure', {
-      transactionId: transactionId,
+    const failure = {
+      transactionId,
       orderId: paymentFailure.orderId,
       orderNumber: paymentFailure.orderNumber,
       failureReason: paymentFailure.reason,
       orderData,
-      canRetry: canRetry,
+      canRetry
+    };
+
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...failure });
+    }
+
+    return res.render('user/order-failure', {
+      ...failure,
       title: 'Order Failed',
       layout: 'user/layouts/user-layout',
       active: 'checkout'
@@ -1844,13 +1856,21 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
       addressIndex: paymentFailure.orderData!.addressIndex
     };
 
-    return res.render('user/retry-payment', {
-      transactionId: transactionId,
+    const retry = {
+      transactionId,
       orderId: paymentFailure.orderId,
       orderNumber: paymentFailure.orderNumber,
       failureReason: paymentFailure.reason,
       razorpayKeyId: process.env.RAZORPAY_KEY_ID,
-      orderData,
+      orderData
+    };
+
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...retry });
+    }
+
+    return res.render('user/retry-payment', {
+      ...retry,
       title: 'Retry Payment',
       layout: 'user/layouts/user-layout',
       active: 'checkout'

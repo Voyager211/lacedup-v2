@@ -30,8 +30,8 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–5 are complete** — the scaffold, the primitives, the shells, auth, browse, and
-cart & wishlist. Every route in the tree resolves; unbuilt pages render a placeholder naming
+**Steps 0–6 are complete** — the scaffold, the primitives, the shells, auth, browse,
+cart, wishlist and checkout. Every route resolves; unbuilt pages render a placeholder naming
 the step that will replace them. When nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
@@ -95,8 +95,16 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | `<WishlistPage>` | debounced search, reuses `<ProductCard>` |
 | Add to cart / wishlist | wired into the product page — the button now works |
 
-**Next: step 6, checkout** — the riskiest step. Razorpay, wallet, COD, the address dialog,
-coupons, and the `pendingRazorpayOrder` decision below.
+### Step 6 — checkout
+
+| Built | Notes |
+|---|---|
+| `<CheckoutPage>` | addresses, coupons, three payment paths, stock recheck before payment |
+| `<AddressFormDialog>` | replaces the 927-line partial shared by checkout and the address book |
+| `useRazorpay()` | loads the SDK on demand, guards re-entry, reports dismissal |
+| Order success / failure / retry pages | |
+
+**Next: step 7, orders & returns** — list, details, invoices, and the cancel/return reason flows.
 
 ### Notes on what these steps changed
 
@@ -133,6 +141,14 @@ coupons, and the `pendingRazorpayOrder` decision below.
   re-prices anything whose offer moved since it was added, and splits the rest into
   buyable / out-of-stock / unavailable. **Never cache a cart price client-side**, and total
   only the buyable bucket — the other two cannot be checked out.
+- **The pending-payment snapshot moved out of the session** into a `PendingOrder` collection
+  keyed by the Razorpay order id, with a 30-minute TTL. Verification finds it by the id
+  Razorpay returns, so a lost session can no longer leave a customer charged with no order.
+  Covers the first-attempt, retry and payment-failure paths.
+- **PayPal is dropped, not ported.** `paypalClientId` was hardcoded to the empty string, so
+  the button could never work. The three live paths are Razorpay, wallet and COD.
+- **Stock is rechecked before any payment sheet opens.** A shopper should learn a size sold
+  out before being charged, not after.
 - **Three validation rules deliberately differ from the originals** — the email TLD
   allowlist is gone (it rejected `.io`, `.dev` and every newer TLD), names now allow
   apostrophes, hyphens and non-ASCII letters, and new passwords need 8 characters with a
@@ -369,7 +385,7 @@ resist the urge to start on pages before they're done.
 | 3 | ~~**Auth**~~ | ✅ done |
 | 4 | ~~**Storefront browse**~~ | ✅ done |
 | 5 | ~~**Cart & wishlist**~~ | ✅ done |
-| 6 | **Checkout** — Razorpay, wallet, COD, address dialog, coupons | riskiest step; `checkout.js` is 2,053 lines |
+| 6 | ~~**Checkout**~~ | ✅ done — PayPal dropped, payment state moved server-side |
 | 7 | **Orders & returns** — list, details, invoices, cancel/return reason flows | |
 | 8 | **Profile, addresses, wallet, referrals, coupons** | reuses the address dialog from step 6 |
 | 9 | **Admin catalog** — products, categories, brands, coupons | four pages, one `<ResourceListPage>` |
@@ -405,14 +421,18 @@ Worth doing deliberately rather than discovering page by page:
 | `pendingUser` | 13 | Signup details held between OTP request and verify | Redux, or a short-lived server record |
 | `emailChangeOtp` | 13 | OTP challenge during an email change | same |
 | `paymentFailure` | 9 | Failed-payment record behind the retry page | Redux, or a query param + server lookup |
-| `pendingRazorpayOrder` | 6 | **The basket, between creating a Razorpay order and verifying payment** | ⚠️ see below |
+| ~~`pendingRazorpayOrder`~~ | ~~6~~ | **Done in step 6** — moved to a `PendingOrder` collection | ✅ |
 | flash messages | 16 | One-shot UI notices | toasts — but see the flash bug below |
 
-⚠️ **`pendingRazorpayOrder` needs care.** No order row exists until the payment signature
-verifies, so this session object is the *only* record of the basket mid-payment. Moving it
-client-side means a closed tab loses the basket; moving it server-side means a new collection
-with its own expiry. **This is the one item here that can lose a customer's cart.** Decide
-deliberately.
+✅ **`pendingRazorpayOrder` is resolved.** It now lives in a `PendingOrder` collection keyed by
+the Razorpay order id, with a 30-minute TTL. Verification finds it by the id Razorpay returns,
+so it no longer depends on the session surviving the trip to the payment provider — which
+previously left customers charged with no order when a session expired mid-payment.
+
+> A correction to an earlier note here: this was described as "the only record of the basket
+> mid-payment", implying a closed tab would lose the cart. That was wrong. The cart is cleared
+> only *after* verification succeeds, so it survives. The snapshot's real job is narrower —
+> freezing the price and coupon so the order created matches the amount charged.
 
 ⚠️ **Flash messages are already broken.** They are written in 8 places and rendered in exactly
 one template (admin login). Blocked-user notices, "please log in", coupon errors and wallet
@@ -457,7 +477,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 136 tests. Frontend: 276.** Both suites pass and both typecheck clean under
+**Backend: 145 tests. Frontend: 288.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 

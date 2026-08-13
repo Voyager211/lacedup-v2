@@ -17,6 +17,10 @@ import ShopPage from '@/features/catalog/ShopPage';
 import ProductDetailsPage from '@/features/catalog/ProductDetailsPage';
 import CartPage from '@/features/cart/CartPage';
 import WishlistPage from '@/features/wishlist/WishlistPage';
+import CheckoutPage from '@/features/checkout/CheckoutPage';
+import OrderSuccessPage from '@/features/checkout/OrderSuccessPage';
+import OrderFailurePage from '@/features/checkout/OrderFailurePage';
+import RetryPaymentPage from '@/features/checkout/RetryPaymentPage';
 
 /**
  * The route tree.
@@ -63,10 +67,10 @@ export const router = createBrowserRouter([
             children: [
               { path: 'cart', element: <CartPage /> },
               { path: 'wishlist', element: <WishlistPage /> },
-              { path: 'checkout', element: <Placeholder title="Checkout" step={6} note="Riskiest page: Razorpay, wallet, COD, addresses, coupons. checkout.js is 2,053 lines." /> },
-              { path: 'checkout/order-success/:orderId', element: <Placeholder title="Order placed" step={6} /> },
-              { path: 'checkout/order-failure/:transactionId', element: <Placeholder title="Payment failed" step={6} /> },
-              { path: 'checkout/retry-payment/:transactionId', element: <Placeholder title="Retry payment" step={6} /> },
+              { path: 'checkout', element: <CheckoutPage /> },
+              { path: 'checkout/order-success/:orderId', element: <OrderSuccessPage /> },
+              { path: 'checkout/order-failure/:transactionId', element: <OrderFailurePage /> },
+              { path: 'checkout/retry-payment/:transactionId', element: <RetryPaymentPage /> },
               { path: 'orders', element: <Placeholder title="Orders" step={7} /> },
               { path: 'orders/:orderId', element: <Placeholder title="Order details" step={7} note="Cancel and return flows, per order and per item." /> },
               { path: 'profile', element: <Placeholder title="Profile" step={8} note="1,729 lines: inline editing, avatar crop, email-change OTP." /> },
