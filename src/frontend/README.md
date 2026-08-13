@@ -30,8 +30,8 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–6 are complete** — the scaffold, the primitives, the shells, auth, browse,
-cart, wishlist and checkout. Every route resolves; unbuilt pages render a placeholder naming
+**Steps 0–7 are complete** — the scaffold, the primitives, the shells, auth, browse,
+cart, wishlist, checkout and orders. Every route resolves; unbuilt pages render a placeholder naming
 the step that will replace them. When nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
@@ -104,7 +104,16 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | `useRazorpay()` | loads the SDK on demand, guards re-entry, reports dismissal |
 | Order success / failure / retry pages | |
 
-**Next: step 7, orders & returns** — list, details, invoices, and the cancel/return reason flows.
+### Step 7 — orders & returns
+
+| Built | Notes |
+|---|---|
+| `<OrdersPage>` | URL-driven search, status filter and paging |
+| `<OrderDetailsPage>` | items, payment breakdown, address, status history |
+| `useOrderActions()` | cancel and return at order or item level, plus invoice download |
+
+**Next: step 8, profile, addresses, wallet & referrals** — reuses `<AddressFormDialog>`
+from step 6.
 
 ### Notes on what these steps changed
 
@@ -149,6 +158,17 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
   the button could never work. The three live paths are Razorpay, wallet and COD.
 - **Stock is rechecked before any payment sheet opens.** A shopper should learn a size sold
   out before being charged, not after.
+- **The orders routes were the second root-mounted router unreachable under `/api`** — every
+  one of the nine was a 404, exactly as the auth routes had been. They are now registered on
+  both paths, with the `/api` forms dropping the odd inner segment
+  (`/api/orders/filtered`, not `/api/orders/api/filtered`). There is a parity test with a
+  negative control. **Check this first for any root-mounted router you build against.**
+- **Cancellation and return reasons come from the server**, sent with the order. They are a
+  server enum and it rejects anything outside its own list, so a hardcoded client copy would
+  drift the moment one is added.
+- **Order actions mirror the server's state rules** — cancel only while Pending or
+  Processing, return only once Delivered. Offering a button the server will refuse is worse
+  than not offering it; the server still decides.
 - **Three validation rules deliberately differ from the originals** — the email TLD
   allowlist is gone (it rejected `.io`, `.dev` and every newer TLD), names now allow
   apostrophes, hyphens and non-ASCII letters, and new passwords need 8 characters with a
@@ -386,7 +406,7 @@ resist the urge to start on pages before they're done.
 | 4 | ~~**Storefront browse**~~ | ✅ done |
 | 5 | ~~**Cart & wishlist**~~ | ✅ done |
 | 6 | ~~**Checkout**~~ | ✅ done — PayPal dropped, payment state moved server-side |
-| 7 | **Orders & returns** — list, details, invoices, cancel/return reason flows | |
+| 7 | ~~**Orders & returns**~~ | ✅ done |
 | 8 | **Profile, addresses, wallet, referrals, coupons** | reuses the address dialog from step 6 |
 | 9 | **Admin catalog** — products, categories, brands, coupons | four pages, one `<ResourceListPage>` |
 | 10 | **Admin orders, returns, users** | `admin/order-details` is the largest page in the app |
@@ -477,7 +497,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 145 tests. Frontend: 288.** Both suites pass and both typecheck clean under
+**Backend: 154 tests. Frontend: 303.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 

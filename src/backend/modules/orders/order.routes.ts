@@ -1,23 +1,40 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import * as orderController from './order.controller';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 const router = express.Router();
+
+/*
+ * Every route here is registered on its historic path and under /api.
+ *
+ * This router is root-mounted and deliberately not dual-mounted (app.ts), so
+ * the bare paths are all that existed - every one of them was a 404 under the
+ * /api base URL the SPA uses, exactly as the auth routes were.
+ *
+ * The /api forms drop the odd inner segment: `/orders/api/filtered` becomes
+ * `/api/orders/filtered` rather than `/api/orders/api/filtered`. Declaration
+ * order still matters - the literal paths must precede `/:orderId`, or that
+ * parameter would swallow them.
+ */
 
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated() || req.session.userId) {
     return next();
   }
 
-  // req.headers.accept is absent when no Accept header is sent, which turned
-  // every unauthenticated hit into a 500 instead of a redirect to login.
-  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+  // A request that arrived under /api wanted the API, whatever headers it
+  // sent - a 302 to an HTML login page gives an XHR caller nothing to act on.
+  if (wantsJson(req)) {
     return res.status(401).json({
       success: false,
       message: 'Authentication required'
     });
   }
 
+  // Note: this flash is never rendered anywhere - see docs/defects.md. Left in
+  // place because the EJS layer's redirect behaviour is unchanged by this
+  // work; it goes when the flash system does.
   req.flash('error', 'Please log in to continue');
   res.redirect('/login');
 };
@@ -61,7 +78,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
  *                         totalOrders: { type: integer }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.get('/orders/api/filtered', requireAuth, orderController.getUserOrdersPaginated);
+router.get(['/orders/api/filtered', '/api/orders/filtered'], requireAuth, orderController.getUserOrdersPaginated);
 
 /**
  * @swagger
@@ -87,7 +104,7 @@ router.get('/orders/api/filtered', requireAuth, orderController.getUserOrdersPag
  *                   items: { $ref: '#/components/schemas/Order' }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.get('/orders/api/search', requireAuth, orderController.searchOrders);
+router.get(['/orders/api/search', '/api/orders/search'], requireAuth, orderController.searchOrders);
 
 /**
  * @swagger
@@ -100,7 +117,7 @@ router.get('/orders/api/search', requireAuth, orderController.searchOrders);
  *       200: { description: Orders page markup, content: { text/html: { schema: { type: string } } } }
  *       302: { description: Redirected to /login when not signed in }
  */
-router.get('/orders', requireAuth, orderController.getUserOrders);
+router.get(['/orders', '/api/orders'], requireAuth, orderController.getUserOrders);
 
 /**
  * @swagger
@@ -149,8 +166,8 @@ router.get('/orders', requireAuth, orderController.getUserOrders);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get('/orders/:orderId', requireAuth, orderController.getOrderDetails);
-router.patch('/orders/:orderId', requireAuth, orderController.cancelOrder);
+router.get(['/orders/:orderId', '/api/orders/:orderId'], requireAuth, orderController.getOrderDetails);
+router.patch(['/orders/:orderId', '/api/orders/:orderId'], requireAuth, orderController.cancelOrder);
 
 /**
  * @swagger
@@ -187,7 +204,7 @@ router.patch('/orders/:orderId', requireAuth, orderController.cancelOrder);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.patch('/orders/:orderId/items/:itemId', requireAuth, orderController.cancelItem);
+router.patch(['/orders/:orderId/items/:itemId', '/api/orders/:orderId/items/:itemId'], requireAuth, orderController.cancelItem);
 
 /**
  * @swagger
@@ -216,7 +233,7 @@ router.patch('/orders/:orderId/items/:itemId', requireAuth, orderController.canc
  *       400: { description: Order is not in a returnable state }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.post('/orders/:orderId/returns', requireAuth, orderController.requestOrderReturn);
+router.post(['/orders/:orderId/returns', '/api/orders/:orderId/returns'], requireAuth, orderController.requestOrderReturn);
 
 /**
  * @swagger
@@ -248,7 +265,7 @@ router.post('/orders/:orderId/returns', requireAuth, orderController.requestOrde
  *       400: { description: Item is not in a returnable state }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.post('/orders/:orderId/items/:itemId/returns', requireAuth, orderController.requestItemReturn);
+router.post(['/orders/:orderId/items/:itemId/returns', '/api/orders/:orderId/items/:itemId/returns'], requireAuth, orderController.requestItemReturn);
 
 /**
  * @swagger
@@ -271,6 +288,6 @@ router.post('/orders/:orderId/items/:itemId/returns', requireAuth, orderControll
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get('/orders/:orderId/invoice', requireAuth, orderController.downloadInvoice);
+router.get(['/orders/:orderId/invoice', '/api/orders/:orderId/invoice'], requireAuth, orderController.downloadInvoice);
 
 export = router;

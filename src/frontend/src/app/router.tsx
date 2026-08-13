@@ -21,6 +21,8 @@ import CheckoutPage from '@/features/checkout/CheckoutPage';
 import OrderSuccessPage from '@/features/checkout/OrderSuccessPage';
 import OrderFailurePage from '@/features/checkout/OrderFailurePage';
 import RetryPaymentPage from '@/features/checkout/RetryPaymentPage';
+import OrdersPage from '@/features/orders/OrdersPage';
+import OrderDetailsPage from '@/features/orders/OrderDetailsPage';
 
 /**
  * The route tree.
@@ -71,8 +73,8 @@ export const router = createBrowserRouter([
               { path: 'checkout/order-success/:orderId', element: <OrderSuccessPage /> },
               { path: 'checkout/order-failure/:transactionId', element: <OrderFailurePage /> },
               { path: 'checkout/retry-payment/:transactionId', element: <RetryPaymentPage /> },
-              { path: 'orders', element: <Placeholder title="Orders" step={7} /> },
-              { path: 'orders/:orderId', element: <Placeholder title="Order details" step={7} note="Cancel and return flows, per order and per item." /> },
+              { path: 'orders', element: <OrdersPage /> },
+              { path: 'orders/:orderId', element: <OrderDetailsPage /> },
               { path: 'profile', element: <Placeholder title="Profile" step={8} note="1,729 lines: inline editing, avatar crop, email-change OTP." /> },
               { path: 'profile/edit', element: <Placeholder title="Edit profile" step={8} /> },
               { path: 'profile/change-password', element: <Placeholder title="Change password" step={8} /> },

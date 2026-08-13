@@ -10,6 +10,7 @@ import * as walletService from '../wallet/wallet.service';
 import paypal from '@paypal/checkout-server-sdk';
 import * as razorpayService from '../payments/razorpay.provider';
 import { getPagination } from '../../common/utils/pagination.util';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 import {
   ORDER_STATUS,
@@ -81,8 +82,7 @@ const getUserOrders = async (req: Request, res: Response) => {
       pageNumbers.push(i);
     }
 
-    res.render('user/orders', {
-      user,
+    const list = {
       orders,
       currentPage,
       totalPages,
@@ -91,12 +91,24 @@ const getUserOrders = async (req: Request, res: Response) => {
       prevPage,
       nextPage,
       pageNumbers,
-      totalOrders, //  NEW: Add total orders count
-      title: 'My Orders',
-      layout: 'user/layouts/user-layout',
-      active: 'orders',
+      totalOrders,
       cancellationReasons: getCancellationReasonsArray(),
       returnReasons: getReturnReasonsArray()
+    };
+
+    // The reason lists travel with the page rather than being mirrored in the
+    // client: they are a server enum, and a copy would drift the moment one is
+    // added.
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...list });
+    }
+
+    res.render('user/orders', {
+      user,
+      ...list,
+      title: 'My Orders',
+      layout: 'user/layouts/user-layout',
+      active: 'orders'
     });
 
   } catch (error: any) {
@@ -511,15 +523,23 @@ const getOrderDetails = async (req: Request, res: Response) => {
     // Add the comprehensive status history to the order object
     order.comprehensiveStatusHistory = comprehensiveStatusHistory;
 
-    res.render('user/order-details', {
-      user,
+    const details = {
       order,
-      title: `Order Details - ${orderId}`,
-      layout: 'user/layouts/user-layout',
-      active: 'orders',
       cancellationReasons: getCancellationReasonsArray(),
       returnReasons: getReturnReasonsArray(),
-      ORDER_STATUS: ORDER_STATUS  
+      ORDER_STATUS
+    };
+
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...details });
+    }
+
+    res.render('user/order-details', {
+      user,
+      ...details,
+      title: `Order Details - ${orderId}`,
+      layout: 'user/layouts/user-layout',
+      active: 'orders'
     });
 
   } catch (error: any) {
