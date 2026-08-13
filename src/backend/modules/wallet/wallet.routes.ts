@@ -1,6 +1,7 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import * as walletController from './wallet.controller';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+  if (wantsJson(req)) {
     return res.status(401).json({
       success: false,
       message: 'You must be logged in to access this feature',

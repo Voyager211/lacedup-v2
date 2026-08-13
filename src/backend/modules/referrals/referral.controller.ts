@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import User from '../users/user.model';
 import Wallet from '../wallet/wallet.model';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 const getReferralsPage = async (req: Request, res: Response) => {
   try {
@@ -86,15 +87,12 @@ const getReferralsPage = async (req: Request, res: Response) => {
     // Build referral link
     const referralLink = `${req.protocol}://${req.get('host')}/signup?ref=${user!.referralCode}`;
 
-    res.render('user/referrals', {
-      title: 'My Referrals',
-      layout: 'user/layouts/user-layout',
-      active: 'referrals',
-      user,
+    const page = {
       referredUsers,
       referralTransactions,
       totalEarnings,
       referralLink,
+      referralCode: user!.referralCode,
       // Referrals pagination
       referralsCurrentPage: referralsPage,
       referralsTotalPages,
@@ -113,13 +111,34 @@ const getReferralsPage = async (req: Request, res: Response) => {
       earningsNextPage,
       earningsPageNumbers,
       totalEarningsCount
+    };
+
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...page });
+    }
+
+    res.render('user/referrals', {
+      title: 'My Referrals',
+      layout: 'user/layouts/user-layout',
+      active: 'referrals',
+      user,
+      ...page
     });
 
   } catch (error: any) {
     console.error('Error loading referrals page:', error);
-    res.status(500).render('user/error', { 
+
+    if (wantsJson(req)) {
+      return res.status(500).json({ success: false, message: 'Failed to load referrals' });
+    }
+
+    // errors/server-error, not 'user/error' - that view does not exist, so the
+    // old path threw inside its own error handler (docs/defects.md).
+    res.status(500).render('errors/server-error', {
       title: 'Error',
-      message: 'Failed to load referrals page. Please try again later.' 
+      message: 'Failed to load referrals page. Please try again later.',
+      layout: 'user/layouts/user-layout',
+      active: 'referrals'
     });
   }
 };

@@ -23,6 +23,11 @@ import OrderFailurePage from '@/features/checkout/OrderFailurePage';
 import RetryPaymentPage from '@/features/checkout/RetryPaymentPage';
 import OrdersPage from '@/features/orders/OrdersPage';
 import OrderDetailsPage from '@/features/orders/OrderDetailsPage';
+import ProfilePage from '@/features/account/ProfilePage';
+import ChangePasswordPage from '@/features/account/ChangePasswordPage';
+import WalletPage from '@/features/account/WalletPage';
+import ReferralsPage from '@/features/account/ReferralsPage';
+import AddressBookPage from '@/features/addresses/AddressBookPage';
 
 /**
  * The route tree.
@@ -75,12 +80,15 @@ export const router = createBrowserRouter([
               { path: 'checkout/retry-payment/:transactionId', element: <RetryPaymentPage /> },
               { path: 'orders', element: <OrdersPage /> },
               { path: 'orders/:orderId', element: <OrderDetailsPage /> },
-              { path: 'profile', element: <Placeholder title="Profile" step={8} note="1,729 lines: inline editing, avatar crop, email-change OTP." /> },
-              { path: 'profile/edit', element: <Placeholder title="Edit profile" step={8} /> },
-              { path: 'profile/change-password', element: <Placeholder title="Change password" step={8} /> },
-              { path: 'addresses', element: <Placeholder title="Address book" step={8} note="Shares its form with checkout — 927-line partial today." /> },
-              { path: 'wallet', element: <Placeholder title="Wallet" step={8} note="Razorpay top-up plus a paginated transaction list." /> },
-              { path: 'referrals', element: <Placeholder title="Referrals" step={8} note="Both paginators are broken server-side — see docs/defects.md." /> }
+              { path: 'profile', element: <ProfilePage /> },
+              /* /profile and /profile/edit were two pages editing the same two
+                 fields. One page now, with an edit mode; the old URL redirects
+                 so existing links keep working. */
+              { path: 'profile/edit', element: <Navigate to="/profile" replace /> },
+              { path: 'profile/change-password', element: <ChangePasswordPage /> },
+              { path: 'addresses', element: <AddressBookPage /> },
+              { path: 'wallet', element: <WalletPage /> },
+              { path: 'referrals', element: <ReferralsPage /> }
             ]
           }
         ]

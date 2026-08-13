@@ -1,6 +1,7 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import * as addressController from './address.controller';
+import { wantsJson } from '../../common/utils/wants-json.util';
 
 const router = express.Router();
 
@@ -14,6 +15,12 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   const userId = req.session.userId || (req.user && req.user._id);
 
   if (!userId) {
+    // A request that arrived under /api wanted the API - a 302 to an HTML
+    // login page gives an XHR caller nothing to act on.
+    if (wantsJson(req)) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
     return res.redirect('/login');
   }
 

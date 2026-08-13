@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import Wallet from './wallet.model';
 import * as walletService from './wallet.service';
 import { getRazorpayInstance } from '../payments/razorpay.provider';
+import { wantsJson } from '../../common/utils/wants-json.util';
 import crypto from 'crypto';
 
 
@@ -62,9 +63,7 @@ const renderWalletPage = async (req: Request, res: Response) => {
       pageNumbers.push(i);
     }
 
-    // Render with pagination data
-    res.render('user/wallet', {
-      user,
+    const payload = {
       wallet,
       transactions,
       currentPage,
@@ -75,13 +74,29 @@ const renderWalletPage = async (req: Request, res: Response) => {
       nextPage,
       pageNumbers,
       totalTransactions,
-      stats,
+      stats
+    };
+
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...payload });
+    }
+
+    res.render('user/wallet', {
+      user,
+      ...payload,
       title: 'My Wallet',
       layout: 'user/layouts/user-layout',
       active: 'wallet'
     });
   } catch (error: any) {
     console.error('Error rendering wallet page:', error);
+
+    if (wantsJson(req)) {
+      return res.status(500).json({ success: false, message: 'Failed to load wallet' });
+    }
+
+    // This flash is written but never rendered anywhere (docs/defects.md), so
+    // the redirect below is silent to the user.
     req.flash('error', 'Failed to load wallet');
     res.redirect('/');
   }

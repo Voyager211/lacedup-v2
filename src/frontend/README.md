@@ -30,9 +30,10 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–7 are complete** — the scaffold, the primitives, the shells, auth, browse,
-cart, wishlist, checkout and orders. Every route resolves; unbuilt pages render a placeholder naming
-the step that will replace them. When nothing renders a placeholder, Phase 4 is done.
+**Steps 0–8 are complete** — the scaffold, the primitives, the shells, auth, browse,
+cart, wishlist, checkout, orders and the account pages. Every route resolves; unbuilt admin
+pages render a placeholder naming the step that replaces them. When nothing renders a
+placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
 tree-shaken out of the production bundle).
@@ -112,8 +113,19 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | `<OrderDetailsPage>` | items, payment breakdown, address, status history |
 | `useOrderActions()` | cancel and return at order or item level, plus invoice download |
 
-**Next: step 8, profile, addresses, wallet & referrals** — reuses `<AddressFormDialog>`
-from step 6.
+### Step 8 — account
+
+| Built | Notes |
+|---|---|
+| `<ProfilePage>` | details and avatar upload; `/profile/edit` now redirects here |
+| `<ChangePasswordPage>` | |
+| `<AddressBookPage>` | reuses the checkout address dialog |
+| `<WalletPage>` | balance, paginated transactions, Razorpay top-up |
+| `<ReferralsPage>` | code, invite link, referred people, rewards |
+| `<AccountNav>` | replaces `profile-sidebar` + `profile-card` |
+
+**Next: step 9, admin catalog** — products, categories, brands and coupons through one
+`<ResourceListPage>`.
 
 ### Notes on what these steps changed
 
@@ -169,6 +181,19 @@ from step 6.
 - **Order actions mirror the server's state rules** — cancel only while Pending or
   Processing, return only once Delivered. Offering a button the server will refuse is worse
   than not offering it; the server still decides.
+- **The referral paginators are now mounted.** `getPaginatedReferrals` and
+  `getPaginatedEarnings` existed as handlers but had no routes, so page 2 of either list had
+  never worked for anyone. Fixed in step 8 — this was defect #1 in
+  [docs/defects.md](docs/defects.md).
+- **The profile router was the third root-mounted router unreachable under `/api`**, after
+  auth and orders. Every guard now uses `wantsJson`, so `/api/profile`, `/api/wallet`,
+  `/api/referrals` and `/api/addresses` all answer 401 JSON rather than redirecting an XHR
+  caller to an HTML login page.
+- **Address pagination is gone.** The server paginated at two per page, which made a handful
+  of addresses feel like a filing cabinet. The list endpoint returns them all.
+- **The email-change OTP flow is deliberately not ported.** It is one of the remaining
+  express-session dependencies; moving it belongs with that work rather than being
+  half-migrated. The profile page shows the email read-only with a note.
 - **Three validation rules deliberately differ from the originals** — the email TLD
   allowlist is gone (it rejected `.io`, `.dev` and every newer TLD), names now allow
   apostrophes, hyphens and non-ASCII letters, and new passwords need 8 characters with a
@@ -407,7 +432,7 @@ resist the urge to start on pages before they're done.
 | 5 | ~~**Cart & wishlist**~~ | ✅ done |
 | 6 | ~~**Checkout**~~ | ✅ done — PayPal dropped, payment state moved server-side |
 | 7 | ~~**Orders & returns**~~ | ✅ done |
-| 8 | **Profile, addresses, wallet, referrals, coupons** | reuses the address dialog from step 6 |
+| 8 | ~~**Profile, addresses, wallet, referrals**~~ | ✅ done — the `/coupons` page is still an open decision |
 | 9 | **Admin catalog** — products, categories, brands, coupons | four pages, one `<ResourceListPage>` |
 | 10 | **Admin orders, returns, users** | `admin/order-details` is the largest page in the app |
 | 11 | **Admin dashboard & sales report** | last — the sales report needs a new backend endpoint |
@@ -497,7 +522,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 154 tests. Frontend: 303.** Both suites pass and both typecheck clean under
+**Backend: 154 tests. Frontend: 318.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 
