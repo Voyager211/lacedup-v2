@@ -9,7 +9,15 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import { PROFILE_UPLOADS_DIR } from '../../config/paths';
-import { currentUserId } from '../../common/utils/current-user.util';
+import { currentUserId, requireUserId } from '../../common/utils/current-user.util';
+import {
+  checkOtp,
+  discardEmailChange,
+  findEmailChange,
+  markVerified,
+  refreshOtp,
+  startEmailChange
+} from './email-change.service';
 
 // Generate OTP function (since generateOtp utility might not exist)
 const generateOtp = () => {
@@ -329,14 +337,12 @@ const updateEmail = async (req: Request, res: Response) => {
     const otp = generateOtp();
     console.log(`Email change OTP: ${otp}`);
 
-    // Store OTP and new email in session
-    req.session.emailChangeOtp = {
-      otp,
+    // Held in the EmailChange collection rather than the session, and hashed.
+    await startEmailChange({
+      userId,
       currentEmail: currentUser!.email,
-      newEmail: emailValidation.trimmedValue,
-      userId: userId,
-      expiresAt: Date.now() + 60 * 1000 // 1 minute
-    };
+      newEmail: emailValidation.trimmedValue
+    });
 
     // Send OTP to current email
     try {
@@ -384,7 +390,8 @@ const updateEmail = async (req: Request, res: Response) => {
 const verifyEmailUpdateOtp = async (req: Request, res: Response) => {
   try {
     const { otp } = req.body;
-    const sessionOtp = req.session.emailChangeOtp;
+    const userId = requireUserId(req);
+    const sessionOtp = await findEmailChange(userId);
 
     if (!sessionOtp) {
       return res.status(400).json({
@@ -393,16 +400,17 @@ const verifyEmailUpdateOtp = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if OTP expired - but don't clear session, allow resend
-    if (Date.now() > (sessionOtp.expiresAt ?? 0)) {
+    const verdict = checkOtp(sessionOtp, otp);
+
+    // Expiry does not discard the record - the shopper can resend.
+    if (verdict === 'expired') {
       return res.status(400).json({
         success: false,
         message: 'OTP expired. Please use the resend option to get a new code.'
       });
     }
 
-    // Verify OTP
-    if (String(otp) !== String(sessionOtp.otp)) {
+    if (verdict === 'incorrect') {
       return res.status(400).json({
         success: false,
         message: 'Invalid OTP. Please try again.'
@@ -423,13 +431,8 @@ const verifyEmailUpdateOtp = async (req: Request, res: Response) => {
       });
     }
 
-    // Update session email if it exists
-    if (req.session.email) {
-      req.session.email = sessionOtp.newEmail;
-    }
-
-    // Clear email change session only on successful verification
-    req.session.emailChangeOtp = null;
+    // Cleared only on success, so a failed attempt stays resumable.
+    await discardEmailChange(userId);
 
     res.json({
       success: true,
@@ -449,29 +452,20 @@ const verifyEmailUpdateOtp = async (req: Request, res: Response) => {
 // Resend OTP for email update
 const resendEmailUpdateOtp = async (req: Request, res: Response) => {
   try {
-    const sessionOtp = req.session.emailChangeOtp;
+    const userId = requireUserId(req);
 
-    if (!sessionOtp) {
+    // Expiry is deliberately not checked - resending is what recovers from it.
+    const resent = await refreshOtp(userId);
+
+    if (!resent) {
       return res.status(400).json({
         success: false,
         message: 'No OTP session found. Please start the email change process again.'
       });
     }
 
-    // Don't check for expiry here - that's the point of resending
-    // Generate new OTP
-    const newOtp = generateOtp();
-    console.log(`Resent email change OTP: ${newOtp}`);
-
-    // Update session with new OTP and reset expiry (don't check if expired)
-    req.session.emailChangeOtp = {
-      ...sessionOtp,
-      otp: newOtp,
-      expiresAt: Date.now() + 60 * 1000 // 1 minute
-    };
-
     // Get user for sending email
-    const user: any = await User.findById(sessionOtp.userId);
+    const user: any = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -481,7 +475,7 @@ const resendEmailUpdateOtp = async (req: Request, res: Response) => {
 
     // Send new OTP to current email
     try {
-      await sendOtp({ email: sessionOtp.currentEmail ?? '', name: user.name }, newOtp);
+      await sendOtp({ email: resent.currentEmail, name: user.name }, resent.otp);
       
       res.json({
         success: true,
@@ -630,13 +624,8 @@ const verifyCurrentEmail = async (req: Request, res: Response) => {
     const otp = generateOtp();
     console.log(`Email change OTP: ${otp}`);
 
-    // Store OTP in session for email change
-    req.session.emailChangeOtp = {
-      otp,
-      email: user.email,
-      userId: userId,
-      expiresAt: Date.now() + 45 * 1000 // 45 seconds
-    };
+    // Held against the user rather than the session, and hashed. 45s as before.
+    await startEmailChange({ userId, currentEmail: user.email, ttlMs: 45 * 1000 });
 
     // Send OTP to current email
     try {
@@ -671,8 +660,8 @@ const loadEmailChangeOtp = async (req: Request, res: Response) => {
       return res.redirect('/login');
     }
 
-    // Check if email change session exists
-    if (!req.session.emailChangeOtp) {
+    const pending = await findEmailChange(userId);
+    if (!pending) {
       return res.redirect('/profile/edit');
     }
 
@@ -687,7 +676,7 @@ const loadEmailChangeOtp = async (req: Request, res: Response) => {
       layout: 'user/layouts/user-layout',
       active: 'profile',
       user: user,
-      email: req.session.emailChangeOtp!.email
+      email: pending.currentEmail
     });
   } catch (error: any) {
     console.error('Error loading email change OTP page:', error);
@@ -699,7 +688,8 @@ const loadEmailChangeOtp = async (req: Request, res: Response) => {
 const verifyEmailChangeOtp = async (req: Request, res: Response) => {
   try {
     const { otp } = req.body;
-    const sessionOtp = req.session.emailChangeOtp;
+    const userId = requireUserId(req);
+    const sessionOtp = await findEmailChange(userId);
 
     if (!sessionOtp) {
       return res.status(400).json({
@@ -708,25 +698,25 @@ const verifyEmailChangeOtp = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if OTP expired
-    if (Date.now() > (sessionOtp.expiresAt ?? 0)) {
-      req.session.emailChangeOtp = null;
+    const verdict = checkOtp(sessionOtp, otp);
+
+    if (verdict === 'expired') {
+      await discardEmailChange(userId);
       return res.status(400).json({
         success: false,
         message: 'OTP expired. Please start the email change process again.'
       });
     }
 
-    // Verify OTP
-    if (String(otp) !== String(sessionOtp.otp)) {
+    if (verdict === 'incorrect') {
       return res.status(400).json({
         success: false,
         message: 'Invalid OTP. Please try again.'
       });
     }
 
-    // Mark OTP as verified
-    req.session.emailChangeOtp!.verified = true;
+    // The current address is confirmed; the new one is accepted next.
+    await markVerified(userId);
 
     res.json({
       success: true,
@@ -746,7 +736,8 @@ const verifyEmailChangeOtp = async (req: Request, res: Response) => {
 const changeEmail = async (req: Request, res: Response) => {
   try {
     const { newEmail } = req.body;
-    const sessionOtp = req.session.emailChangeOtp;
+    const userId = requireUserId(req);
+    const sessionOtp = await findEmailChange(userId);
 
     if (!sessionOtp || !sessionOtp.verified) {
       return res.status(400).json({
@@ -767,7 +758,7 @@ const changeEmail = async (req: Request, res: Response) => {
     // Check if new email already exists
     const existingUser: any = await User.findOne({
       email: emailValidation.trimmedValue,
-      _id: { $ne: sessionOtp.userId }
+      _id: { $ne: userId }
     });
 
     if (existingUser) {
@@ -779,7 +770,7 @@ const changeEmail = async (req: Request, res: Response) => {
 
     // Update user email
     const updatedUser = await User.findByIdAndUpdate(
-      sessionOtp.userId,
+      userId,
       { email: emailValidation.trimmedValue },
       { new: true, runValidators: true }
     ).select('-password');
@@ -791,11 +782,7 @@ const changeEmail = async (req: Request, res: Response) => {
       });
     }
 
-    // Update session email
-    req.session.email = emailValidation.trimmedValue;
-
-    // Clear email change session
-    req.session.emailChangeOtp = null;
+    await discardEmailChange(userId);
 
     res.json({
       success: true,
