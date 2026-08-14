@@ -241,6 +241,31 @@ describe('ProductDetailsPage', () => {
     userWishlistProductIds: []
   };
 
+  it('renders features from the comma-separated string the schema stores', async () => {
+    // `features` is a required String on the model - the EJS page splits it on
+    // commas. Treating it as an array threw "features.map is not a function"
+    // on every product that had any.
+    mock
+      .onGet('/product/air-max-90')
+      .reply(200, { ...details, product: product({ features: 'Breathable, Cushioned sole' }) });
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    expect(await screen.findByText('Breathable')).toBeInTheDocument();
+    expect(screen.getByText('Cushioned sole')).toBeInTheDocument();
+  });
+
+  it('shows no features section when the string is empty', async () => {
+    mock
+      .onGet('/product/air-max-90')
+      .reply(200, { ...details, product: product({ features: '' }) });
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    await screen.findByRole('button', { name: 'UK 8' });
+    expect(screen.queryByText('Features')).not.toBeInTheDocument();
+  });
+
   it('opens on a size that can actually be bought', async () => {
     // UK 9 is out of stock, so UK 8 must be the default - opening on a
     // sold-out size shows "out of stock" for a product that is available.

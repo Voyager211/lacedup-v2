@@ -40,7 +40,12 @@ export interface Product {
   productName: string;
   slug: string;
   description?: string;
-  features?: string[];
+  /**
+   * A comma-separated string, not a list - the schema stores it as one
+   * required String and the EJS page splits it at render time. Use
+   * `productFeatures()` rather than treating it as an array.
+   */
+  features?: string;
   brand?: BrandRef | null;
   category?: CategoryRef | null;
   regularPrice: number;
@@ -60,6 +65,20 @@ export interface Product {
   averageRating?: number;
   totalReviews?: number;
 }
+
+/**
+ * Splits the stored feature string into displayable items.
+ *
+ * Tolerates an array because the admin form has always accepted either shape,
+ * and drops blanks so a trailing comma does not render an empty bullet.
+ */
+export const productFeatures = (features: Product['features'] | string[]): string[] => {
+  if (Array.isArray(features)) return features.filter(Boolean);
+  return String(features ?? '')
+    .split(',')
+    .map((feature) => feature.trim())
+    .filter(Boolean);
+};
 
 export interface ShopPagination {
   totalPages: number;

@@ -30,10 +30,14 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–10 are complete** — the scaffold, the primitives, the shells, auth, browse,
-cart, wishlist, checkout, orders, the account pages and the whole admin panel bar
-reporting. Only the dashboard and the sales report still render placeholders. When
-nothing renders a placeholder, Phase 4 is done.
+**Phase 4 is complete — steps 0 through 11.** The scaffold, the primitives, the shells,
+auth, browse, cart, wishlist, checkout, orders, the account pages, the whole admin panel
+and the reporting.
+
+The only placeholders left are `/about` and `/help` — static content with no behaviour to
+port, deliberately deferred rather than forgotten.
+
+**528 tests pass — 367 frontend, 161 backend.**
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
 tree-shaken out of the production bundle).
@@ -144,11 +148,34 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | `<AdminReturnsPage>` | approve and reject, with a reason the shopper sees |
 | `<AdminUsersPage>` | block and unblock |
 
-**Next: step 11, dashboard and sales report** — the last step. The sales report needs a
-JSON endpoint; it scrapes its own HTML today.
+### Step 11 — reporting
+
+| Built | Notes |
+|---|---|
+| `<DashboardPage>` | eight endpoints, one period selector; Chart.js → Recharts |
+| `<SalesReportPage>` | filters in the URL, five stat cards, PDF and Excel export links |
+| `<AdminProductDetailPage>` | the read-only view; shows which offer won and why |
+
+Two backend endpoints were added for this step, both of which simply did not exist:
+
+- **`GET /api/admin/sales-report`.** The EJS page refetched its own HTML with an
+  `X-Requested-With` header, parsed the response with `DOMParser` and swapped four regions
+  into place — against a controller with no branch for that header, so it re-rendered the
+  entire page, layout included, on every filter change.
+- **`GET /api/admin/products/:id`.** The admin product detail page only ever rendered EJS.
+
+Recharts is around 350kB, so the dashboard route is lazy and charting is deliberately left
+unassigned in `manualChunks` — see the comment in `vite.config.ts`. It lands in the
+dashboard's own chunk, so a shopper browsing products never downloads it.
 
 ### Notes on what these steps changed
 
+- **`product.features` is a comma-separated string, not an array.** The schema stores one
+  required `String` and the EJS page called `.split(',')` on it. The React type declared
+  `string[]` and mapped over it, which threw `features.map is not a function` on every
+  product that had any — the fixtures all omitted the field, so nothing caught it until a
+  backend test built a real product. Now typed as `string` with a `productFeatures()`
+  helper that tolerates either shape, since the admin form has always accepted both.
 - **`GET /api/auth/me` and `GET /api/admin/auth/me` were added to the backend.** The SPA
   cannot read httpOnly cookies, so without them it has no way to tell a signed-in visitor
   from a signed-out one except by firing a request and watching it fail. Both return 401
@@ -335,11 +362,15 @@ pre-existing backend defects — is in [docs/defects.md](docs/defects.md).
   back once there is content. An ecommerce site arguably needs them.
 - **No social accounts.** The footer's social icons were `href="#"`. Supply real URLs and
   they can come back.
-- **PayPal is inert** — the controller hardcodes an empty client id. Decide whether to
-  finish it or remove it before checkout (step 6).
+- **PayPal was dropped** — the controller hardcoded an empty client id, so it had never
+  worked. Razorpay, wallet and COD are the payment methods.
 - **`/coupons` has no page**, and its route 500s. Absent from the router until someone
   decides whether the page is wanted.
-- **The sales report needs a JSON endpoint** before step 11 — it scrapes its own HTML today.
+- **`/about` and `/help` are still placeholders.** `/about` is 759 lines of static markup;
+  `/help` is an FAQ accordion plus `POST /help/contact`. Neither blocks anything.
+- **Phase 5 is next**: delete the EJS layer, drop `express-session`, `connect-mongo` and
+  `connect-flash`, remove the auth shims, and remove the duplicate bare mounts that exist
+  only to keep those views working.
 
 ---
 
@@ -455,7 +486,7 @@ resist the urge to start on pages before they're done.
 | 8 | ~~**Profile, addresses, wallet, referrals**~~ | ✅ done — the `/coupons` page is still an open decision |
 | 9 | ~~**Admin catalog**~~ | ✅ done |
 | 10 | ~~**Admin orders, returns, users**~~ | ✅ done |
-| 11 | **Admin dashboard & sales report** | last — the sales report needs a new backend endpoint |
+| 11 | ~~**Admin dashboard & sales report**~~ | ✅ done — two new backend endpoints |
 
 ### The four highest-leverage consolidations
 

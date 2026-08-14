@@ -45,6 +45,11 @@ describe('PendingOrder', () => {
 
   beforeAll(async () => {
     await db.connect();
+
+    // Index builds are asynchronous, so without waiting the first insert can
+    // land before the unique index exists and a duplicate quietly succeeds.
+    // That made the two uniqueness tests below flaky rather than wrong.
+    await PendingOrder.init();
   });
 
   afterAll(async () => {

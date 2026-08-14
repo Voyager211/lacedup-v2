@@ -6,6 +6,7 @@ import { processImages } from '../../common/utils/image-processor.util';
 import { getPagination } from '../../common/utils/pagination.util';
 import { validateBase64Image, validateMultipleImageFiles } from '../../common/utils/image-validation.util';
 import { getImagesToDelete, deleteFiles } from '../../common/utils/file-cleanup.util';
+import { wantsJson } from '../../common/utils/wants-json.util';
 import sharp from 'sharp';
 import mongoose from 'mongoose';
 
@@ -64,7 +65,13 @@ const renderDetailPage = async (req: Request, res: Response) => {
       .populate('brand');
     
     if (!product || product.isDeleted) {
-      return res.status(404).render('error', { 
+      if (wantsJson(req)) {
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
+      // `views/error.ejs` does not exist, so this render throws inside the
+      // catch below. Documented in docs/defects.md; the JSON branch above is
+      // the path the React admin takes.
+      return res.status(404).render('error', {
         message: 'Product not found',
         title: 'Error'
       });
@@ -150,14 +157,22 @@ const renderDetailPage = async (req: Request, res: Response) => {
     // Combine all images for carousel
     const allImages = [product.mainImage, ...product.subImages];
 
-    res.render('admin/product-detail', {
-      title: `Product Details - ${product.productName}`,
+    const payload = {
       product: {
         ...product.toObject(),
         variants: variantsWithCalculatedPrices
       },
       allImages,
-      activeOffers  // ✅ Pass active offers to view
+      activeOffers
+    };
+
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...payload });
+    }
+
+    res.render('admin/product-detail', {
+      title: `Product Details - ${product.productName}`,
+      ...payload
     });
   } catch (err: any) {
     console.error('Render Detail Error:', err);

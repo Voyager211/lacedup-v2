@@ -1,4 +1,5 @@
 import { api } from '@/api/api';
+import type { Product, Variant } from '@/types/catalog';
 
 /**
  * Admin catalog endpoints.
@@ -112,6 +113,29 @@ const normaliseList = (response: Record<string, unknown>): AdminListResponse => 
   };
 };
 
+/** A variant with the offer the backend picked for it already resolved. */
+export interface AdminVariant extends Variant {
+  calculatedFinalPrice?: number;
+  appliedOffer?: number;
+  /** Which offer won: Brand, Category, Variant, Product, or None. */
+  offerSource?: string;
+}
+
+export interface ActiveOffer {
+  type: string;
+  name: string;
+  value: number;
+  label: string;
+}
+
+export interface AdminProductDetail {
+  success?: boolean;
+  product: Omit<Product, 'variants'> & { variants: AdminVariant[] };
+  /** Main image first, then the sub-images - assembled by the controller. */
+  allImages: string[];
+  activeOffers: ActiveOffer[];
+}
+
 const TAG: Record<ResourceKey, 'Category' | 'Brand' | 'Coupon' | 'Product'> = {
   categories: 'Category',
   brands: 'Brand',
@@ -189,6 +213,20 @@ export const adminApi = api.injectEndpoints({
         method: RESOURCE_PATHS[resource].removeMethod
       }),
       invalidatesTags: (_result, _error, { resource }) => [TAG[resource], 'Product']
+    }),
+
+    /**
+     * The admin product detail view.
+     *
+     * Separate from `getAdminRecord` because the controller sends more than the
+     * stored document: every variant carries the winning offer and the price it
+     * produces, and `activeOffers` is the set of offers that competed. Those are
+     * computed server-side and must not be recomputed here - the point of the
+     * page is to show which offer the backend actually applied.
+     */
+    getAdminProductDetail: build.query<AdminProductDetail, string>({
+      query: (id) => ({ url: `/api/admin/products/${id}` }),
+      providesTags: ['Product']
     })
   })
 });
@@ -196,6 +234,7 @@ export const adminApi = api.injectEndpoints({
 export const {
   useGetAdminListQuery,
   useGetAdminRecordQuery,
+  useGetAdminProductDetailQuery,
   useCreateAdminRecordMutation,
   useUpdateAdminRecordMutation,
   useToggleAdminRecordMutation,

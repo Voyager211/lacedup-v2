@@ -1,3 +1,4 @@
+import { wantsJson } from '../../common/utils/wants-json.util';
 import type { Request, Response } from 'express';
 import Order from '../orders/order.model';
 import PDFDocument from 'pdfkit';
@@ -162,6 +163,10 @@ const getSalesReport = async (req: Request, res: Response) => {
     const formattedOrders = orders.map(order => ({
       _id: order._id,
       orderId: order.orderId,
+      // `date` is pre-formatted for the EJS template, which has no helpers.
+      // `createdAt` is the raw value, so the SPA can format it the same way it
+      // formats every other date rather than inheriting a second convention.
+      createdAt: order.createdAt,
       date: new Date(order.createdAt).toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -175,8 +180,7 @@ const getSalesReport = async (req: Request, res: Response) => {
       finalAmount: order.totalAmount
     }));
 
-    res.render('admin/sales-report', {
-      title: 'Sales Report',
+    const report = {
       salesStats: stats,
       dailyAnalysis,
       orders: formattedOrders,
@@ -191,15 +195,38 @@ const getSalesReport = async (req: Request, res: Response) => {
         currentPage: page,
         totalPages,
         totalOrders,
-        itemsPerPage: limit,  // ADDED THIS
+        itemsPerPage: limit,
         hasPrev: page > 1,
         hasNext: page < totalPages
-      },
+      }
+    };
+
+    /*
+     * The SPA reads this as JSON.
+     *
+     * Until now there was no way to: the EJS page "refreshed" by refetching
+     * its own HTML with an X-Requested-With header, parsing the response with
+     * DOMParser and swapping nodes into place - and this controller had no
+     * branch for that header, so it returned the whole page, layout and all,
+     * every time.
+     */
+    if (wantsJson(req)) {
+      return res.json({ success: true, ...report });
+    }
+
+    res.render('admin/sales-report', {
+      title: 'Sales Report',
+      ...report,
       layout: 'admin/layout'
     });
 
   } catch (error: any) {
     console.error('Error fetching sales report:', error);
+
+    if (wantsJson(req)) {
+      return res.status(500).json({ success: false, message: 'Error loading sales report' });
+    }
+
     res.render('admin/sales-report', {
       title: 'Sales Report',
       error: 'Error loading sales report',

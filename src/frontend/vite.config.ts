@@ -63,6 +63,19 @@ export default defineConfig({
             return 'form-vendor';
           }
 
+          /*
+           * Charting is deliberately left unassigned.
+           *
+           * Recharts and its d3 dependencies are around 350kB and are reached
+           * only through the lazily-loaded dashboard. Naming a chunk here would
+           * make it eager again; returning undefined lets the bundler put it
+           * with the route that actually imports it, so a shopper looking at a
+           * product page never downloads it.
+           */
+          if (/[\\/]node_modules[\\/](recharts|d3-|victory-|internmap|delaunator|robust-predicates)/.test(id)) {
+            return undefined;
+          }
+
           return 'vendor';
         }
       }

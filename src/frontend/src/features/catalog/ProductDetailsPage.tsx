@@ -17,6 +17,7 @@ import { selectSession } from '@/features/auth/authSlice';
 import { formatDate, formatINR } from '@/lib/format';
 import { discountPercent } from '@/lib/pricing';
 import { cn } from '@/lib/cn';
+import { productFeatures } from '@/types/catalog';
 import type { Variant } from '@/types/catalog';
 
 /**
@@ -64,6 +65,8 @@ const ProductDetailsPage = () => {
     () => [product?.mainImage, ...(product?.subImages ?? [])].filter(Boolean) as string[],
     [product]
   );
+
+  const features = useMemo(() => productFeatures(product?.features), [product]);
 
   // Default to the first variant that is actually buyable, so the page does
   // not open on a size nobody can order.
@@ -311,11 +314,11 @@ const ProductDetailsPage = () => {
                   </section>
                 )}
 
-                {(product.features?.length ?? 0) > 0 && (
+                {features.length > 0 && (
                   <section className="mt-6">
                     <h2 className="font-heading text-lg font-semibold text-ink">Features</h2>
                     <ul className="mt-2 list-inside list-disc space-y-1 text-ink-muted">
-                      {product.features?.map((feature) => <li key={feature}>{feature}</li>)}
+                      {features.map((feature) => <li key={feature}>{feature}</li>)}
                     </ul>
                   </section>
                 )}

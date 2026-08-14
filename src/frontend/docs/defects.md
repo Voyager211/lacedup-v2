@@ -178,7 +178,8 @@ Not crashes, but things that should not be reproduced.
 | **About and Help never highlight in the nav** | `navbar.ejs` | only Home and Shop have active states |
 | **Invoice downloads as HTML** | `orders-common.js` | saved as `Invoice-{id}.html` despite `pdfkit` being installed and used for other exports |
 | **Newsletter form does nothing** | `join-community.ejs` | no action, no handler |
-| **Sales report has no JSON endpoint** | admin sales-report | its "AJAX" refetches its own HTML and swaps nodes with `DOMParser`; the controller has no `X-Requested-With` branch, so it returns the full page every time. React needs a real endpoint |
+| ✅ **Sales report has no JSON endpoint** | admin sales-report | its "AJAX" refetched its own HTML and swapped nodes with `DOMParser`; the controller had no `X-Requested-With` branch, so it returned the full page every time. **Fixed in step 11** — `sales-report.controller.ts` now answers JSON via `wantsJson(req)`, and sends the raw `createdAt` alongside the pre-formatted `date` |
+| ✅ **Admin product detail has no JSON endpoint** | admin products | `renderDetailPage` only ever rendered EJS, so the read-only detail view had nothing to call. **Fixed in step 11** — the same `wantsJson(req)` branch, returning the computed per-variant offer resolution the page exists to display |
 | **Two Cropper.js versions on one page** | admin categories, brands | layout loads 1.5.13, the page loads 1.6.1 on top |
 | **SweetAlert2 loaded twice** | `admin/layout.ejs` | head and body |
 | **Toastify loaded, never called** | `admin/layout.ejs` | admin has no working toast despite shipping a toast library |

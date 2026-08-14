@@ -31,10 +31,12 @@ import AddressBookPage from '@/features/addresses/AddressBookPage';
 import AdminLoginPage from '@/features/admin/AdminLoginPage';
 import ProductsPage from '@/features/admin/ProductsPage';
 import ProductFormPage from '@/features/admin/ProductFormPage';
+import AdminProductDetailPage from '@/features/admin/AdminProductDetailPage';
 import AdminOrdersPage from '@/features/admin/AdminOrdersPage';
 import AdminOrderDetailsPage from '@/features/admin/AdminOrderDetailsPage';
 import AdminReturnsPage from '@/features/admin/AdminReturnsPage';
 import AdminUsersPage from '@/features/admin/AdminUsersPage';
+import SalesReportPage from '@/features/admin/SalesReportPage';
 import CouponsPage from '@/features/admin/CouponsPage';
 import { BrandsPage, CategoriesPage } from '@/features/admin/CategoriesPage';
 
@@ -59,6 +61,16 @@ import { BrandsPage, CategoriesPage } from '@/features/admin/CategoriesPage';
  * far cheaper than retrofitting it once those pages exist; the same `lazy`
  * shape applies to any page heavy enough to warrant its own chunk.
  */
+/*
+ * The dashboard is split out separately from the rest of admin because it is
+ * the only page that pulls in a charting library - around 350kB of Recharts
+ * and d3. Left in the main graph, every shopper would download it to look at
+ * a product page.
+ */
+const lazyDashboard = async () => ({
+  Component: (await import('@/features/admin/DashboardPage')).default
+});
+
 const lazyAdminLayout = async () => ({
   Component: (await import('@/components/layout/AdminLayout')).default
 });
@@ -134,10 +146,10 @@ export const router = createBrowserRouter([
             element: <RequireAuth audience="admin" />,
             children: [
               { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-              { path: 'dashboard', element: <Placeholder title="Dashboard" step={11} note="Eight API endpoints, three charts. Chart.js becomes Recharts." /> },
+              { path: 'dashboard', lazy: lazyDashboard },
               { path: 'products', element: <ProductsPage /> },
               { path: 'products/add', element: <ProductFormPage /> },
-              { path: 'products/:id', element: <Placeholder title="Product detail" step={9} /> },
+              { path: 'products/:id', element: <AdminProductDetailPage /> },
               { path: 'products/:id/edit', element: <ProductFormPage /> },
               { path: 'categories', element: <CategoriesPage /> },
               { path: 'brands', element: <BrandsPage /> },
@@ -146,7 +158,7 @@ export const router = createBrowserRouter([
               { path: 'orders/:orderId', element: <AdminOrderDetailsPage /> },
               { path: 'returns', element: <AdminReturnsPage /> },
               { path: 'users', element: <AdminUsersPage /> },
-              { path: 'sales-report', element: <Placeholder title="Sales report" step={11} note="Needs a JSON endpoint — it scrapes its own HTML today." /> }
+              { path: 'sales-report', element: <SalesReportPage /> }
             ]
           }
         ]
