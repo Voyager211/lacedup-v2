@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { findSignup } from '../../modules/auth/pending-signup.service';
 
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
@@ -19,7 +20,7 @@ export const preventBackNavigation = (req: Request, res: Response, next: NextFun
 };
 
 // Specific middleware for OTP verification pages
-export const preventOtpBackNavigation = (req: Request, res: Response, next: NextFunction) => {
+export const preventOtpBackNavigation = async (req: Request, res: Response, next: NextFunction) => {
   res.set(NO_CACHE_HEADERS);
 
   // Check if user is already authenticated
@@ -27,10 +28,14 @@ export const preventOtpBackNavigation = (req: Request, res: Response, next: Next
     return res.redirect('/home');
   }
 
-  // For signup OTP verification, check if there's pending user data
+  // For signup OTP verification, check if there's pending signup data
   if (req.path === '/verify-otp') {
     const email = req.query.email;
-    if (!email || !req.session.pendingUser || req.session.pendingUser.email !== email) {
+
+    // Looked up in the PendingSignup collection rather than the session, so
+    // reloading the OTP page no longer bounces the shopper back to /signup
+    // just because their session was dropped.
+    if (!email || !(await findSignup(String(email)))) {
       return res.redirect('/signup');
     }
   }

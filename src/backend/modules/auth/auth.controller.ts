@@ -6,7 +6,15 @@ import passport from 'passport';
 import { issueSession, endSession } from './auth.session';
 import { generateReferralCode } from '../referrals/referral-code.util';
 import Wallet from '../wallet/wallet.model';
-import * as walletService from '../wallet/wallet.service'; 
+import * as walletService from '../wallet/wallet.service';
+import {
+  checkOtp,
+  createUserFrom,
+  discardSignup,
+  findSignup,
+  refreshOtp,
+  startSignup
+} from './pending-signup.service'; 
 
 const getSignup = (req: Request, res: Response) => {
   if (req.isAuthenticated()) return res.redirect('/home');
@@ -46,20 +54,18 @@ const postSignup = async (req: Request, res: Response) => {
       }
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-    const otpExpiresAt = Date.now() + 60 * 1000;
-
-    req.session.pendingUser = {
+    // Held in the PendingSignup collection rather than the session, so the
+    // flow is recoverable if the session is lost - it is found by the email
+    // the client sends back with the code. The password is hashed on the way
+    // in; the session used to keep it in plaintext.
+    const { otp } = await startSignup({
       name,
       email,
       phone,
       password,
-      otpHash,
-      otpExpiresAt,
       referralCode: referralCode ? referralCode.toUpperCase() : null,
       referrerId: referrer ? referrer._id : null
-    };
+    });
 
     const tempUser = { name, email };
     await sendOtp(tempUser, otp);
@@ -150,29 +156,23 @@ const postOtpVerification = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
 
   try {
-    if (req.session.pendingUser && req.session.pendingUser.email === email) {
-      const pendingUser = req.session.pendingUser;
-      const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const pendingUser = await findSignup(email);
 
-      const isExpired = Number(pendingUser.otpExpiresAt) < Date.now();
-      const isValid = pendingUser.otpHash === otpHash;
+    if (pendingUser) {
+      const verdict = checkOtp(pendingUser, otp);
 
-      if (isExpired) {
-        delete req.session.pendingUser;
+      if (verdict === 'expired') {
+        await discardSignup(email);
         return res.status(410).json({ error: 'OTP expired. Please sign up again.' });
       }
 
-      if (!isValid) {
+      if (verdict === 'incorrect') {
         return res.status(401).json({ error: 'Incorrect OTP. Try again.' });
       }
 
-      // Create the new user
-      const newUser = new User({
-        name: pendingUser.name,
-        email: pendingUser.email,
-        phone: pendingUser.phone,
-        password: pendingUser.password
-      });
+      // Creates the user from the stored hash without re-hashing it. See
+      // pending-signup.service; pinned by a sign-in test.
+      const newUser = await createUserFrom(pendingUser);
 
       newUser.referralCode = await generateReferralCode();
 
@@ -242,7 +242,7 @@ const postOtpVerification = async (req: Request, res: Response) => {
         }
       }
 
-      delete req.session.pendingUser;
+      await discardSignup(email);
 
       await issueSession(res, newUser, 'user');
       return res.status(200).json({ success: true });
@@ -287,19 +287,10 @@ const resendOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
 
   try {
-    if (req.session.pendingUser && req.session.pendingUser.email === email) {
-      const pendingUser = req.session.pendingUser;
+    const resent = await refreshOtp(email);
 
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-      const otpExpiresAt = Date.now() + 60 * 1000; // 1 minute
-
-      req.session.pendingUser.otpHash = otpHash;
-      req.session.pendingUser.otpExpiresAt = otpExpiresAt;
-
-      // Send OTP email
-      const tempUser = { name: pendingUser.name, email: pendingUser.email };
-      await sendOtp(tempUser, otp);
+    if (resent) {
+      await sendOtp({ name: resent.name, email }, resent.otp);
 
       return res.status(200).json({ success: true });
 
