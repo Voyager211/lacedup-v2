@@ -57,4 +57,9 @@ const emailChangeSchema = new Schema<IEmailChange>({
   createdAt: { type: Date, default: Date.now, expires: 60 * 30 }
 });
 
-export = mongoose.model<IEmailChange>('EmailChange', emailChangeSchema);
+// `export default`, not `export =` - see the note in pending-signup.model.ts.
+// Mixing an export assignment with a named export produces a module that
+// throws on import under tsx, which tsc and Vitest both accept.
+const EmailChange = mongoose.model<IEmailChange>('EmailChange', emailChangeSchema);
+
+export default EmailChange;

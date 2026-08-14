@@ -56,4 +56,15 @@ const pendingSignupSchema = new Schema<IPendingSignup>({
   createdAt: { type: Date, default: Date.now, expires: 60 * 30 }
 });
 
-export = mongoose.model<IPendingSignup>('PendingSignup', pendingSignupSchema);
+/*
+ * `export default`, not `export =`.
+ *
+ * This file also exports its interface, and the two cannot coexist: the CJS
+ * transform tsx uses emits a module that throws on import, which takes the
+ * whole server down at startup. tsc and Vitest both accept it, so neither the
+ * typecheck nor the test suite catches it - only booting the server does.
+ * Matches pending-order.model.ts, which has the same shape.
+ */
+const PendingSignup = mongoose.model<IPendingSignup>('PendingSignup', pendingSignupSchema);
+
+export default PendingSignup;
