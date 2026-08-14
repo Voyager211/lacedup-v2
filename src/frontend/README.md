@@ -133,9 +133,7 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | `<ResourceFormDialog>` | one create/edit dialog, described by a field list |
 | `<FilterBar>` | deferred from step 1 until it had consumers |
 | Categories, Brands, Coupons, Products lists | |
-
-The product add/edit form is still a placeholder — it needs `<ImageUploader>` for the
-3–6 image pipeline, which lands with it.
+| `<ProductFormPage>` + `<ImageUploader>` | add and edit in one component; 3–6 images |
 
 **Next: step 10, admin orders, returns and users** — includes the 2,320-line order-details
 page, the largest in the app.
@@ -446,7 +444,7 @@ resist the urge to start on pages before they're done.
 | 6 | ~~**Checkout**~~ | ✅ done — PayPal dropped, payment state moved server-side |
 | 7 | ~~**Orders & returns**~~ | ✅ done |
 | 8 | ~~**Profile, addresses, wallet, referrals**~~ | ✅ done — the `/coupons` page is still an open decision |
-| 9 | ~~**Admin catalog**~~ | ✅ done — the product add/edit form is still to come |
+| 9 | ~~**Admin catalog**~~ | ✅ done |
 | 10 | **Admin orders, returns, users** | `admin/order-details` is the largest page in the app |
 | 11 | **Admin dashboard & sales report** | last — the sales report needs a new backend endpoint |
 
@@ -535,7 +533,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 154 tests. Frontend: 336.** Both suites pass and both typecheck clean under
+**Backend: 154 tests. Frontend: 339.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 

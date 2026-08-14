@@ -12,6 +12,7 @@ import AdminLoginPage from './AdminLoginPage';
 import CouponsPage from './CouponsPage';
 import ProductsPage from './ProductsPage';
 import { CategoriesPage } from './CategoriesPage';
+import ProductFormPage from './ProductFormPage';
 import { RESOURCE_PATHS } from './admin.api';
 
 const renderAt = (element: React.ReactNode, entry = '/admin/x', path = '/admin/x') => {
@@ -327,5 +328,60 @@ describe('ProductsPage', () => {
     await vi.waitFor(() => {
       expect(router.state.location.pathname).toBe('/admin/products/add');
     });
+  });
+});
+
+describe('ProductFormPage', () => {
+  const filters = {
+    success: true,
+    categories: [{ _id: 'c1', name: 'Running' }],
+    brands: [{ _id: 'b1', name: 'Nike' }],
+    sizes: []
+  };
+
+  const fill = async () => {
+    await userEvent.type(screen.getByLabelText('Product name'), 'Air Max 90');
+    await userEvent.selectOptions(screen.getByLabelText('Category'), 'c1');
+    await userEvent.selectOptions(screen.getByLabelText('Brand'), 'b1');
+    await userEvent.type(screen.getByLabelText('Regular price'), '2000');
+    await userEvent.type(screen.getByLabelText('Size'), 'UK 8');
+  };
+
+  beforeEach(() => {
+    mock.onGet('/catalog/filters').reply(200, filters);
+  });
+
+  it('refuses a base price at or above the regular price', async () => {
+    // The regular price is what gets struck through, so a variant priced at or
+    // above it would show a "discount" that costs more.
+    renderAt(<ProductFormPage />, '/admin/products/add', '/admin/products/add');
+
+    await fill();
+    await userEvent.type(screen.getByLabelText('Base price'), '2500');
+    await userEvent.click(screen.getByRole('button', { name: 'Add product' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /base price ₹2,500 must be below the regular price ₹2,000/i
+    );
+    expect(mock.history.post).toHaveLength(0);
+  });
+
+  it('refuses fewer than three images', async () => {
+    renderAt(<ProductFormPage />, '/admin/products/add', '/admin/products/add');
+
+    await fill();
+    await userEvent.type(screen.getByLabelText('Base price'), '1800');
+    await userEvent.click(screen.getByRole('button', { name: 'Add product' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/at least 3 images/i);
+    expect(mock.history.post).toHaveLength(0);
+  });
+
+  it('says which field is missing rather than failing silently', async () => {
+    renderAt(<ProductFormPage />, '/admin/products/add', '/admin/products/add');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add product' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/give the product a name/i);
   });
 });

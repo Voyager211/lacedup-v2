@@ -30,6 +30,7 @@ import ReferralsPage from '@/features/account/ReferralsPage';
 import AddressBookPage from '@/features/addresses/AddressBookPage';
 import AdminLoginPage from '@/features/admin/AdminLoginPage';
 import ProductsPage from '@/features/admin/ProductsPage';
+import ProductFormPage from '@/features/admin/ProductFormPage';
 import CouponsPage from '@/features/admin/CouponsPage';
 import { BrandsPage, CategoriesPage } from '@/features/admin/CategoriesPage';
 
@@ -131,9 +132,9 @@ export const router = createBrowserRouter([
               { index: true, element: <Navigate to="/admin/dashboard" replace /> },
               { path: 'dashboard', element: <Placeholder title="Dashboard" step={11} note="Eight API endpoints, three charts. Chart.js becomes Recharts." /> },
               { path: 'products', element: <ProductsPage /> },
-              { path: 'products/add', element: <Placeholder title="Add product" step={9} note="Variants plus a 3–6 image upload. Needs <ImageUploader>." /> },
+              { path: 'products/add', element: <ProductFormPage /> },
               { path: 'products/:id', element: <Placeholder title="Product detail" step={9} /> },
-              { path: 'products/:id/edit', element: <Placeholder title="Edit product" step={9} note="Shares its form with add." /> },
+              { path: 'products/:id/edit', element: <ProductFormPage /> },
               { path: 'categories', element: <CategoriesPage /> },
               { path: 'brands', element: <BrandsPage /> },
               { path: 'coupons', element: <CouponsPage /> },
