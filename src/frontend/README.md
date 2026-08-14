@@ -1,9 +1,10 @@
 # Frontend
 
-The Phase 4 app: what is built, what is next, and the specification for the rest.
+The React app. **Phases 0–5 are complete** — the `src/` restructure, a 16-module modular
+monolith, 100% TypeScript, JWT auth, the full React rewrite, and the removal of the EJS
+layer and the session that supported it.
 
-Phases 0–3 are done — the `src/` restructure, a 16-module modular monolith, 100% TypeScript,
-JWT auth, Swagger at `/docs`. **The backend is finished. Build against it as a stable API.**
+React is the only UI. Express serves the built app and answers JSON at `/api`.
 
 ## Running it
 
@@ -30,14 +31,14 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Phase 4 is complete — steps 0 through 11.** The scaffold, the primitives, the shells,
-auth, browse, cart, wishlist, checkout, orders, the account pages, the whole admin panel
-and the reporting.
+**Phase 4 built every page. Phase 5 removed everything the old one needed.**
 
-The only placeholders left are `/about` and `/help` — static content with no behaviour to
-port, deliberately deferred rather than forgotten.
+All 49 pages are React, including `/about` and `/help` — nothing renders a placeholder.
+The EJS layer is gone: 76 templates, the 15 JS and 7 CSS files they loaded, the view engine,
+and 59,464 lines with them. `express-session` went too; each thing it held now has a home
+of its own — see the table further down.
 
-**528 tests pass — 367 frontend, 161 backend.**
+**607 tests pass — 376 frontend, 231 backend.**
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
 tree-shaken out of the production bundle).
@@ -364,13 +365,14 @@ pre-existing backend defects — is in [docs/defects.md](docs/defects.md).
   they can come back.
 - **PayPal was dropped** — the controller hardcoded an empty client id, so it had never
   worked. Razorpay, wallet and COD are the payment methods.
-- **`/coupons` has no page**, and its route 500s. Absent from the router until someone
-  decides whether the page is wanted.
-- **`/about` and `/help` are still placeholders.** `/about` is 759 lines of static markup;
-  `/help` is an FAQ accordion plus `POST /help/contact`. Neither blocks anything.
-- **Phase 5 is next**: delete the EJS layer, drop `express-session`, `connect-mongo` and
-  `connect-flash`, remove the auth shims, and remove the duplicate bare mounts that exist
-  only to keep those views working.
+- **`/coupons` has no page.** Its view has never existed in git history. The route is
+  absent from the router until someone decides whether the page is wanted.
+- **The OTP email template is the last `.ejs` file.** It lives in
+  `src/backend/common/email-templates/` and is rendered to a string for the mailer, so it
+  has nothing to do with the view engine — which is why `ejs` is still a dependency.
+- **Two mongodb drivers were installed.** `connect-mongo` resolved the standalone one while
+  mongoose bundled its own, which needed a cast to paper over the version skew. With
+  `connect-mongo` uninstalled that cast is gone; the stray dependency can follow.
 
 ---
 
@@ -378,12 +380,19 @@ pre-existing backend defects — is in [docs/defects.md](docs/defects.md).
 
 ### API surface
 
-- **`/api` is the mount to use.** Prefixed routers (cart, wishlist, wallet, coupons,
-  referrals, checkout, help, about, and all admin routers) are mounted twice — on their
-  historic path for the EJS views, and under `/api`.
-- **Root-mounted routers are *not* dual-mounted.** They already declare `/api/...` endpoints
-  internally (47 of them, across addresses, catalog, shop and checkout). `/api/shop` returns
-  JSON; `/shop` returns HTML.
+- **Everything is under `/api`, and each endpoint answers on exactly one URL.** Until Phase 5
+  the routers were mounted twice — once on the bare path the EJS templates posted to, once
+  under `/api`. The bare copies are gone. Duplicated URLs are not free: a guard fixed on
+  one of them protects half of what it appears to protect.
+- **Some routers mount at the root and declare `/api/...` internally** (addresses, catalog,
+  shop, checkout, auth, orders, profile), which is why they are not additionally mounted
+  under `/api` — that would produce `/api/api/*`. Check which kind a router is before adding
+  a route to it; getting this wrong is the most repeated bug in this codebase.
+- **Guards answer JSON, never a redirect.** Signed out gets 401, non-admin gets 403, and the
+  SPA decides where to send the visitor.
+- **Any other path falls through to the React app**, so client-side deep links survive a
+  refresh. `/api`, `/docs`, `/uploads`, `/images` and `/google` are excluded — answering a
+  mistyped endpoint with a page of HTML would make a broken fetch look like a parsing bug.
 - **Live docs at `/docs`**, raw OpenAPI at `/docs.json` — 156 documented operations, 15 tags,
   11 schemas. Read this before guessing a payload shape.
 - 93% of controller responses were already JSON before any of this started, so most screens
@@ -487,6 +496,8 @@ resist the urge to start on pages before they're done.
 | 9 | ~~**Admin catalog**~~ | ✅ done |
 | 10 | ~~**Admin orders, returns, users**~~ | ✅ done |
 | 11 | ~~**Admin dashboard & sales report**~~ | ✅ done — two new backend endpoints |
+| 12 | ~~**/about and /help**~~ | ✅ done — deferred as static, ported in Phase 5 rather than deleted |
+| — | ~~**Phase 5: delete the EJS layer**~~ | ✅ done — 59,464 lines, plus express-session and the duplicate mounts |
 
 ### The four highest-leverage consolidations
 
@@ -504,54 +515,37 @@ Worth doing deliberately rather than discovering page by page:
 
 ## Phase 4 checklist
 
-### 1. Migrate transient state out of `express-session`
+### 1–3. Done in Phase 5
 
-> express-session is still there. Phase 3's exit criteria said remove it, but ~90 uses keep
-> transient, non-auth state in it. Ripping that out then would have risked the checkout path
-> for no gain — it's better done with the React rewrite, when the client can hold that state.
-> `passport.session()` is gone; passport now only verifies credentials.
+The three items that used to sit here — migrate the session, remove the auth shims, delete
+the EJS layer — are complete. What happened to each:
 
-| Session field | Uses | What it holds | Suggested owner |
-|---|---|---|---|
-| `appliedCoupon` | 51 | Coupon applied to the current cart | Redux (re-validate server-side at place-order) |
-| `pendingUser` | 13 | Signup details held between OTP request and verify | Redux, or a short-lived server record |
-| `emailChangeOtp` | 13 | OTP challenge during an email change | same |
-| `paymentFailure` | 9 | Failed-payment record behind the retry page | Redux, or a query param + server lookup |
-| ~~`pendingRazorpayOrder`~~ | ~~6~~ | **Done in step 6** — moved to a `PendingOrder` collection | ✅ |
-| flash messages | 16 | One-shot UI notices | toasts — but see the flash bug below |
+| Was in the session | Uses | Where it lives now |
+|---|---:|---|
+| `appliedCoupon` | 51 | the **Cart** document, via `coupons/applied-coupon.service` |
+| `pendingUser` | 13 | `PendingSignup`, a TTL collection keyed by email |
+| `emailChangeOtp` | 13 | `EmailChange`, a TTL collection keyed by user |
+| `paymentFailure` | 9 | nowhere — rebuilt from the failed Order on demand |
+| `pendingRazorpayOrder` | 6 | `PendingOrder`, keyed by the Razorpay order id |
+| `userId` / `role` | 75 | read from `req.user`, via `common/utils/current-user.util` |
+| flash messages | 16 | deleted — they were written 8 times and rendered once |
 
-✅ **`pendingRazorpayOrder` is resolved.** It now lives in a `PendingOrder` collection keyed by
-the Razorpay order id, with a 30-minute TTL. Verification finds it by the id Razorpay returns,
-so it no longer depends on the session surviving the trip to the payment provider — which
-previously left customers charged with no order when a session expired mid-payment.
+Three of those moves fixed a real hole rather than just relocating state. The Razorpay
+snapshot no longer depends on the session surviving a trip to the payment provider. The
+signup and email-change flows are found by something the client sends back, so a dropped
+session no longer tells someone their correct OTP is wrong. And the signup password is now
+hashed on the way in — the session stored it in plaintext in a MongoDB collection until it
+expired.
 
-> A correction to an earlier note here: this was described as "the only record of the basket
-> mid-payment", implying a closed tab would lose the cart. That was wrong. The cart is cleared
-> only *after* verification succeeds, so it survives. The snapshot's real job is narrower —
-> freezing the price and coupon so the order created matches the amount charged.
+`paymentFailure` needed no new home at all: the session was only ever a cache over the
+failed Order, and the fallback that rebuilt it already existed. That rebuild had a bug
+making half of it unreachable — it branched on `String().match(...)`, i.e. the empty
+string, so a failure page opened with a Mongo id never found its order.
 
-⚠️ **Flash messages are already broken.** They are written in 8 places and rendered in exactly
-one template (admin login). Blocked-user notices, "please log in", coupon errors and wallet
-failures are all silently dropped today. Replacing flash with toasts is a bug fix, not just a
-migration — see [docs/components.md](docs/components.md).
+`express-session`, `connect-mongo`, `connect-flash`, `express-ejs-layouts` and
+`method-override` are uninstalled. `ejs` stays for exactly one thing: the OTP **email**
+template, which now lives in `src/backend/common/email-templates/`.
 
-Once all of the above are migrated, `express-session`, `connect-mongo` and `connect-flash`
-come out, and the shims below go with them.
-
-### 2. Remove the auth compatibility shims
-
-Both live in `common/middlewares/jwt-auth.middleware.ts` and exist only for the EJS layer:
-
-- `req.isAuthenticated()` is shimmed because passport defined it and 24 call sites still use it.
-- `req.session.userId` is mirrored from the JWT because 71 places read it, 49 of them with no
-  `req.user` fallback.
-
-The JWT is the source of truth in both cases. Delete the shims when the EJS views go.
-
-### 3. Delete the EJS layer
-
-`src/backend/views/`, plus `ejs` and `express-ejs-layouts` from package.json, and the
-duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ### 4. Library replacements
 
