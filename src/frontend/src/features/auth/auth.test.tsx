@@ -123,13 +123,84 @@ describe('LoginPage', () => {
 });
 
 describe('SignupPage', () => {
-  const fill = async () => {
+  /**
+   * Walks the two steps the way a visitor does.
+   *
+   * Worth doing properly even though jsdom cannot see the step that is hidden:
+   * the suite runs with `css: false`, so Tailwind's `hidden` has no effect and
+   * every field is reachable whichever step is showing. Driving it through
+   * Proceed is what makes these tests exercise the flow rather than a form
+   * that only looks split.
+   */
+  const fillStepOne = async () => {
     await userEvent.type(screen.getByLabelText('Full Name'), 'Alice Example');
     await userEvent.type(screen.getByLabelText('Phone Number'), '9876543210');
     await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
+  };
+
+  const fill = async () => {
+    await fillStepOne();
+    await userEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
     await userEvent.type(screen.getByLabelText('Confirm Password'), 'correcthorse1');
   };
+
+  it('does not advance past details that are not filled in', async () => {
+    renderPage(<SignupPage />, '/signup');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+
+    expect(screen.getByText(/step 1 of 2/i)).toBeInTheDocument();
+  });
+
+  it('does not report the password fields before showing them', async () => {
+    // Validating the whole schema on Proceed would mark the empty password
+    // invalid - an error against a field the visitor has not been offered yet.
+    // Asserted on aria-invalid rather than on text, because the strength meter
+    // renders "Enter a password" whenever the field is empty, error or not.
+    renderPage(<SignupPage />, '/signup');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+
+    expect(screen.getByLabelText('Password')).not.toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Full Name')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('advances once the details are valid', async () => {
+    renderPage(<SignupPage />, '/signup');
+
+    await fillStepOne();
+    await userEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+
+    expect(await screen.findByText(/step 2 of 2/i)).toBeInTheDocument();
+  });
+
+  it('keeps what was typed when going back a step', async () => {
+    // The steps stay mounted precisely so this holds - unmounting the first
+    // would drop the values react-hook-form is holding.
+    renderPage(<SignupPage />, '/signup');
+
+    await fillStepOne();
+    await userEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+    await userEvent.click(screen.getByRole('button', { name: /back to your details/i }));
+
+    expect(await screen.findByText(/step 1 of 2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toHaveValue('alice@example.com');
+  });
+
+  it('returns to the first step when the server rejects the email', async () => {
+    // The field the visitor has to change lives on step one, so leaving them
+    // on step two would show an error against nothing they can see.
+    mock.onPost('/signup').reply(409, { error: 'Email already in use.' });
+
+    renderPage(<SignupPage />, '/signup');
+
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+
+    expect(await screen.findByText(/step 1 of 2/i)).toBeInTheDocument();
+  });
 
   it('sends the visitor to verification, carrying the email', async () => {
     mock.onPost('/signup').reply(200, { success: true });
@@ -161,8 +232,12 @@ describe('SignupPage', () => {
 
     renderPage(<SignupPage />, '/signup');
 
-    await fill();
+    await fillStepOne();
     await userEvent.type(screen.getByLabelText('Referral Code (Optional)'), 'NOPE');
+    await userEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+
+    await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
+    await userEvent.type(screen.getByLabelText('Confirm Password'), 'correcthorse1');
     await userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
 
     expect(await screen.findByText(/invalid referral code/i)).toBeInTheDocument();
@@ -171,9 +246,9 @@ describe('SignupPage', () => {
   it('catches a password mismatch before submitting', async () => {
     renderPage(<SignupPage />, '/signup');
 
-    await userEvent.type(screen.getByLabelText('Full Name'), 'Alice Example');
-    await userEvent.type(screen.getByLabelText('Phone Number'), '9876543210');
-    await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
+    await fillStepOne();
+    await userEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
     await userEvent.type(screen.getByLabelText('Confirm Password'), 'somethingelse1');
     await userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
