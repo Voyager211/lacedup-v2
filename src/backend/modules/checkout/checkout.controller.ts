@@ -11,7 +11,8 @@ import PendingOrder from './pending-order.model';
 import { wantsJson } from '../../common/utils/wants-json.util';
 import * as razorpayService from '../payments/razorpay.provider';
 import * as walletService from '../wallet/wallet.service';
-import { currentUserId } from '../../common/utils/current-user.util';
+import { requireUserId } from '../../common/utils/current-user.util';
+import { clearAppliedCoupon, getAppliedCoupon } from '../coupons/applied-coupon.service';
 
 import {
   ORDER_STATUS, 
@@ -230,7 +231,8 @@ const calculateOrderTotals = (cartItems: any) => {
 
 const loadCheckout = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
+    const heldCoupon = await getAppliedCoupon(userId);
     
     // user
     const user = await User.findById(userId).select('fullname email profilePhoto');
@@ -296,8 +298,8 @@ const loadCheckout = async (req: Request, res: Response) => {
     let couponDiscount = 0;
     let appliedCoupon = null;
 
-    if (req.session.appliedCoupon) {
-      appliedCoupon = req.session.appliedCoupon;
+    if (heldCoupon) {
+      appliedCoupon = heldCoupon;
       couponDiscount = appliedCoupon.discountAmount || 0;
     }
 
@@ -363,7 +365,7 @@ const loadCheckout = async (req: Request, res: Response) => {
 // 1. validate checkout stock 
 const validateCheckoutStock = async (req: Request, res: Response) => {
   try {    
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -467,7 +469,8 @@ const validateCheckoutStock = async (req: Request, res: Response) => {
 // 3. place order with validation
 const placeOrderWithValidation = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
+    const heldCoupon = await getAppliedCoupon(userId);
     const { deliveryAddressId, addressIndex, paymentMethod } = req.body;
 
     if (!userId) {
@@ -518,13 +521,13 @@ const placeOrderWithValidation = async (req: Request, res: Response) => {
     console.log(`📦 Cart items found: ${cart!.items.length}`);
 
     //  NEW: Validate coupon before processing order
-    if (req.session.appliedCoupon) {
+    if (heldCoupon) {
       try {
-        const coupon = await Coupon.findById(req.session.appliedCoupon._id);
+        const coupon = await Coupon.findById(heldCoupon.couponId);
 
         if (!coupon || !coupon.isActive) {
           console.warn(' Applied coupon is no longer valid');
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Applied coupon is no longer valid',
@@ -535,7 +538,7 @@ const placeOrderWithValidation = async (req: Request, res: Response) => {
         const now = new Date();
         if (now < new Date(coupon.validFrom) || now > new Date(coupon.validTo)) {
           console.warn(' Applied coupon has expired');
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon has expired',
@@ -545,7 +548,7 @@ const placeOrderWithValidation = async (req: Request, res: Response) => {
 
         if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
           console.warn(' Coupon usage limit reached');
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon usage limit reached',
@@ -559,7 +562,7 @@ const placeOrderWithValidation = async (req: Request, res: Response) => {
 
         if (coupon.userLimit && userUsageCount >= coupon.userLimit) {
           console.warn(' User has reached coupon usage limit');
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'You have reached the coupon usage limit',
@@ -571,7 +574,7 @@ const placeOrderWithValidation = async (req: Request, res: Response) => {
 
       } catch (couponError: any) {
         console.error('Error validating coupon:', couponError);
-        delete req.session.appliedCoupon;
+        await clearAppliedCoupon(userId);
         return res.status(400).json({
           success: false,
           message: 'Error validating coupon',
@@ -660,7 +663,8 @@ const placeOrderWithValidation = async (req: Request, res: Response) => {
 // handle cod order
 const handleCODOrder = async (req: any, res: any, cart: any) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
+    const heldCoupon = await getAppliedCoupon(userId);
     const { deliveryAddressId, addressIndex } = req.body;
 
     console.log('Processing COD order for user:', userId);
@@ -700,13 +704,13 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
     let couponDiscount = 0;
     let appliedCouponId = null;
 
-    if (req.session.appliedCoupon) {
+    if (heldCoupon) {
       try {
-        const coupon = await Coupon.findById(req.session.appliedCoupon._id);
+        const coupon = await Coupon.findById(heldCoupon.couponId);
 
         // validate coupon
         if (!coupon || !coupon.isActive) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Applied coupon is no longer valid. Please try again without the coupon.',
@@ -716,7 +720,7 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
  
         const now = new Date();
         if (now < new Date(coupon.validFrom) || now > new Date(coupon.validTo)) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon has expired or is not yet active',
@@ -725,7 +729,7 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
         }
 
         if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon usage limit has been reached',
@@ -736,7 +740,7 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
         const userUsageCount = coupon.usedBy.filter(usage => usage.user.toString() === userId!.toString()).length;
 
         if (coupon.userLimit && userUsageCount >= coupon.userLimit) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'You have already used this coupon the maximum number of times',
@@ -745,7 +749,7 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
         }
 
         if (coupon.minimumOrderValue && totals.total < coupon.minimumOrderValue) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: `Minimum order value of ₹${coupon.minimumOrderValue} required for the coupon`,
@@ -753,13 +757,13 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
           });
         }
 
-        couponDiscount = req.session.appliedCoupon.discountAmount || 0;
-        appliedCouponId = req.session.appliedCoupon._id;
+        couponDiscount = heldCoupon.discountAmount || 0;
+        appliedCouponId = heldCoupon.couponId;
         console.log(`Coupon validated and applied: ${coupon.code} (₹${couponDiscount} off)`);
 
       } catch (couponError: any) {
         console.error('Error validating coupon:', couponError);
-        delete req.session.appliedCoupon;
+        await clearAppliedCoupon(userId);
         return res.status(400).json({
           success: false,
           message: 'Error validating coupon. Please try again without the coupon.',
@@ -830,7 +834,7 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
       },
       couponApplied: appliedCouponId as any,
       couponDiscount: Math.round(couponDiscount),
-      couponCode: req.session.appliedCoupon?.code || null,
+      couponCode: heldCoupon?.code || null,
       paymentMethod: PAYMENT_METHODS.COD,
       paymentStatus: PAYMENT_STATUS.PENDING,
       subtotal: totals.subtotal,
@@ -884,8 +888,8 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
     await cart.save();
     console.log('Cart cleared');
 
-    if (req.session.appliedCoupon) {
-      delete req.session.appliedCoupon;
+    if (heldCoupon) {
+      await clearAppliedCoupon(userId);
       console.log('Coupon removed from session');
     }
 
@@ -913,7 +917,8 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
 // Create Razorpay Order
 const createRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
+    const heldCoupon = await getAppliedCoupon(userId);
     const { deliveryAddressId, addressIndex } = req.body;
 
     const cart = await Cart.findOne({ userId })
@@ -938,12 +943,12 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
     let couponDiscount = 0;
     let appliedCouponId = null;
 
-    if (req.session.appliedCoupon) {
+    if (heldCoupon) {
       try {
-        const coupon = await Coupon.findById(req.session.appliedCoupon._id);
+        const coupon = await Coupon.findById(heldCoupon.couponId);
 
         if (!coupon || !coupon.isActive) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Applied coupon is no longer valid',
@@ -953,7 +958,7 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
 
         const now = new Date();
         if (now < new Date(coupon.validFrom) || now > new Date(coupon.validTo)) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon has expired',
@@ -962,7 +967,7 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
         }
 
         if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon usage limit reached',
@@ -972,7 +977,7 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
 
         const userUsageCount = coupon.usedBy.filter(usage => usage.user.toString() === userId!.toString()).length;
         if (coupon.userLimit && userUsageCount >= coupon.userLimit) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'You have reached the coupon usage limit',
@@ -981,7 +986,7 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
         }
 
         if (coupon.minimumOrderValue && totals.total < coupon.minimumOrderValue) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: `Minimum order value of ₹${coupon.minimumOrderValue} required`,
@@ -989,13 +994,13 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
           });
         }
 
-        couponDiscount = req.session.appliedCoupon.discountAmount || 0;
-        appliedCouponId = req.session.appliedCoupon._id;
+        couponDiscount = heldCoupon.discountAmount || 0;
+        appliedCouponId = heldCoupon.couponId;
         console.log(`Coupon validated: ${coupon.code} (₹${couponDiscount} off)`);
 
       } catch (couponError: any) {
         console.error('Coupon validation error:', couponError);
-        delete req.session.appliedCoupon;
+        await clearAppliedCoupon(userId);
         return res.status(400).json({
           success: false,
           message: 'Error validating coupon',
@@ -1064,7 +1069,7 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
 // Verify Razorpay Payment
 const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
 
     if (!userId) {
@@ -1250,7 +1255,7 @@ const verifyRazorpayPayment = async (req: Request, res: Response) => {
       // Step 6: the snapshot has served its purpose, and the coupon is now
       // recorded on the order itself.
       await PendingOrder.deleteOne({ razorpayOrderId });
-      delete req.session.appliedCoupon;
+      await clearAppliedCoupon(userId);
 
       return res.json({
         success: true,
@@ -1311,7 +1316,7 @@ const verifyRazorpayPayment = async (req: Request, res: Response) => {
 // Handle Payment Failure
 const handlePaymentFailure = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
     const { razorpayOrderId, error } = req.body;
 
     console.log(' Payment failed for Razorpay Order:', razorpayOrderId);
@@ -1431,7 +1436,7 @@ const handlePaymentFailure = async (req: Request, res: Response) => {
       };
 
       await PendingOrder.deleteOne({ razorpayOrderId });
-      delete req.session.appliedCoupon;
+      await clearAppliedCoupon(userId);
 
       return res.json({
         success: true,
@@ -1473,7 +1478,7 @@ const handlePaymentFailure = async (req: Request, res: Response) => {
 const loadOrderSuccess = async (req: Request, res: Response) => {
   try {
     const orderId = String(req.params.orderId);
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
 
     if (!userId) {
       return res.redirect('/login');
@@ -1588,7 +1593,7 @@ const loadOrderSuccess = async (req: Request, res: Response) => {
 // Load Order Failure Page
 const loadOrderFailure = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
     const { transactionId } = req.params;
 
     if (!userId) {
@@ -1759,7 +1764,7 @@ const loadOrderFailure = async (req: Request, res: Response) => {
 // Load Retry Payment Page
 const loadRetryPaymentPage = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
     const { transactionId } = req.params;
 
     if (!userId) {
@@ -1887,7 +1892,7 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
 // Retry razorpay Payment
 const createRazorpayOrderForRetry = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
     const { razorpayOrderId, error } = req.body;
 
     if (!userId) {
@@ -2012,7 +2017,7 @@ const createRazorpayOrderForRetry = async (req: Request, res: Response) => {
 
 const verifyRetryRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
 
     if (!userId) {
@@ -2138,7 +2143,7 @@ const verifyRetryRazorpayPayment = async (req: Request, res: Response) => {
       }
 
       delete req.session.paymentFailure;
-      delete req.session.appliedCoupon;
+      await clearAppliedCoupon(userId);
 
       return res.json({
         success: true,
@@ -2192,7 +2197,7 @@ const verifyRetryRazorpayPayment = async (req: Request, res: Response) => {
 
 const handleRetryPaymentFailure = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
     const { razorpayOrderId, error } = req.body;
 
     if (!userId) {
@@ -2302,7 +2307,8 @@ const handleRetryPaymentFailure = async (req: Request, res: Response) => {
 
 const handleWalletPayment = async (req: Request, res: Response) => {
   try {
-    const userId = currentUserId(req);
+    const userId = requireUserId(req);
+    const heldCoupon = await getAppliedCoupon(userId);
     const { deliveryAddressId, addressIndex } = req.body;
 
     if (!userId) {
@@ -2365,12 +2371,12 @@ const handleWalletPayment = async (req: Request, res: Response) => {
     let couponDiscount = 0;
     let appliedCouponId = null;
 
-    if (req.session.appliedCoupon) {
+    if (heldCoupon) {
       try {
-        const coupon = await Coupon.findById(req.session.appliedCoupon._id);
+        const coupon = await Coupon.findById(heldCoupon.couponId);
 
         if (!coupon || !coupon.isActive) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Applied coupon is no longer valid',
@@ -2380,7 +2386,7 @@ const handleWalletPayment = async (req: Request, res: Response) => {
 
         const now = new Date();
         if (now < new Date(coupon.validFrom) || now > new Date(coupon.validTo)) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon has expired',
@@ -2389,7 +2395,7 @@ const handleWalletPayment = async (req: Request, res: Response) => {
         }
 
         if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'Coupon usage limit reached',
@@ -2402,7 +2408,7 @@ const handleWalletPayment = async (req: Request, res: Response) => {
         ).length;
 
         if (coupon.userLimit && userUsageCount >= coupon.userLimit) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: 'You have reached the coupon usage limit',
@@ -2411,7 +2417,7 @@ const handleWalletPayment = async (req: Request, res: Response) => {
         }
 
         if (coupon.minimumOrderValue && totals.total < coupon.minimumOrderValue) {
-          delete req.session.appliedCoupon;
+          await clearAppliedCoupon(userId);
           return res.status(400).json({
             success: false,
             message: `Minimum order value of ₹${coupon.minimumOrderValue} required`,
@@ -2419,13 +2425,13 @@ const handleWalletPayment = async (req: Request, res: Response) => {
           });
         }
 
-        couponDiscount = req.session.appliedCoupon.discountAmount || 0;
-        appliedCouponId = req.session.appliedCoupon._id;
+        couponDiscount = heldCoupon.discountAmount || 0;
+        appliedCouponId = heldCoupon.couponId;
         console.log(`Coupon validated: ${coupon.code} (₹${couponDiscount} off)`);
 
       } catch (couponError: any) {
         console.error('Error validating coupon:', couponError);
-        delete req.session.appliedCoupon;
+        await clearAppliedCoupon(userId);
         return res.status(400).json({
           success: false,
           message: 'Error validating coupon',
@@ -2548,7 +2554,7 @@ const handleWalletPayment = async (req: Request, res: Response) => {
       },
       couponApplied: appliedCouponId as any,
       couponDiscount: Math.round(couponDiscount),
-      couponCode: req.session.appliedCoupon?.code || null,
+      couponCode: heldCoupon?.code || null,
       paymentMethod: 'wallet',
       paymentStatus: PAYMENT_STATUS.COMPLETED,
       subtotal: totals.subtotal,
@@ -2612,7 +2618,7 @@ const handleWalletPayment = async (req: Request, res: Response) => {
       console.error('Error clearing cart:', cartError);
     }
 
-    delete req.session.appliedCoupon;
+    await clearAppliedCoupon(userId);
 
     return res.json({
       success: true,

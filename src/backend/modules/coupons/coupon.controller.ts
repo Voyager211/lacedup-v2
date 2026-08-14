@@ -3,7 +3,9 @@ import type { Types } from 'mongoose';
 import Coupon from './coupon.model';
 import Cart from '../cart/cart.model';
 import Product from '../catalog/product.model';
+import type { IAppliedCoupon } from '../cart/cart.types';
 import { requireUserId } from '../../common/utils/current-user.util';
+import { clearAppliedCoupon, getAppliedCoupon, setAppliedCoupon } from './applied-coupon.service';
 
 // helper function to calculate variant specific final price
 const calculateVariantFinalPrice = (product: any, variant: any) => {
@@ -117,7 +119,9 @@ const calculateCartTotals = async (userId: Types.ObjectId | string): Promise<Car
     }
 };
 
-function validateCouponConditions  (coupon: any, orderTotal: number, userId: Types.ObjectId | string, session: any) {
+// Takes the already-applied coupon rather than the session it used to be read
+// from, so the rule stays here and the source of the coupon does not.
+function validateCouponConditions  (coupon: any, orderTotal: number, userId: Types.ObjectId | string, alreadyApplied: IAppliedCoupon | null) {
     const currentDate = new Date();
 
     // check if coupon is expired
@@ -152,7 +156,7 @@ function validateCouponConditions  (coupon: any, orderTotal: number, userId: Typ
     }
 
     // check if user has already applied a coupon
-    if (session.appliedCoupon) {
+    if (alreadyApplied) {
         return {
             isValid: false,
             message: 'Please remove the current coupon before applying a new one'
@@ -410,7 +414,7 @@ const applyCoupon = async (req: Request, res: Response) => {
         }
 
         // validate coupon conditions
-        const validation = validateCouponConditions(coupon, actualOrderTotal, userId, req.session);
+        const validation = validateCouponConditions(coupon, actualOrderTotal, userId, await getAppliedCoupon(userId));
 
         if(!validation.isValid) {
             return res.status(400).json({
@@ -422,17 +426,17 @@ const applyCoupon = async (req: Request, res: Response) => {
         // calculate discont
         const discountCalculation = calculateDiscount(coupon, actualOrderTotal);
 
-        // store applied coupon in session
-        req.session.appliedCoupon = {
-            _id: coupon._id,
+        // Held against the cart rather than the session, so it survives a lost
+        // session and follows the shopper between devices.
+        await setAppliedCoupon(userId, {
+            couponId: coupon._id,
             code: coupon.code,
             name: coupon.name,
             discountType: coupon.discountType,
             discountValue: coupon.discountValue,
             discountAmount: discountCalculation.discountAmount,
-            appliedAt: new Date(),
             originalCartTotals: cartTotalsResult.totals
-        }
+        });
 
         const finalTotal = Math.max(0, cartTotalsResult.totals.total - discountCalculation.discountAmount);
 
@@ -482,16 +486,16 @@ const removeCoupon = async (req: Request, res: Response) => {
     try {
         const userId = requireUserId(req);
 
-        console.log('Removing applied coupon from session');
+        const heldCoupon = await getAppliedCoupon(userId);
 
-        if (!req.session.appliedCoupon) {
+        if (!heldCoupon) {
             return res.status(400).json({
                 success: false,
                 message: 'No coupon is currently applied'
             });
         }
 
-        const removedCoupon = req.session.appliedCoupon;
+        const removedCoupon = heldCoupon;
 
         const cartTotalsResult = await calculateCartTotals(userId);
 
@@ -503,7 +507,7 @@ const removeCoupon = async (req: Request, res: Response) => {
         }
 
         // remove coupon from session
-        delete req.session.appliedCoupon;
+        await clearAppliedCoupon(userId);
 
         // return order summary without coupon
         const orderSummary = {

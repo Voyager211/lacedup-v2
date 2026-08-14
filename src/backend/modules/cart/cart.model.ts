@@ -50,7 +50,31 @@ const cartSchema = new Schema<ICart>(
           default: 'none'
         }
       }
-    ]
+    ],
+
+    /**
+     * The coupon applied to this cart.
+     *
+     * Moved here from `req.session.appliedCoupon` in Phase 5. Storing it on the
+     * cart is not just a place to put it: a coupon applies to a basket, so it
+     * now survives a lost session and follows the shopper between devices,
+     * which is what a shopper would expect of something they can see in their
+     * cart. It is cleared when the cart changes materially or the order is
+     * placed - see modules/coupons/applied-coupon.service.
+     */
+    appliedCoupon: {
+      type: {
+        couponId: { type: Schema.Types.ObjectId, ref: 'Coupon', required: true },
+        code: { type: String, required: true },
+        name: { type: String },
+        discountType: { type: String },
+        discountValue: { type: Number },
+        discountAmount: { type: Number, required: true },
+        appliedAt: { type: Date, default: Date.now },
+        originalCartTotals: { type: Schema.Types.Mixed }
+      },
+      default: null
+    }
   },
   { timestamps: true }
 );
