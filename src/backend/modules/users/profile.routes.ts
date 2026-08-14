@@ -38,7 +38,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-router.post(['/profile/edit', '/api/profile/edit'], requireAuth, profileController.updateProfileData);
+router.post('/api/profile/edit', requireAuth, profileController.updateProfileData);
 
 /**
  * @swagger
@@ -62,7 +62,7 @@ router.post(['/profile/edit', '/api/profile/edit'], requireAuth, profileControll
  *       400: { description: Email invalid or already in use }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.post(['/profile/email', '/api/profile/email'], requireAuth, profileController.updateEmail);
+router.post('/api/profile/email', requireAuth, profileController.updateEmail);
 
 /**
  * @swagger
@@ -85,7 +85,7 @@ router.post(['/profile/email', '/api/profile/email'], requireAuth, profileContro
  *       400: { description: OTP incorrect or expired }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.post(['/profile/verify-email-update-otp', '/api/profile/verify-email-update-otp'], requireAuth, profileController.verifyEmailUpdateOtp);
+router.post('/api/profile/verify-email-update-otp', requireAuth, profileController.verifyEmailUpdateOtp);
 
 /**
  * @swagger
@@ -98,13 +98,13 @@ router.post(['/profile/verify-email-update-otp', '/api/profile/verify-email-upda
  *       200: { description: OTP resent }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.post(['/profile/resend-email-update-otp', '/api/profile/resend-email-update-otp'], requireAuth, profileController.resendEmailUpdateOtp);
+router.post('/api/profile/resend-email-update-otp', requireAuth, profileController.resendEmailUpdateOtp);
 
-router.post(['/profile/verify-current-email', '/api/profile/verify-current-email'], requireAuth, profileController.verifyCurrentEmail);
-router.post(['/profile/verify-email-otp', '/api/profile/verify-email-otp'], requireAuth, profileController.verifyEmailChangeOtp);
-router.post(['/profile/change-email', '/api/profile/change-email'], requireAuth, profileController.changeEmail);
+router.post('/api/profile/verify-current-email', requireAuth, profileController.verifyCurrentEmail);
+router.post('/api/profile/verify-email-otp', requireAuth, profileController.verifyEmailChangeOtp);
+router.post('/api/profile/change-email', requireAuth, profileController.changeEmail);
 
-router.post(['/profile/change-password', '/api/profile/change-password'], requireAuth, profileController.updatePassword);
+router.post('/api/profile/change-password', requireAuth, profileController.updatePassword);
 
 
 router.get('/orders', requireAuth, orderController.getUserOrders);
@@ -147,12 +147,12 @@ router.get('/orders', requireAuth, orderController.getUserOrders);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 router.post(
-  ['/profile/photo', '/api/profile/photo'],
+  '/api/profile/photo',
   requireAuth,
   upload.single('profilePhoto'),
   profileController.uploadProfilePhoto
 );
-router.delete(['/profile/photo', '/api/profile/photo'], requireAuth, profileController.deleteProfilePhoto);
+router.delete('/api/profile/photo', requireAuth, profileController.deleteProfilePhoto);
 
 /**
  * @swagger

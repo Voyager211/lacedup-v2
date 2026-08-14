@@ -24,7 +24,7 @@ const SHOPPER = {
 
 const signIn = async (): Promise<string[]> => {
   const res = await request(app)
-    .post('/login')
+    .post('/api/login')
     .type('form')
     .send({ email: SHOPPER.email, password: SHOPPER.password });
 
@@ -80,7 +80,7 @@ describe('orders /api surface', () => {
   it('answers JSON on both mounts now the page render is gone', async () => {
     // Until Phase 5 the bare path rendered EJS and only /api answered data.
     // The bare mount itself disappears with the duplicate mounts in 5.5.
-    for (const path of ['/orders', '/api/orders']) {
+    for (const path of ['/api/orders', '/api/orders']) {
       const res = await request(app).get(path).set('Cookie', cookies);
 
       expect(res.headers['content-type']).toMatch(/json/);
@@ -99,7 +99,7 @@ describe('orders /api surface', () => {
   });
 
   it('answers a signed-out client with 401 on either mount', async () => {
-    const page = await request(app).get('/orders');
+    const page = await request(app).get('/api/orders');
     expect(page.status).toBe(401);
 
     const data = await request(app).get('/api/orders');

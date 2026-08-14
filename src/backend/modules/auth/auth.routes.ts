@@ -23,9 +23,9 @@ const router = express.Router();
  * call from React 404s. Same reasoning as the other root-mounted routers,
  * which already declare 47 of their own /api endpoints.
  */
-router.post(['/signup', '/api/signup'], authLimiter, isGuest, authController.postSignup);
+router.post('/api/signup', authLimiter, isGuest, authController.postSignup);
 
-router.post(['/verify-otp', '/api/verify-otp'], otpLimiter, isGuest, authController.postOtpVerification);
+router.post('/api/verify-otp', otpLimiter, isGuest, authController.postOtpVerification);
 
 /**
  * @swagger
@@ -37,13 +37,13 @@ router.post(['/verify-otp', '/api/verify-otp'], otpLimiter, isGuest, authControl
  *       200: { description: OTP resent }
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
-router.post(['/resend-otp', '/api/resend-otp'], otpLimiter, isGuest, authController.resendOtp);
+router.post('/api/resend-otp', otpLimiter, isGuest, authController.resendOtp);
 
-router.post(['/login', '/api/login'], authLimiter, isGuest, authController.postLogin);
+router.post('/api/login', authLimiter, isGuest, authController.postLogin);
 
-router.post(['/forgot-password', '/api/forgot-password'], passwordResetLimiter, isGuest, authController.sendResetOtp);
+router.post('/api/forgot-password', passwordResetLimiter, isGuest, authController.sendResetOtp);
 
-router.post(['/reset-otp', '/api/reset-otp'], otpLimiter, isGuest, authController.verifyResetOtp);
+router.post('/api/reset-otp', otpLimiter, isGuest, authController.verifyResetOtp);
 
 /**
  * @swagger
@@ -55,9 +55,9 @@ router.post(['/reset-otp', '/api/reset-otp'], otpLimiter, isGuest, authControlle
  *       200: { description: OTP resent }
  *       429: { $ref: '#/components/responses/RateLimited' }
  */
-router.post(['/resend-reset-otp', '/api/resend-reset-otp'], otpLimiter, isGuest, authController.resendResetOtp);
+router.post('/api/resend-reset-otp', otpLimiter, isGuest, authController.resendResetOtp);
 
-router.post(['/reset-password', '/api/reset-password'], passwordResetLimiter, isGuest, authController.resetPassword);
+router.post('/api/reset-password', passwordResetLimiter, isGuest, authController.resetPassword);
 
 /**
  * @swagger
@@ -124,7 +124,7 @@ router.get('/google/callback', (req: Request, res: Response, next: NextFunction)
  *       200: { description: New access and refresh cookies issued }
  *       401: { description: Refresh token missing, expired, already used, or revoked }
  */
-router.post(['/auth/refresh', '/api/auth/refresh'], async (req: Request, res: Response) => {
+router.post('/api/auth/refresh', async (req: Request, res: Response) => {
   const presented = req.cookies?.user_rt;
 
   if (!presented) {
@@ -210,12 +210,7 @@ router.get('/api/auth/me', (req: Request, res: Response) => {
 router.post('/api/auth/logout', async (req: Request, res: Response) => {
   await endSession(res, req.cookies?.user_rt, 'user');
 
-  // The session still carries transient state - the applied coupon, OTP flows,
-  // the Razorpay basket - so it goes too.
-  req.session.destroy(() => {
-    res.clearCookie('user.sid');
-    res.json({ success: true });
-  });
+  res.json({ success: true });
 });
 
 router.get('/logout', authController.logout);

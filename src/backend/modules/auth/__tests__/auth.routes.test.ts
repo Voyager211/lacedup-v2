@@ -37,7 +37,7 @@ describe('auth routes (HTTP)', () => {
       // The EJS login view is gone. /login is a React route now, so this path
       // reaches the SPA fallback (or 404s when the frontend is not built) -
       // either way the server does not render a form.
-      const res = await request(app).get('/login');
+      const res = await request(app).get('/api/login');
 
       expect(res.text).not.toContain('<form');
     });
@@ -54,7 +54,7 @@ describe('auth routes (HTTP)', () => {
   describe('POST /login', () => {
     it('rejects a wrong password without revealing which field was wrong', async () => {
       const res = await request(app)
-        .post('/login')
+        .post('/api/login')
         .type('form')
         .send({ email: SEEDED.email, password: 'WrongPassword1!' });
 
@@ -65,7 +65,7 @@ describe('auth routes (HTTP)', () => {
 
     it('rejects an unknown email', async () => {
       const res = await request(app)
-        .post('/login')
+        .post('/api/login')
         .type('form')
         .send({ email: 'nobody@example.com', password: SEEDED.password });
 
@@ -78,7 +78,7 @@ describe('auth routes (HTTP)', () => {
       await User.updateOne({ email: SEEDED.email }, { isBlocked: true });
 
       const res = await request(app)
-        .post('/login')
+        .post('/api/login')
         .type('form')
         .send({ email: SEEDED.email, password: SEEDED.password });
 
@@ -92,7 +92,7 @@ describe('auth routes (HTTP)', () => {
     it('refuses to create a second account on an existing email', async () => {
       const before = await User.countDocuments({ email: SEEDED.email });
 
-      await request(app).post('/signup').type('form').send({
+      await request(app).post('/api/signup').type('form').send({
         name: 'Impostor',
         email: SEEDED.email,
         password: 'AnotherPass1!',
@@ -123,7 +123,7 @@ describe('auth routes (HTTP)', () => {
     it('dual-mounts the prefixed JSON routers under /api', async () => {
       // /cart requires auth, so an unauthenticated request must be rejected
       // rather than 404 - proving the route exists at both mounts.
-      const legacy = await request(app).get('/cart');
+      const legacy = await request(app).get('/api/cart');
       const prefixed = await request(app).get('/api/cart');
       expect(legacy.status).not.toBe(404);
       expect(prefixed.status).not.toBe(404);
@@ -134,7 +134,7 @@ describe('auth routes (HTTP)', () => {
       // redirected to the login page, an XHR client got a 401. There is no
       // login page to redirect to any more, and the SPA handles the redirect
       // itself, so both are now a 401 the client can act on.
-      for (const path of ['/cart', '/api/cart']) {
+      for (const path of ['/api/cart', '/api/cart']) {
         const res = await request(app).get(path);
 
         expect(res.status).toBe(401);
@@ -146,7 +146,7 @@ describe('auth routes (HTTP)', () => {
     // null check, so a request with no Accept header 500'd. The guard no
     // longer negotiates at all, but the case is cheap to keep pinned.
     it('does not error on unauthenticated cart access without an Accept header', async () => {
-      const res = await request(app).get('/cart').unset('Accept');
+      const res = await request(app).get('/api/cart').unset('Accept');
       expect(res.status).toBe(401);
     });
 

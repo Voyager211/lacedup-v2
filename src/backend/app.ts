@@ -3,10 +3,6 @@ import './config/env';
 // Package imports
 import express from 'express';
 import type { NextFunction, Request, Response, Router } from 'express';
-import mongoose from 'mongoose';
-import session from 'express-session';
-import MongoStore from 'connect-mongo';
-import flash from 'connect-flash';
 import passport from 'passport';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
@@ -60,53 +56,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.static(PUBLIC_DIR));
-app.use(flash());
-
-/**
- * Session middleware.
- *
- * Authentication no longer lives here - that moved to JWT cookies below. This
- * remains because ~90 places still keep transient, non-auth state in the
- * session: the signup and email-change OTP flows, the applied coupon, the
- * Razorpay basket held between creating a payment and verifying it, the
- * payment-failure record behind the retry page, and connect-flash messages.
- * Migrating those is Phase 5 work, once the EJS layer goes.
- *
- * The per-request construction and the admin/shopper cookie split are kept so
- * the two audiences stay separate, matching the JWT cookie pairs.
- */
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const isAdminRoute = req.path.startsWith('/admin');
-  const sessionName = isAdminRoute ? 'admin.sid' : 'user.sid';
-
-  const sessionDuration = isAdminRoute ? 60 * 60 : 20 * 60; // in seconds
-  const cookieMaxAge = sessionDuration * 1000; // in milliseconds
-
-  const sessionMiddleware = session({
-    name: sessionName,
-    secret: process.env.SESSION_SECRET || 'yourSecretKey',
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      // Two copies of the mongodb driver are installed - mongoose bundles
-      // 6.16 while package.json also declares mongodb 6.20 directly, even
-      // though nothing imports it. connect-mongo resolves the 6.20 typings, so
-      // mongoose's client does not structurally match them. Compatible at
-      // runtime; the cast papers over the version skew rather than the shape.
-      client: mongoose.connection.getClient() as unknown as Parameters<
-        typeof MongoStore.create
-      >[0]['client'],
-      ttl: sessionDuration
-    }),
-    cookie: {
-      maxAge: cookieMaxAge,
-      httpOnly: true,
-      sameSite: 'lax'
-    }
-  });
-
-  sessionMiddleware(req, res, next);
-});
 
 // Passport is still used to verify credentials on the login routes, but no
 // longer to carry the login: passport.session() is gone, and req.user is
@@ -154,10 +103,11 @@ app.use(
 // ---------------------------------------------------------------------------
 // ROUTES
 //
-// Every router below is mounted twice: once on its historic path, which the EJS
-// templates still call, and once under /api, which the React client will use.
-// The duplication is deliberate and temporary - the bare mounts are deleted in
-// Phase 5 once the EJS views are gone.
+// Everything is under /api. The bare mounts these routers also had existed for
+// the EJS templates, which posted to unprefixed paths; with those gone the
+// duplicates only widened the surface - every endpoint answered on two URLs,
+// and a guard fixed on one of them protected half of what it looked like it
+// protected.
 // ---------------------------------------------------------------------------
 const PREFIXED_ROUTES: Array<[string, Router]> = [
   ['/help', helpRoutes],
@@ -181,12 +131,11 @@ const PREFIXED_ROUTES: Array<[string, Router]> = [
 ];
 
 /**
- * Routers that declare their own full paths, so they mount at the root.
+ * Routers that declare their own full paths, including the '/api' prefix.
  *
- * These are NOT additionally mounted under /api: they already declare their
- * JSON endpoints as '/api/...' internally (47 such routes across addresses,
- * catalog, shop and checkout), so their API surface is at /api/* already.
- * Mounting them again under /api would only produce /api/api/* duplicates.
+ * They are mounted at the root because their routes already read
+ * '/api/orders', '/api/addresses' and so on internally - mounting them under
+ * '/api' as well would produce '/api/api/*'.
  */
 const ROOT_ROUTES: Router[] = [
   userAuthRoutes,
@@ -197,11 +146,10 @@ const ROOT_ROUTES: Router[] = [
   userOrderRoutes
 ];
 
-// Broad backstop across the API surface; page routes are left alone.
+// Every route below is under /api, so this now covers the whole surface.
 app.use('/api', apiLimiter);
 
 for (const [mountPath, router] of PREFIXED_ROUTES) {
-  app.use(mountPath, router);
   app.use(`/api${mountPath}`, router);
 }
 

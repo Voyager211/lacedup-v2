@@ -22,11 +22,6 @@ function handleUserLogout(req: Request, res: Response, errorMessage: string) {
 
   // For regular requests, handle session safely
   try {
-    // Set flash message BEFORE destroying session (if session exists)
-    if (req.session && typeof req.flash === 'function') {
-      req.flash('error', errorMessage);
-    }
-
     // Revoke every outstanding token for this user, then clear the cookies.
     // A blocked user must not stay signed in until their access token expires,
     // and must not be able to refresh into a new one.
@@ -40,26 +35,7 @@ function handleUserLogout(req: Request, res: Response, errorMessage: string) {
         console.error('Failed to revoke sessions for blocked user:', revokeErr);
       }
 
-      // Destroy session safely
-      if (req.session && typeof req.session.destroy === 'function') {
-        req.session.destroy((destroyErr) => {
-          if (destroyErr) {
-            console.error('Session destroy error:', destroyErr);
-          }
-          res.clearCookie('connect.sid');
-
-          // If flash message couldn't be set, redirect with URL parameter
-          if (!req.session || typeof req.flash !== 'function') {
-            return res.redirect('/login?error=' + encodeURIComponent(errorMessage));
-          }
-
-          return res.status(401).json({ success: false, message: 'Authentication required' });
-        });
-      } else {
-        // Session already destroyed or doesn't exist
-        res.clearCookie('connect.sid');
-        return res.redirect('/login?error=' + encodeURIComponent(errorMessage));
-      }
+      res.status(401).json({ success: false, message: errorMessage });
     })();
   } catch (error) {
     // Fallback for any unexpected errors

@@ -13,6 +13,7 @@ import * as razorpayService from '../payments/razorpay.provider';
 import * as walletService from '../wallet/wallet.service';
 import { requireUserId } from '../../common/utils/current-user.util';
 import { clearAppliedCoupon, getAppliedCoupon } from '../coupons/applied-coupon.service';
+import { failureByRazorpayOrder, failureByTransaction } from './payment-failure.service';
 
 import {
   ORDER_STATUS, 
@@ -1392,26 +1393,6 @@ const handlePaymentFailure = async (req: Request, res: Response) => {
       }
 
       // Store failed order info in session for retry page
-      req.session.paymentFailure = {
-        transactionId: razorpayOrderId || `TXN-${Date.now()}`,
-        reason: error?.description || error?.reason || 'Payment processing failed. Please try again.',
-        failedAt: new Date(),
-        orderId: String(order!._id),
-        orderNumber: order!.orderId,
-        orderData: {
-          items: pendingOrder.cart!,
-          deliveryAddressId: pendingOrder.deliveryAddressId!,
-          addressIndex: pendingOrder.addressIndex!,
-          subtotal: pendingOrder.totals!.subtotal,
-          totalDiscount: pendingOrder.totals!.totalDiscount,
-          shipping: pendingOrder.totals!.shipping,
-          total: pendingOrder.amount!,
-          totalItemCount: pendingOrder.totals!.totalItemCount,
-          paymentMethod: 'upi',
-          couponDiscount: pendingOrder.couponDiscount!,
-          appliedCouponId: pendingOrder.appliedCouponId!
-        }
-      };
 
       await PendingOrder.deleteOne({ razorpayOrderId });
       await clearAppliedCoupon(userId);
@@ -1569,65 +1550,10 @@ const loadOrderFailure = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    let paymentFailure = req.session.paymentFailure;
-    
-    if (!paymentFailure) {
-      console.log(' Payment failure not in session, searching database...');
-      
-      try {
-        // Try to find by orderId (MongoDB ObjectId) or orderNumber (ORD-xxxxx)
-        let failedOrder = null;
-        
-        // Check if transactionId is a valid MongoDB ObjectId
-        if (String().match(/^[0-9a-fA-F]{24}$/)) {
-          failedOrder = await Order.findOne({
-            user: userId as any,
-            paymentStatus: PAYMENT_STATUS.FAILED,
-            _id: transactionId
-          }).lean();
-        } else {
-          // Search by orderId (ORD-xxxxx) instead
-          failedOrder = await Order.findOne({
-            user: userId as any,
-            paymentStatus: PAYMENT_STATUS.FAILED,
-            orderId: transactionId
-          }).lean();
-        }
-
-        if (failedOrder) {
-          console.log(' Found failed order in database by', 
-            String().match(/^[0-9a-fA-F]{24}$/) ? 'ObjectId' : 'orderId');
-          
-          // Reconstruct paymentFailure from the order
-          paymentFailure = {
-            orderId: failedOrder._id,
-            orderNumber: failedOrder.orderId,
-            reason: 'Payment failed. Please try again.',
-            orderData: {
-              items: failedOrder.items,
-              deliveryAddressId: failedOrder.deliveryAddress?.addressId,
-              addressIndex: failedOrder.deliveryAddress?.addressIndex || 0,
-              subtotal: failedOrder.subtotal,
-              totalDiscount: failedOrder.totalDiscount,
-              shipping: failedOrder.shipping,
-              total: failedOrder.totalAmount,
-              totalItemCount: failedOrder.totalItemCount,
-              couponDiscount: failedOrder.couponDiscount || 0,
-              appliedCouponId: failedOrder.couponApplied
-            }
-          };
-          
-          // Restore it to session
-          req.session.paymentFailure = paymentFailure;
-        }
-      } catch (dbError: any) {
-        console.error('Error searching database for failed order:', dbError);
-      }
-    }
+    const paymentFailure = await failureByTransaction(userId, transactionId);
 
     if (!paymentFailure) {
-      console.log(' No payment failure found in session or database, redirecting to cart');
-      return res.redirect('/cart');
+      return res.status(404).json({ success: false, message: 'No failed payment found' });
     }
 
     // Fetch the failed order from database
@@ -1731,10 +1657,10 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    const paymentFailure = req.session.paymentFailure;
+    const paymentFailure = await failureByTransaction(userId, transactionId);
 
     if (!paymentFailure) {
-      return res.redirect('/cart');
+      return res.status(404).json({ success: false, message: 'No failed payment found' });
     }
 
     // Fetch the failed order from database
@@ -1758,7 +1684,6 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
           
           if (!product || !product.isListed || product.isDeleted) {
             //  Redirect instead of render error
-            req.session.errorMessage = 'One or more items in your order are no longer available. Please review your cart.';
             return res.redirect('/cart');
           }
 
@@ -1767,7 +1692,6 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
             const variant = product.variants.find(v => v._id!.toString() === item.variantId.toString());
             if (!variant || variant.stock === 0 || variant.stock < item.quantity) {
               //  Redirect instead of render error
-              req.session.errorMessage = `${(item.productId as any).productName} (Size: ${item.size}) is no longer available in the requested quantity.`;
               return res.redirect('/cart');
             }
           }
@@ -1854,8 +1778,9 @@ const createRazorpayOrderForRetry = async (req: Request, res: Response) => {
       });
     }
 
-    //  Use paymentFailure data instead of cart
-    const paymentFailure = req.session.paymentFailure;
+    // The client sends the transaction id it was given; the failed order is
+    // the source of truth rather than a session cache.
+    const paymentFailure = await failureByTransaction(userId, req.body.transactionId);
 
     if (!paymentFailure) {
       return res.status(400).json({
@@ -1999,7 +1924,7 @@ const verifyRetryRazorpayPayment = async (req: Request, res: Response) => {
 
     console.log(' Signature verified');
 
-    const paymentFailure = req.session.paymentFailure;
+    const paymentFailure = await failureByRazorpayOrder(userId, razorpayOrderId);
 
     if (!paymentFailure || !paymentFailure.orderId) {
       return res.status(400).json({
@@ -2093,7 +2018,6 @@ const verifyRetryRazorpayPayment = async (req: Request, res: Response) => {
         console.error('Error clearing cart:', cartError);
       }
 
-      delete req.session.paymentFailure;
       await clearAppliedCoupon(userId);
 
       return res.json({
@@ -2159,8 +2083,8 @@ const handleRetryPaymentFailure = async (req: Request, res: Response) => {
       });
     }
 
-    const paymentFailure = req.session.paymentFailure;
-    
+    const paymentFailure = await failureByRazorpayOrder(userId, razorpayOrderId);
+
     if (!paymentFailure) {
       return res.status(400).json({
         success: false,
@@ -2218,11 +2142,6 @@ const handleRetryPaymentFailure = async (req: Request, res: Response) => {
       console.log('Stock NOT deducted - Order failed');
       console.log('Coupon usage NOT updated - Order failed');
 
-      req.session.paymentFailure = {
-        ...paymentFailure,
-        transactionId: razorpayOrderId || paymentFailure.transactionId,
-        failedAt: new Date()
-      };
 
       return res.json({
         success: true,

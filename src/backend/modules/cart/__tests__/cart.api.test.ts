@@ -27,7 +27,7 @@ const SHOPPER = {
 
 const signIn = async (): Promise<string[]> => {
   const res = await request(app)
-    .post('/login')
+    .post('/api/login')
     .type('form')
     .send({ email: SHOPPER.email, password: SHOPPER.password });
 
@@ -63,7 +63,7 @@ describe('cart API', () => {
       // Until Phase 5 the bare path rendered EJS and only /api answered data.
       // Both are the same JSON endpoint now; the bare mount disappears with
       // the duplicate mounts in 5.5.
-      for (const path of ['/cart', '/api/cart']) {
+      for (const path of ['/api/cart', '/api/cart']) {
         const res = await request(app).get(path).set('Cookie', cookies);
 
         expect(res.headers['content-type']).toMatch(/json/);
@@ -72,7 +72,7 @@ describe('cart API', () => {
     });
 
     it('answers a signed-out client with 401 rather than a redirect', async () => {
-      const page = await request(app).get('/cart');
+      const page = await request(app).get('/api/cart');
       expect(page.status).toBe(401);
 
       const data = await request(app).get('/api/cart');

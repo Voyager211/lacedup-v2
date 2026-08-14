@@ -69,7 +69,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
  *                         totalOrders: { type: integer }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.get(['/orders/api/filtered', '/api/orders/filtered'], requireAuth, orderController.getUserOrdersPaginated);
+router.get('/api/orders/filtered', requireAuth, orderController.getUserOrdersPaginated);
 
 /**
  * @swagger
@@ -95,7 +95,7 @@ router.get(['/orders/api/filtered', '/api/orders/filtered'], requireAuth, orderC
  *                   items: { $ref: '#/components/schemas/Order' }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.get(['/orders/api/search', '/api/orders/search'], requireAuth, orderController.searchOrders);
+router.get('/api/orders/search', requireAuth, orderController.searchOrders);
 
 /**
  * @swagger
@@ -108,7 +108,7 @@ router.get(['/orders/api/search', '/api/orders/search'], requireAuth, orderContr
  *       200: { description: Orders page markup, content: { text/html: { schema: { type: string } } } }
  *       302: { description: Redirected to /login when not signed in }
  */
-router.get(['/orders', '/api/orders'], requireAuth, orderController.getUserOrders);
+router.get('/api/orders', requireAuth, orderController.getUserOrders);
 
 /**
  * @swagger
@@ -157,8 +157,8 @@ router.get(['/orders', '/api/orders'], requireAuth, orderController.getUserOrder
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get(['/orders/:orderId', '/api/orders/:orderId'], requireAuth, orderController.getOrderDetails);
-router.patch(['/orders/:orderId', '/api/orders/:orderId'], requireAuth, orderController.cancelOrder);
+router.get('/api/orders/:orderId', requireAuth, orderController.getOrderDetails);
+router.patch('/api/orders/:orderId', requireAuth, orderController.cancelOrder);
 
 /**
  * @swagger
@@ -195,7 +195,7 @@ router.patch(['/orders/:orderId', '/api/orders/:orderId'], requireAuth, orderCon
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.patch(['/orders/:orderId/items/:itemId', '/api/orders/:orderId/items/:itemId'], requireAuth, orderController.cancelItem);
+router.patch('/api/orders/:orderId/items/:itemId', requireAuth, orderController.cancelItem);
 
 /**
  * @swagger
@@ -224,7 +224,7 @@ router.patch(['/orders/:orderId/items/:itemId', '/api/orders/:orderId/items/:ite
  *       400: { description: Order is not in a returnable state }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.post(['/orders/:orderId/returns', '/api/orders/:orderId/returns'], requireAuth, orderController.requestOrderReturn);
+router.post('/api/orders/:orderId/returns', requireAuth, orderController.requestOrderReturn);
 
 /**
  * @swagger
@@ -256,7 +256,7 @@ router.post(['/orders/:orderId/returns', '/api/orders/:orderId/returns'], requir
  *       400: { description: Item is not in a returnable state }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.post(['/orders/:orderId/items/:itemId/returns', '/api/orders/:orderId/items/:itemId/returns'], requireAuth, orderController.requestItemReturn);
+router.post('/api/orders/:orderId/items/:itemId/returns', requireAuth, orderController.requestItemReturn);
 
 /**
  * @swagger
@@ -279,6 +279,6 @@ router.post(['/orders/:orderId/items/:itemId/returns', '/api/orders/:orderId/ite
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get(['/orders/:orderId/invoice', '/api/orders/:orderId/invoice'], requireAuth, orderController.downloadInvoice);
+router.get('/api/orders/:orderId/invoice', requireAuth, orderController.downloadInvoice);
 
 export = router;

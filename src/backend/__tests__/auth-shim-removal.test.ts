@@ -51,7 +51,7 @@ describe('auth without the session mirror', () => {
   });
 
   it('no longer writes the session mirror on a signed-in request', async () => {
-    const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+    const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
 
     // The mirror lived in the session cookie's store. If it were still being
     // written, logging in would establish a session cookie for the shopper
@@ -63,7 +63,7 @@ describe('auth without the session mirror', () => {
   });
 
   it('resolves the shopper from the token alone', async () => {
-    const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+    const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
 
     // A route whose controller reads currentUserId(req) rather than req.user
     // directly - proving the helper resolves without the session.
@@ -73,7 +73,7 @@ describe('auth without the session mirror', () => {
   });
 
   it('lets an admin token through the isAdmin guard', async () => {
-    const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+    const cookies = await signIn('/api/admin/login', ADMIN.email, ADMIN.password);
 
     const res = await request(app).get('/api/admin/users/api').set('Cookie', cookies);
 
@@ -84,7 +84,7 @@ describe('auth without the session mirror', () => {
     // The important one. jwt-auth picks the cookie pair by path, so on /admin
     // it reads admin_at - a shopper's user_at is never consulted and req.user
     // stays unset, which is what isAdmin now depends on.
-    const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+    const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
 
     const res = await request(app).get('/api/admin/users/api').set('Cookie', cookies);
 
@@ -92,7 +92,7 @@ describe('auth without the session mirror', () => {
   });
 
   it('refuses an admin token at an admin route once the user stops being an admin', async () => {
-    const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+    const cookies = await signIn('/api/admin/login', ADMIN.email, ADMIN.password);
 
     // Demoted after the token was issued. The guard reads the freshly-loaded
     // user, not the token's claims, so this takes effect immediately rather

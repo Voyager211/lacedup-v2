@@ -34,7 +34,13 @@ describe.skipIf(!built)('SPA fallback', () => {
     await db.disconnect();
   });
 
-  it.each(['/account/addresses', '/checkout/success', '/some/deep/react/route'])(
+  it.each([
+    '/account/addresses',
+    '/some/deep/react/route',
+    // Both were claimed by a bare router mount until 5.5 removed it.
+    '/orders/ORD000123',
+    '/admin/products/abc'
+  ])(
     'returns the app shell for the deep link %s',
     async (route) => {
       const res = await request(app).get(route);
@@ -44,18 +50,6 @@ describe.skipIf(!built)('SPA fallback', () => {
     }
   );
 
-  it.each(['/orders/ORD000123', '/admin/products/abc'])(
-    'answers %s with JSON rather than redirecting to a page that no longer exists',
-    async (route) => {
-      // These paths are still claimed by a router, so they do not reach the
-      // fallback - but signed out they now answer 401/403 JSON instead of a
-      // 302 to an EJS login page. The SPA decides where to send the visitor.
-      const res = await request(app).get(route);
-
-      expect([401, 403]).toContain(res.status);
-      expect(res.headers['content-type']).toMatch(/json/);
-    }
-  );
 
   it.each([
     '/api/definitely-not-a-route',

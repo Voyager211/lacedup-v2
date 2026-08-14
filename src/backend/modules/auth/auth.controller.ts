@@ -103,19 +103,11 @@ const postLogin = (req: Request, res: Response, next: NextFunction) => {
 
 const logout = async (req: Request, res: Response) => {
   // Revoke the refresh token server-side before clearing cookies, so a captured
-  // token cannot be replayed after logout.
+  // token cannot be replayed after logout. There is no session left to destroy:
+  // everything it used to carry now lives in its own collection.
   await endSession(res, req.cookies?.user_rt, 'user');
 
-  // The session still carries transient state (cart coupon, OTP flows), so it
-  // is destroyed too.
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Error destroying session:', err);
-      return res.redirect('/home');
-    }
-    res.clearCookie('connect.sid');
-    return res.redirect('/');
-  });
+  return res.json({ success: true });
 };
 
 

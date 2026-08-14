@@ -48,7 +48,7 @@ describe('JWT auth flow (HTTP)', () => {
   });
 
   const login = () =>
-    request(app).post('/login').type('form').send({
+    request(app).post('/api/login').type('form').send({
       email: SEEDED.email,
       password: SEEDED.password
     });
@@ -84,7 +84,7 @@ describe('JWT auth flow (HTTP)', () => {
 
     it('issues no cookies on a failed login', async () => {
       const res = await request(app)
-        .post('/login')
+        .post('/api/login')
         .type('form')
         .send({ email: SEEDED.email, password: 'WrongPassword1!' });
 
@@ -106,12 +106,12 @@ describe('JWT auth flow (HTTP)', () => {
     it('reaches a protected route with the access cookie', async () => {
       const at = cookieFrom(await login(), 'user_at')!;
 
-      const res = await request(app).get('/cart').set('Cookie', at);
+      const res = await request(app).get('/api/cart').set('Cookie', at);
       expect(res.status).toBe(200);
     });
 
     it('is refused without any cookie', async () => {
-      const res = await request(app).get('/cart').set('Accept', 'application/json');
+      const res = await request(app).get('/api/cart').set('Accept', 'application/json');
       expect(res.status).toBe(401);
     });
 
@@ -124,7 +124,7 @@ describe('JWT auth flow (HTTP)', () => {
       // 403 rather than the old redirect to /admin/login: the admin panel is a
       // React route now and decides for itself where to send the visitor. The
       // point of the test is unchanged - a shopper token must not pass.
-      const res = await request(app).get('/admin/dashboard').set('Cookie', forged);
+      const res = await request(app).get('/api/admin/dashboard').set('Cookie', forged);
       expect(res.status).toBe(403);
     });
   });
@@ -133,7 +133,7 @@ describe('JWT auth flow (HTTP)', () => {
     it('rotates the pair and revokes the presented token', async () => {
       const rt = cookieFrom(await login(), 'user_rt')!;
 
-      const res = await request(app).post('/auth/refresh').set('Cookie', rt);
+      const res = await request(app).post('/api/auth/refresh').set('Cookie', rt);
       expect(res.status).toBe(200);
       expect(cookieFrom(res, 'user_at')).toBeDefined();
       expect(cookieFrom(res, 'user_rt')).toBeDefined();
@@ -149,14 +149,14 @@ describe('JWT auth flow (HTTP)', () => {
     it('refuses a refresh token that has already been used', async () => {
       const rt = cookieFrom(await login(), 'user_rt')!;
 
-      await request(app).post('/auth/refresh').set('Cookie', rt);
-      const replay = await request(app).post('/auth/refresh').set('Cookie', rt);
+      await request(app).post('/api/auth/refresh').set('Cookie', rt);
+      const replay = await request(app).post('/api/auth/refresh').set('Cookie', rt);
 
       expect(replay.status).toBe(401);
     });
 
     it('refuses when no refresh cookie is sent', async () => {
-      const res = await request(app).post('/auth/refresh');
+      const res = await request(app).post('/api/auth/refresh');
       expect(res.status).toBe(401);
     });
 
@@ -164,7 +164,7 @@ describe('JWT auth flow (HTTP)', () => {
       const at = cookieFrom(await login(), 'user_at')!;
       const asRefresh = at.replace('user_at=', 'user_rt=');
 
-      const res = await request(app).post('/auth/refresh').set('Cookie', asRefresh);
+      const res = await request(app).post('/api/auth/refresh').set('Cookie', asRefresh);
       expect(res.status).toBe(401);
     });
   });
@@ -174,7 +174,7 @@ describe('JWT auth flow (HTTP)', () => {
       const res = await login();
       const cookies = [cookieFrom(res, 'user_at')!, cookieFrom(res, 'user_rt')!].join('; ');
 
-      await request(app).get('/logout').set('Cookie', cookies);
+      await request(app).post('/api/auth/logout').set('Cookie', cookies);
 
       const stored = await RefreshToken.findOne({});
       expect(stored!.revokedAt).not.toBeNull();
@@ -184,9 +184,11 @@ describe('JWT auth flow (HTTP)', () => {
       const res = await login();
       const rt = cookieFrom(res, 'user_rt')!;
 
-      await request(app).get('/logout').set('Cookie', [cookieFrom(res, 'user_at')!, rt].join('; '));
+      await request(app)
+        .post('/api/auth/logout')
+        .set('Cookie', [cookieFrom(res, 'user_at')!, rt].join('; '));
 
-      const refresh = await request(app).post('/auth/refresh').set('Cookie', rt);
+      const refresh = await request(app).post('/api/auth/refresh').set('Cookie', rt);
       expect(refresh.status).toBe(401);
     });
   });
@@ -197,13 +199,13 @@ describe('JWT auth flow (HTTP)', () => {
     it('stops accepting a token once the user is blocked', async () => {
       const at = cookieFrom(await login(), 'user_at')!;
 
-      const before = await request(app).get('/cart').set('Cookie', at);
+      const before = await request(app).get('/api/cart').set('Cookie', at);
       expect(before.status).toBe(200);
 
       await User.updateOne({ email: SEEDED.email }, { isBlocked: true });
 
       const after = await request(app)
-        .get('/cart')
+        .get('/api/cart')
         .set('Cookie', at)
         .set('Accept', 'application/json');
       expect(after.status).toBe(401);

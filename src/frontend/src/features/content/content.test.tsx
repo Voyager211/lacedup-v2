@@ -120,7 +120,7 @@ describe('HelpPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /send message/i }));
 
     expect(await screen.findByText('Message sent.')).toBeInTheDocument();
-    expect(JSON.parse(mock.history.post[0].data)).toMatchObject({
+    expect(JSON.parse(mock.history.post[0]!.data)).toMatchObject({
       name: 'Alice Example',
       email: 'alice@example.com',
       subject: 'Sizing',

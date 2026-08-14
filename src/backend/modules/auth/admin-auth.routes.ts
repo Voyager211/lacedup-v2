@@ -82,10 +82,7 @@ router.get('/auth/me', (req: Request, res: Response) => {
 router.post('/auth/logout', async (req: Request, res: Response) => {
   await endSession(res, req.cookies?.admin_rt, 'admin');
 
-  req.session.destroy(() => {
-    res.clearCookie('admin.sid');
-    res.json({ success: true });
-  });
+  res.json({ success: true });
 });
 
 /**

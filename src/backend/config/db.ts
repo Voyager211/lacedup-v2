@@ -4,8 +4,7 @@ import './env';
 /**
  * Opens the MongoDB connection.
  *
- * The connection also backs the express-session store, so a failure here is
- * fatal rather than degraded - hence the process.exit.
+ * A failure here is fatal rather than degraded - hence the process.exit.
  */
 const connectDB = async (): Promise<void> => {
   try {

@@ -819,28 +819,10 @@ const logout = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    // Destroy session and clear cookies
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Session destruction error", err);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to logout, Please try again",
-        });
-      }
-
-      // Clear all session-related cookies
-      res.clearCookie("connect.sid");
-      
-      // Also clear any other potential session cookies
-      if (req.cookies) {
-        Object.keys(req.cookies).forEach(cookieName => {
-          res.clearCookie(cookieName);
-        });
-      }
-
-      return res.redirect("/login");
-    });
+    // There is no session to destroy any more, and the auth cookies are
+    // cleared by endSession on the auth routes - this handler predates those
+    // and only ever needed to report success.
+    return res.json({ success: true });
 
   } catch (error: any) {
     console.error("Logout error", error);

@@ -10,12 +10,7 @@ const postLogin = (req: Request, res: Response, next: NextFunction) => {
 
         if (!validationResult.isValid) {
             // Store form data to preserve user input
-            req.flash('formData', {
-                email: req.body.email ? req.body.email.trim() : '',
-                remember: req.body.remember || false
-            } as unknown as string);
-            req.flash('error', validationResult.message ?? '');
-            return res.redirect('/admin/login');
+            return res.status(400).json({ success: false, message: validationResult.message });
         }
 
         // Trim and sanitize input before authentication
@@ -32,19 +27,17 @@ const postLogin = (req: Request, res: Response, next: NextFunction) => {
                 }
 
                 if (!user) {
-                    req.flash('error', info?.message || 'Invalid credentials');
-                    return res.redirect('/admin/login');
+                    return res.status(401).json({ success: false, message: info?.message || 'Invalid credentials' });
                 }
 
                 // A valid shopper login must not become an admin session.
                 if (user.role !== 'admin') {
-                    req.flash('error', 'Not authorized as admin');
-                    return res.redirect('/admin/login');
+                    return res.status(403).json({ success: false, message: 'Not authorized as admin' });
                 }
 
                 await issueSession(res, user, 'admin');
 
-                return res.redirect('/admin/dashboard');
+                return res.json({ success: true });
             } catch (innerErr: any) {
                 console.error('Error during login post-auth callback:', innerErr);
                 return res.status(500).send('Internal Server Error');
@@ -64,14 +57,7 @@ const logout = async (req: Request, res: Response) => {
         // Revoke the admin refresh token server-side, then clear both cookies.
         await endSession(res, req.cookies?.admin_rt, 'admin');
 
-        req.session.destroy((destroyErr) => {
-            if (destroyErr) {
-                console.error('Session destroy error:', destroyErr);
-                return res.status(500).send('Session Error');
-            }
-
-            res.redirect('/admin/login');
-        });
+        return res.json({ success: true });
     } catch (error: any) {
         console.error('Unexpected error in logout:', error);
         res.status(500).send('Internal Server Error');

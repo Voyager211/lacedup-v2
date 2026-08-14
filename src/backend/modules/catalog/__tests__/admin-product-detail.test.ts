@@ -79,7 +79,7 @@ describe('admin product detail as JSON', () => {
     });
 
     productId = String(product._id);
-    cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+    cookies = await signIn('/api/admin/login', ADMIN.email, ADMIN.password);
   });
 
   it('is routed under /api at all', async () => {
@@ -129,7 +129,7 @@ describe('admin product detail as JSON', () => {
   });
 
   it('is not readable with a shopper session', async () => {
-    const shopper = await signIn('/login', SHOPPER.email, SHOPPER.password);
+    const shopper = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
 
     const res = await request(app).get(`/api/admin/products/${productId}`).set('Cookie', shopper);
 
@@ -137,7 +137,7 @@ describe('admin product detail as JSON', () => {
   });
 
   it('answers JSON on the bare admin path too, now the EJS page is gone', async () => {
-    const res = await request(app).get(`/admin/products/${productId}`).set('Cookie', cookies);
+    const res = await request(app).get(`/api/admin/products/${productId}`).set('Cookie', cookies);
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/json/);

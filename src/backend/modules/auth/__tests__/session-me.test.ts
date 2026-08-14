@@ -56,7 +56,7 @@ describe('session introspection', () => {
     });
 
     it('returns the signed-in shopper', async () => {
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
       const res = await request(app).get('/api/auth/me').set('Cookie', cookies);
 
       expect(res.status).toBe(200);
@@ -69,7 +69,7 @@ describe('session introspection', () => {
     });
 
     it('never sends the password or OTP fields', async () => {
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
       const res = await request(app).get('/api/auth/me').set('Cookie', cookies);
 
       for (const field of ['password', 'otpHash', 'otpExpiresAt', 'googleId', 'facebookId']) {
@@ -77,15 +77,15 @@ describe('session introspection', () => {
       }
     });
 
-    it('is not served on the bare path - the SPA is the only caller', async () => {
-      // Signed in, so a working endpoint here would be unmistakable.
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+    it('is not served on the bare path - /api is the only mount', async () => {
+      // Signed in, so a working endpoint here would be unmistakable. Since 5.5
+      // removed the duplicate bare mounts this path reaches the SPA fallback
+      // instead of the endpoint, so the assertion is that it does not answer
+      // as the endpoint rather than that it is absent from the routing table.
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
 
       const res = await request(app).get('/auth/me').set('Cookie', cookies);
 
-      // Since Phase 5 the bare path falls through to the React shell rather
-      // than 404ing, so the assertion is that it does not answer as the
-      // endpoint - not that it is absent from the routing table.
       expect(res.body?.user).toBeUndefined();
     });
   });
@@ -93,11 +93,11 @@ describe('session introspection', () => {
   /**
    * The SPA sends everything through an /api base URL.
    *
-   * This router is root-mounted and deliberately NOT dual-mounted in app.ts,
-   * so its routes only ever existed on their bare paths - the EJS forms post
-   * there. Every one of these was a 404 under /api until they were registered
-   * on both, which meant the React auth pages, and the refresh interceptor,
-   * could not reach the server at all.
+   * This router is root-mounted and declares its own '/api/...' paths. They
+   * only ever existed on their bare paths at first, so every one was a 404
+   * under /api - which meant the React auth pages, and the refresh
+   * interceptor, could not reach the server at all. Phase 5.5 removed the bare
+   * variants, leaving exactly one URL per endpoint.
    *
    * Mocked HTTP in the frontend tests cannot catch that: the mock answers
    * whatever path it is given. Only asserting against the real router does.
@@ -128,9 +128,9 @@ describe('session introspection', () => {
       expect(res.text ?? '').toMatch(/Cannot POST/);
     });
 
-    it('keeps the bare paths working for the EJS forms', async () => {
+    it('logs in over the /api path', async () => {
       const res = await request(app)
-        .post('/login')
+        .post('/api/login')
         .type('form')
         .send({ email: SHOPPER.email, password: SHOPPER.password });
 
@@ -151,7 +151,7 @@ describe('session introspection', () => {
 
   describe('POST /api/auth/logout', () => {
     it('answers with JSON, not a redirect an XHR client would discard', async () => {
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
       const res = await request(app).post('/api/auth/logout').set('Cookie', cookies);
 
       expect(res.status).toBe(200);
@@ -159,7 +159,7 @@ describe('session introspection', () => {
     });
 
     it('clears both cookies, so the browser stops sending them', async () => {
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
       const res = await request(app).post('/api/auth/logout').set('Cookie', cookies);
 
       const cleared = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
@@ -177,7 +177,7 @@ describe('session introspection', () => {
      * refresh token is the thing that gets revoked.
      */
     it('cannot invalidate an access token that was already issued', async () => {
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
 
       await request(app).post('/api/auth/logout').set('Cookie', cookies);
 
@@ -186,16 +186,16 @@ describe('session introspection', () => {
       expect(replayed.status).toBe(200);
 
       // But the refresh token is dead, so the session cannot be extended.
-      const refresh = await request(app).post('/auth/refresh').set('Cookie', cookies);
+      const refresh = await request(app).post('/api/auth/refresh').set('Cookie', cookies);
       expect(refresh.status).toBe(401);
     });
 
     it('revokes the refresh token, so it cannot be replayed', async () => {
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
 
       await request(app).post('/api/auth/logout').set('Cookie', cookies);
 
-      const replay = await request(app).post('/auth/refresh').set('Cookie', cookies);
+      const replay = await request(app).post('/api/auth/refresh').set('Cookie', cookies);
       expect(replay.status).toBe(401);
     });
 
@@ -207,7 +207,7 @@ describe('session introspection', () => {
 
   describe('POST /api/admin/auth/logout', () => {
     it('ends the admin session and revokes its refresh token', async () => {
-      const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+      const cookies = await signIn('/api/admin/login', ADMIN.email, ADMIN.password);
 
       const res = await request(app).post('/api/admin/auth/logout').set('Cookie', cookies);
       expect(res.status).toBe(200);
@@ -216,7 +216,7 @@ describe('session introspection', () => {
       expect(cleared.some((c) => /^admin_at=;/.test(c))).toBe(true);
       expect(cleared.some((c) => /^admin_rt=;/.test(c))).toBe(true);
 
-      const refresh = await request(app).post('/admin/auth/refresh').set('Cookie', cookies);
+      const refresh = await request(app).post('/api/admin/auth/refresh').set('Cookie', cookies);
       expect(refresh.status).toBe(401);
     });
   });
@@ -228,7 +228,7 @@ describe('session introspection', () => {
     });
 
     it('returns the signed-in admin', async () => {
-      const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+      const cookies = await signIn('/api/admin/login', ADMIN.email, ADMIN.password);
       const res = await request(app).get('/api/admin/auth/me').set('Cookie', cookies);
 
       expect(res.status).toBe(200);
@@ -238,18 +238,19 @@ describe('session introspection', () => {
     it('refuses a shopper session', async () => {
       // The two audiences are independent. A valid shopper cookie reaching an
       // admin route is not an admin, and must not be reported as signed in.
-      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+      const cookies = await signIn('/api/login', SHOPPER.email, SHOPPER.password);
       const res = await request(app).get('/api/admin/auth/me').set('Cookie', cookies);
 
       expect(res.status).toBe(401);
     });
 
-    it('is also reachable on its historic mount', async () => {
-      // The admin router is dual-mounted, unlike the shopper auth router.
-      const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
+    it('is no longer reachable on its historic bare mount', async () => {
+      // The admin router used to be mounted twice. 5.5 removed the bare copy,
+      // so every endpoint now answers on exactly one URL.
+      const cookies = await signIn('/api/admin/login', ADMIN.email, ADMIN.password);
       const res = await request(app).get('/admin/auth/me').set('Cookie', cookies);
 
-      expect(res.status).toBe(200);
+      expect(res.body?.user).toBeUndefined();
     });
   });
 });
