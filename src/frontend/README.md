@@ -30,10 +30,10 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–8 are complete** — the scaffold, the primitives, the shells, auth, browse,
-cart, wishlist, checkout, orders and the account pages. Every route resolves; unbuilt admin
-pages render a placeholder naming the step that replaces them. When nothing renders a
-placeholder, Phase 4 is done.
+**Steps 0–9 are complete** — the scaffold, the primitives, the shells, auth, browse,
+cart, wishlist, checkout, orders, the account pages and the admin catalog. Every route
+resolves; unbuilt pages render a placeholder naming the step that replaces them. When
+nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
 tree-shaken out of the production bundle).
@@ -124,8 +124,21 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | `<ReferralsPage>` | code, invite link, referred people, rewards |
 | `<AccountNav>` | replaces `profile-sidebar` + `profile-card` |
 
-**Next: step 9, admin catalog** — products, categories, brands and coupons through one
-`<ResourceListPage>`.
+### Step 9 — admin catalog
+
+| Built | Notes |
+|---|---|
+| `<AdminLoginPage>` | admin audience, so it sets the admin cookie pair |
+| `<ResourceListPage>` | one list page, configured four times |
+| `<ResourceFormDialog>` | one create/edit dialog, described by a field list |
+| `<FilterBar>` | deferred from step 1 until it had consumers |
+| Categories, Brands, Coupons, Products lists | |
+
+The product add/edit form is still a placeholder — it needs `<ImageUploader>` for the
+3–6 image pipeline, which lands with it.
+
+**Next: step 10, admin orders, returns and users** — includes the 2,320-line order-details
+page, the largest in the app.
 
 ### Notes on what these steps changed
 
@@ -433,7 +446,7 @@ resist the urge to start on pages before they're done.
 | 6 | ~~**Checkout**~~ | ✅ done — PayPal dropped, payment state moved server-side |
 | 7 | ~~**Orders & returns**~~ | ✅ done |
 | 8 | ~~**Profile, addresses, wallet, referrals**~~ | ✅ done — the `/coupons` page is still an open decision |
-| 9 | **Admin catalog** — products, categories, brands, coupons | four pages, one `<ResourceListPage>` |
+| 9 | ~~**Admin catalog**~~ | ✅ done — the product add/edit form is still to come |
 | 10 | **Admin orders, returns, users** | `admin/order-details` is the largest page in the app |
 | 11 | **Admin dashboard & sales report** | last — the sales report needs a new backend endpoint |
 
@@ -522,7 +535,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 154 tests. Frontend: 318.** Both suites pass and both typecheck clean under
+**Backend: 154 tests. Frontend: 336.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 

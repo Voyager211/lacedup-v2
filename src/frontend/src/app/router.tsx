@@ -28,6 +28,10 @@ import ChangePasswordPage from '@/features/account/ChangePasswordPage';
 import WalletPage from '@/features/account/WalletPage';
 import ReferralsPage from '@/features/account/ReferralsPage';
 import AddressBookPage from '@/features/addresses/AddressBookPage';
+import AdminLoginPage from '@/features/admin/AdminLoginPage';
+import ProductsPage from '@/features/admin/ProductsPage';
+import CouponsPage from '@/features/admin/CouponsPage';
+import { BrandsPage, CategoriesPage } from '@/features/admin/CategoriesPage';
 
 /**
  * The route tree.
@@ -119,20 +123,20 @@ export const router = createBrowserRouter([
         children: [
           {
             element: <RequireGuest audience="admin" />,
-            children: [{ path: 'login', element: <Placeholder title="Admin sign in" step={3} /> }]
+            children: [{ path: 'login', element: <AdminLoginPage /> }]
           },
           {
             element: <RequireAuth audience="admin" />,
             children: [
               { index: true, element: <Navigate to="/admin/dashboard" replace /> },
               { path: 'dashboard', element: <Placeholder title="Dashboard" step={11} note="Eight API endpoints, three charts. Chart.js becomes Recharts." /> },
-              { path: 'products', element: <Placeholder title="Products" step={9} /> },
-              { path: 'products/add', element: <Placeholder title="Add product" step={9} note="Shares a form with edit — ~2,400 near-duplicate lines today." /> },
+              { path: 'products', element: <ProductsPage /> },
+              { path: 'products/add', element: <Placeholder title="Add product" step={9} note="Variants plus a 3–6 image upload. Needs <ImageUploader>." /> },
               { path: 'products/:id', element: <Placeholder title="Product detail" step={9} /> },
-              { path: 'products/:id/edit', element: <Placeholder title="Edit product" step={9} /> },
-              { path: 'categories', element: <Placeholder title="Categories" step={9} /> },
-              { path: 'brands', element: <Placeholder title="Brands" step={9} /> },
-              { path: 'coupons', element: <Placeholder title="Coupons" step={9} /> },
+              { path: 'products/:id/edit', element: <Placeholder title="Edit product" step={9} note="Shares its form with add." /> },
+              { path: 'categories', element: <CategoriesPage /> },
+              { path: 'brands', element: <BrandsPage /> },
+              { path: 'coupons', element: <CouponsPage /> },
               { path: 'orders', element: <Placeholder title="Orders" step={10} /> },
               { path: 'orders/:orderId', element: <Placeholder title="Order details" step={10} note="The largest page in the app — 2,320 lines, 23 SweetAlert calls." /> },
               { path: 'returns', element: <Placeholder title="Returns" step={10} note="The only page using filters-bar, the model for <FilterBar>." /> },
