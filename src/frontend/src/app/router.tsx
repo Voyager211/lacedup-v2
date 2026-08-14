@@ -1,6 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequireGuest } from './guards';
-import Placeholder from './Placeholder';
 import NotFound from './NotFound';
 import RootError from './RootError';
 import Gallery from './Gallery';
@@ -31,6 +30,8 @@ import AddressBookPage from '@/features/addresses/AddressBookPage';
 import AdminLoginPage from '@/features/admin/AdminLoginPage';
 import ProductsPage from '@/features/admin/ProductsPage';
 import ProductFormPage from '@/features/admin/ProductFormPage';
+import AboutPage from '@/features/content/AboutPage';
+import HelpPage from '@/features/content/HelpPage';
 import AdminProductDetailPage from '@/features/admin/AdminProductDetailPage';
 import AdminOrdersPage from '@/features/admin/AdminOrdersPage';
 import AdminOrderDetailsPage from '@/features/admin/AdminOrderDetailsPage';
@@ -86,8 +87,8 @@ export const router = createBrowserRouter([
           { path: 'home', element: <Navigate to="/" replace /> },
           { path: 'shop', element: <ShopPage /> },
           { path: 'product/:slug', element: <ProductDetailsPage /> },
-          { path: 'about', element: <Placeholder title="About" step={4} note="Static. 759 lines, no behaviour." /> },
-          { path: 'help', element: <Placeholder title="Help" step={4} note="FAQ accordion plus POST /help/contact." /> },
+          { path: 'about', element: <AboutPage /> },
+          { path: 'help', element: <HelpPage /> },
 
           /* Requires a shopper session */
           {
