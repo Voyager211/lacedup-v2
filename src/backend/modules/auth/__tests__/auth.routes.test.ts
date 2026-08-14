@@ -156,10 +156,23 @@ describe('auth routes (HTTP)', () => {
       expect(res.body).toMatchObject({ success: false, code: 'AUTHENTICATION_REQUIRED' });
     });
 
-    it('returns 404 for an unknown path rather than crashing', async () => {
+    it('does not crash on an unknown path', async () => {
+      // Since Phase 5 an unknown *page* path is answered with the React shell
+      // rather than a 404 - it is a client-side route the server knows nothing
+      // about, and React Router renders its own not-found. So the assertion is
+      // that the server answers sanely, not that it 404s.
       const res = await request(app).get('/definitely-not-a-real-route');
-      expect(res.status).toBeGreaterThanOrEqual(400);
+
       expect(res.status).toBeLessThan(500);
+    });
+
+    it('still 404s an unknown API path instead of returning the shell', async () => {
+      // The fallback deliberately excludes /api. Answering a mistyped endpoint
+      // with 200 and a page of HTML would make a broken fetch look like a
+      // JSON parsing bug.
+      const res = await request(app).get('/api/definitely-not-a-real-route');
+
+      expect(res.status).toBe(404);
     });
   });
 });

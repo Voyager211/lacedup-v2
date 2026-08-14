@@ -1,10 +1,11 @@
 import type { Request, Response } from 'express';
 import Address from './address.model';
 import User from '../users/user.model';
+import { currentUserId } from '../../common/utils/current-user.util';
 
 const addAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.status(401).json({
@@ -127,7 +128,7 @@ const addAddress = async (req: Request, res: Response) => {
 
 const updateAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -255,7 +256,7 @@ const updateAddress = async (req: Request, res: Response) => {
 
 const getAddresses = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.status(401).json({
@@ -282,7 +283,7 @@ const getAddresses = async (req: Request, res: Response) => {
 
 const getAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -325,7 +326,7 @@ const getAddress = async (req: Request, res: Response) => {
 
 const deleteAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -379,7 +380,7 @@ const deleteAddress = async (req: Request, res: Response) => {
 
 const setDefaultAddress = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     const addressId = req.params.addressId;
     
     if (!userId) {
@@ -429,7 +430,7 @@ const setDefaultAddress = async (req: Request, res: Response) => {
 
 const loadAddresses = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.redirect('/login');
@@ -504,7 +505,7 @@ const getStatesAndDistricts = async (req: Request, res: Response) => {
 
 const getAddressesPaginated = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.status(401).json({

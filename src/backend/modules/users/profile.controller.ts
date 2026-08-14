@@ -9,6 +9,7 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import { PROFILE_UPLOADS_DIR } from '../../config/paths';
+import { currentUserId } from '../../common/utils/current-user.util';
 
 // Generate OTP function (since generateOtp utility might not exist)
 const generateOtp = () => {
@@ -103,7 +104,7 @@ const validateProfilePhone = (phone: any) => {
 const loadProfile = async (req: Request, res: Response) => {
   try {
     // Get userId from session or req.user (Passport.js)
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.redirect('/login');
@@ -130,7 +131,7 @@ const loadProfile = async (req: Request, res: Response) => {
 
 const loadEditProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.redirect('/login');
     }
@@ -155,7 +156,7 @@ const loadEditProfile = async (req: Request, res: Response) => {
 
 const loadChangePassword = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.redirect('/login');
     }
@@ -188,7 +189,7 @@ const loadAddresses = async (req: Request, res: Response) => {
 
 const loadOrders = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.redirect('/login');
     }
@@ -275,7 +276,7 @@ const loadOrders = async (req: Request, res: Response) => {
 // Simple email update function (for inline editing with OTP)
 const updateEmail = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -506,7 +507,7 @@ const resendEmailUpdateOtp = async (req: Request, res: Response) => {
 // Update profile data (excluding email) with enhanced validation
 const updateProfileData = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -598,7 +599,7 @@ const updateProfileData = async (req: Request, res: Response) => {
 // Verify current email for email change
 const verifyCurrentEmail = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     const { currentEmail } = req.body;
 
     if (!userId) {
@@ -665,7 +666,7 @@ const verifyCurrentEmail = async (req: Request, res: Response) => {
 // Load email change OTP page
 const loadEmailChangeOtp = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.redirect('/login');
     }
@@ -814,7 +815,7 @@ const changeEmail = async (req: Request, res: Response) => {
 // Update password function
 const updatePassword = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     const { currentPassword, newPassword, confirmPassword } = req.body;
 
     if (!userId) {
@@ -898,7 +899,7 @@ const updatePassword = async (req: Request, res: Response) => {
 // Upload profile photo
 const uploadProfilePhoto = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -967,7 +968,7 @@ const uploadProfilePhoto = async (req: Request, res: Response) => {
 // Delete profile photo
 const deleteProfilePhoto = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -1021,7 +1022,7 @@ const deleteProfilePhoto = async (req: Request, res: Response) => {
 const logout = async (req: Request, res: Response) => {
   try {
     // Check if there's an active session
-    const userId = req.session.userId || req.session.googleUserId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.redirect('/login');
@@ -1061,7 +1062,7 @@ const logout = async (req: Request, res: Response) => {
 
 const getAddressesPaginated = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || (req.user && req.user!._id);
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.status(401).json({

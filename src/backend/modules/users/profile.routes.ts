@@ -4,6 +4,7 @@ import multer from 'multer';
 import * as profileController from './profile.controller';
 import { wantsJson } from '../../common/utils/wants-json.util';
 import * as orderController from '../orders/order.controller';
+import { currentUserId } from '../../common/utils/current-user.util';
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ const upload = multer({
 
 /** Accepts either auth path and backfills the session from req.user. */
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.session.userId || (req.user && req.user._id);
+  const userId = currentUserId(req);
 
   if (!userId) {
     // A request that arrived under /api wanted the API, whatever headers it
@@ -35,10 +36,6 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     }
 
     return res.redirect('/login');
-  }
-
-  if (!req.session.userId && req.user) {
-    req.session.userId = String(req.user._id);
   }
 
   next();

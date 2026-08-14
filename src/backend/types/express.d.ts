@@ -3,13 +3,16 @@ import type { IUser } from '../modules/users/user.types';
 /**
  * Express request augmentation.
  *
- * Passport populates `req.user` and several middlewares read it directly, so
- * without this every converted middleware and controller would need a cast.
+ * `jwt-auth.middleware` populates `req.user` from the access-token cookie and
+ * several middlewares read it directly, so without this every middleware and
+ * controller would need a cast.
  *
- * `req.session.userId` is declared alongside it because this codebase has two
- * parallel auth paths - passport's `req.isAuthenticated()` and a raw
- * `req.session.userId`. They get unified in Phase 3 (JWT); until then both must
- * type-check.
+ * `userId` and `role` used to be declared on SessionData too, mirrored from the
+ * token so that ~75 reads of `req.session.userId` kept type-checking. Both are
+ * gone as of Phase 5: the mirror was written and read within the same request,
+ * so it never carried anything the token did not already say. Reads go through
+ * `common/utils/current-user.util`. The entries left below are genuine
+ * cross-request state, and are what remains to be migrated off the session.
  */
 declare global {
   namespace Express {
@@ -21,9 +24,6 @@ declare global {
 
 declare module 'express-session' {
   interface SessionData {
-    userId?: string;
-    /** Set on admin login; read by the isAdmin middleware. */
-    role?: string;
     /** Signup details held between OTP request and verification. */
     pendingUser?: {
       email: string;

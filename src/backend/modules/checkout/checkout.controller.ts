@@ -11,6 +11,7 @@ import PendingOrder from './pending-order.model';
 import { wantsJson } from '../../common/utils/wants-json.util';
 import * as razorpayService from '../payments/razorpay.provider';
 import * as walletService from '../wallet/wallet.service';
+import { currentUserId } from '../../common/utils/current-user.util';
 
 import {
   ORDER_STATUS, 
@@ -229,7 +230,7 @@ const calculateOrderTotals = (cartItems: any) => {
 
 const loadCheckout = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     
     // user
     const user = await User.findById(userId).select('fullname email profilePhoto');
@@ -362,7 +363,7 @@ const loadCheckout = async (req: Request, res: Response) => {
 // 1. validate checkout stock 
 const validateCheckoutStock = async (req: Request, res: Response) => {
   try {    
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -466,7 +467,7 @@ const validateCheckoutStock = async (req: Request, res: Response) => {
 // 3. place order with validation
 const placeOrderWithValidation = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { deliveryAddressId, addressIndex, paymentMethod } = req.body;
 
     if (!userId) {
@@ -659,7 +660,7 @@ const placeOrderWithValidation = async (req: Request, res: Response) => {
 // handle cod order
 const handleCODOrder = async (req: any, res: any, cart: any) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { deliveryAddressId, addressIndex } = req.body;
 
     console.log('Processing COD order for user:', userId);
@@ -912,7 +913,7 @@ const handleCODOrder = async (req: any, res: any, cart: any) => {
 // Create Razorpay Order
 const createRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { deliveryAddressId, addressIndex } = req.body;
 
     const cart = await Cart.findOne({ userId })
@@ -1063,7 +1064,7 @@ const createRazorpayPayment = async (req: Request, res: Response) => {
 // Verify Razorpay Payment
 const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
 
     if (!userId) {
@@ -1310,7 +1311,7 @@ const verifyRazorpayPayment = async (req: Request, res: Response) => {
 // Handle Payment Failure
 const handlePaymentFailure = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { razorpayOrderId, error } = req.body;
 
     console.log(' Payment failed for Razorpay Order:', razorpayOrderId);
@@ -1472,7 +1473,7 @@ const handlePaymentFailure = async (req: Request, res: Response) => {
 const loadOrderSuccess = async (req: Request, res: Response) => {
   try {
     const orderId = String(req.params.orderId);
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     if (!userId) {
       return res.redirect('/login');
@@ -1587,7 +1588,7 @@ const loadOrderSuccess = async (req: Request, res: Response) => {
 // Load Order Failure Page
 const loadOrderFailure = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { transactionId } = req.params;
 
     if (!userId) {
@@ -1758,7 +1759,7 @@ const loadOrderFailure = async (req: Request, res: Response) => {
 // Load Retry Payment Page
 const loadRetryPaymentPage = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { transactionId } = req.params;
 
     if (!userId) {
@@ -1886,7 +1887,7 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
 // Retry razorpay Payment
 const createRazorpayOrderForRetry = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { razorpayOrderId, error } = req.body;
 
     if (!userId) {
@@ -2011,7 +2012,7 @@ const createRazorpayOrderForRetry = async (req: Request, res: Response) => {
 
 const verifyRetryRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
 
     if (!userId) {
@@ -2191,7 +2192,7 @@ const verifyRetryRazorpayPayment = async (req: Request, res: Response) => {
 
 const handleRetryPaymentFailure = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { razorpayOrderId, error } = req.body;
 
     if (!userId) {
@@ -2301,7 +2302,7 @@ const handleRetryPaymentFailure = async (req: Request, res: Response) => {
 
 const handleWalletPayment = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id || req.session?.userId;
+    const userId = currentUserId(req);
     const { deliveryAddressId, addressIndex } = req.body;
 
     if (!userId) {

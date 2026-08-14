@@ -12,10 +12,10 @@ import { cookieNamesFor, verifyAccessToken } from '../../modules/auth/jwt.servic
  *    24 call sites across controllers, middlewares and routers still call it.
  *    Shimming keeps every one of them working unchanged.
  *
- *  - `req.session.userId` is mirrored from the token. 71 places read it, 49 of
- *    them without falling back to req.user. The JWT is the source of truth;
- *    this mirror exists so those reads keep working and is removed once the
- *    EJS layer goes in Phase 5.
+ *    The session mirror this used to write (`req.session.userId` / `.role`) is
+ *    gone as of Phase 5. Every reader now goes through `currentUserId(req)`,
+ *    which reads `req.user` - the token was always the source of truth, and the
+ *    mirror was only ever read back by the same request that wrote it.
  *
  * Which token is read depends on the path: /admin uses the admin cookie pair,
  * everything else the shopper pair. That preserves today's behaviour where one
@@ -51,11 +51,6 @@ const jwtAuth = async (req: Request, res: Response, next: NextFunction) => {
 
     req.user = user;
     req.isAuthenticated = (() => true) as typeof req.isAuthenticated;
-
-    if (req.session) {
-      req.session.userId = String(user._id);
-      req.session.role = user.role;
-    }
 
     res.locals.user = user;
   } catch (error) {

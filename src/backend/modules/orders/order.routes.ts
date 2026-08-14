@@ -2,6 +2,7 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import * as orderController from './order.controller';
 import { wantsJson } from '../../common/utils/wants-json.util';
+import { isSignedIn } from '../../common/utils/current-user.util';
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ const router = express.Router();
  */
 
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() || req.session.userId) {
+  if (isSignedIn(req)) {
     return next();
   }
 

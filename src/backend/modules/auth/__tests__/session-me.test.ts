@@ -78,8 +78,15 @@ describe('session introspection', () => {
     });
 
     it('is not served on the bare path - the SPA is the only caller', async () => {
-      const res = await request(app).get('/auth/me');
-      expect(res.status).toBe(404);
+      // Signed in, so a working endpoint here would be unmistakable.
+      const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
+
+      const res = await request(app).get('/auth/me').set('Cookie', cookies);
+
+      // Since Phase 5 the bare path falls through to the React shell rather
+      // than 404ing, so the assertion is that it does not answer as the
+      // endpoint - not that it is absent from the routing table.
+      expect(res.body?.user).toBeUndefined();
     });
   });
 

@@ -14,9 +14,11 @@ import expressLayouts from 'express-ejs-layouts';
 import morgan from 'morgan';
 import morganBody from 'morgan-body';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
+import fs from 'fs';
 
 // Middleware imports
-import { PUBLIC_DIR, VIEWS_DIR } from './config/paths';
+import { FRONTEND_DIST, PUBLIC_DIR, VIEWS_DIR } from './config/paths';
 import { apiLimiter } from './common/middlewares/rate-limiting.middleware';
 import { addUserContext } from './common/middlewares/user-context.middleware';
 import checkUserBlocked from './common/middlewares/check-user-blocked.middleware';
@@ -221,5 +223,42 @@ for (const [mountPath, router] of PREFIXED_ROUTES) {
 for (const router of ROOT_ROUTES) {
   app.use('/', router);
 }
+
+// ---------------------------------------------------------------------------
+// THE REACT APP
+//
+// Mounted last, so it only ever sees what no router claimed. While the EJS
+// views still exist they answer the page routes first and this serves nothing
+// but unrouted paths; as the renders are deleted, more falls through to here
+// until the SPA owns every page.
+//
+// In development this is inert - `npm run dev` in src/frontend serves the app
+// on :5173 and proxies the API back to this server, so there is no build to
+// find. The check is on every request rather than at startup so that starting
+// the server before the first build, then building, does not require a restart.
+// ---------------------------------------------------------------------------
+app.use(express.static(FRONTEND_DIST));
+
+/**
+ * Paths that must 404 as themselves rather than being answered with the SPA
+ * shell. Returning `index.html` for a mistyped endpoint turns what should be a
+ * clear 404 into a 200 full of HTML, which is a genuinely confusing thing to
+ * debug from the client side.
+ */
+const NEVER_SPA = ['/api', '/docs', '/uploads', '/images', '/google'];
+
+app.get(/(.*)/, (req: Request, res: Response, next: NextFunction) => {
+  if (NEVER_SPA.some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`))) {
+    return next();
+  }
+
+  const shell = path.join(FRONTEND_DIST, 'index.html');
+
+  if (!fs.existsSync(shell)) {
+    return next();
+  }
+
+  res.sendFile(shell);
+});
 
 export = app;

@@ -5,6 +5,7 @@ import User from '../users/user.model';
 import Wishlist from '../wishlist/wishlist.model';
 import * as walletService from '../wallet/wallet.service';
 import { wantsJson } from '../../common/utils/wants-json.util';
+import { currentUserId, isSignedIn } from '../../common/utils/current-user.util';
 
 // Helper function to calculate final price with offers
 const calculateFinalPrice = async (product: any) => {
@@ -39,7 +40,7 @@ const calculateItemTotal = (price: number, quantity: number) => {
 // Add product to cart with comprehensive validation
 const addToCart = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     const { productId, variantId, quantity = 1 } = req.body;
 
     if (!productId) {
@@ -235,7 +236,7 @@ const addToCart = async (req: Request, res: Response) => {
 // Get cart count for navbar
 const getCartCount = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     if (!userId) {
       return res.json({ count: 0 });
@@ -443,7 +444,7 @@ const buildCart = async (userId: unknown) => {
  */
 const loadCart = async (req: Request, res: Response) => {
   try {
-    const result = await buildCart(req.user ? req.user!._id : req.session.userId);
+    const result = await buildCart(currentUserId(req));
 
     if (!result) {
       return wantsJson(req)
@@ -483,7 +484,7 @@ const loadCart = async (req: Request, res: Response) => {
 // Remove item from cart
 const removeFromCart = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     const { productId, variantId } = req.body;
 
     if (!productId) {
@@ -542,7 +543,7 @@ const removeFromCart = async (req: Request, res: Response) => {
 // Update cart item quantity
 const updateCartQuantity = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     const { productId, variantId, quantity } = req.body;
 
     if (!productId || !variantId || !quantity) {
@@ -701,7 +702,7 @@ const updateCartQuantity = async (req: Request, res: Response) => {
 // Clear entire cart
 const clearCart = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     const cart: any = await Cart.findOne({ userId });
     if (!cart) {
@@ -731,7 +732,7 @@ const clearCart = async (req: Request, res: Response) => {
 
 const removeOutOfStockItems = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     const cart: any = await Cart.findOne({ userId })
       .populate({
@@ -811,7 +812,7 @@ const removeOutOfStockItems = async (req: Request, res: Response) => {
 
 const validateCartItems = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     const cart: any = await Cart.findOne({ userId })
       .populate({
@@ -907,10 +908,9 @@ const validateCartItems = async (req: Request, res: Response) => {
 // Check authentication status
 const checkAuth = async (req: Request, res: Response) => {
   try {
-    const isAuthenticated = !!(req.user || req.session.userId);
-    res.json({ 
-      authenticated: isAuthenticated,
-      user: isAuthenticated ? (req.user || { id: req.session.userId }) : null
+    res.json({
+      authenticated: isSignedIn(req),
+      user: req.user ?? null
     });
   } catch (error: any) {
     console.error('Error checking authentication:', error);
@@ -925,7 +925,7 @@ const loadCheckout = async (req: Request, res: Response) => {
 
 const validateCheckoutStock = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     const cart: any = await Cart.findOne({ userId })
       .populate({
@@ -1070,7 +1070,7 @@ const validateCheckoutStock = async (req: Request, res: Response) => {
 
 const validateCartStock = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     const cart: any = await Cart.findOne({ userId })
       .populate({
@@ -1196,7 +1196,7 @@ const validateCartStock = async (req: Request, res: Response) => {
 
 const resetCartItemQuantity = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     const { productId, variantId } = req.body;
 
     if (!productId || !variantId) {
@@ -1279,7 +1279,7 @@ const resetCartItemQuantity = async (req: Request, res: Response) => {
 
 const saveForLater = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     const { productId, variantId } = req.body;
 
     if (!productId) {
@@ -1364,7 +1364,7 @@ const saveForLater = async (req: Request, res: Response) => {
 
 const getWalletBalanceForCheckout = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     
     if (!userId) {
       return res.status(401).json({

@@ -3,6 +3,7 @@ import type { Types } from 'mongoose';
 import Coupon from './coupon.model';
 import Cart from '../cart/cart.model';
 import Product from '../catalog/product.model';
+import { requireUserId } from '../../common/utils/current-user.util';
 
 // helper function to calculate variant specific final price
 const calculateVariantFinalPrice = (product: any, variant: any) => {
@@ -33,7 +34,10 @@ type CartTotalsResult =
   | { success: true; totals: CartTotals; message?: string }
   | { success: false; message: string; totals?: null };
 
-const calculateCartTotals = async (userId: string): Promise<CartTotalsResult> => {
+// Widened from `string` because the id now comes straight off req.user as an
+// ObjectId; both are valid Mongoose query values, and converting at every call
+// site only to have Mongoose cast it back would be noise.
+const calculateCartTotals = async (userId: Types.ObjectId | string): Promise<CartTotalsResult> => {
     try {
         const cart = await Cart.findOne ({ userId })
             .populate({
@@ -113,7 +117,7 @@ const calculateCartTotals = async (userId: string): Promise<CartTotalsResult> =>
     }
 };
 
-function validateCouponConditions  (coupon: any, orderTotal: number, userId: string, session: any) {
+function validateCouponConditions  (coupon: any, orderTotal: number, userId: Types.ObjectId | string, session: any) {
     const currentDate = new Date();
 
     // check if coupon is expired
@@ -206,7 +210,7 @@ function calculateDiscount(coupon: any, orderTotal: number) {
 
 const renderCouponsPage = async (req: Request, res: Response) => {
     try {
-        const userId = req.user?.id || req.session.userId;
+        const userId = requireUserId(req);
 
         if (!userId) {
             req.flash('error', 'Please login to view coupons');
@@ -280,7 +284,7 @@ const renderCouponsPage = async (req: Request, res: Response) => {
 
 const getAvailableCoupons = async (req: Request, res: Response) => {
     try {
-        const userId = req.user?.id || req.session.userId;
+        const userId = requireUserId(req);
 
         if (!userId) {
             return res.status(401).json({
@@ -355,7 +359,7 @@ const getAvailableCoupons = async (req: Request, res: Response) => {
 const applyCoupon = async (req: Request, res: Response) => {
     try {
         const { couponCode, orderTotal } = req.body;
-        const userId = req.user?.id || req.session.userId;
+        const userId = requireUserId(req);
 
         console.log('Applying coupon:', couponCode, 'for order total:', orderTotal);
 
@@ -476,7 +480,7 @@ const applyCoupon = async (req: Request, res: Response) => {
 
 const removeCoupon = async (req: Request, res: Response) => {
     try {
-        const userId = req.user?.id || req.session.userId;
+        const userId = requireUserId(req);
 
         console.log('Removing applied coupon from session');
 

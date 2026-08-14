@@ -2,19 +2,12 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import * as addressController from './address.controller';
 import { wantsJson } from '../../common/utils/wants-json.util';
+import { currentUserId } from '../../common/utils/current-user.util';
 
 const router = express.Router();
 
-/**
- * Accepts either auth path this codebase currently has - passport's req.user or
- * a raw req.session.userId - and backfills the session from req.user so the
- * rest of the module can rely on one of them. Both paths are unified in the
- * JWT phase.
- */
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.session.userId || (req.user && req.user._id);
-
-  if (!userId) {
+  if (!currentUserId(req)) {
     // A request that arrived under /api wanted the API - a 302 to an HTML
     // login page gives an XHR caller nothing to act on.
     if (wantsJson(req)) {
@@ -22,10 +15,6 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     }
 
     return res.redirect('/login');
-  }
-
-  if (!req.session.userId && req.user) {
-    req.session.userId = String(req.user._id);
   }
 
   next();

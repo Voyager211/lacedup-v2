@@ -4,6 +4,7 @@ import * as walletService from './wallet.service';
 import { getRazorpayInstance } from '../payments/razorpay.provider';
 import { wantsJson } from '../../common/utils/wants-json.util';
 import crypto from 'crypto';
+import { requireUserId } from '../../common/utils/current-user.util';
 
 
 /**
@@ -12,7 +13,7 @@ import crypto from 'crypto';
  */
 const renderWalletPage = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id || req.user?._id || req.session.userId;
+    const userId = requireUserId(req);
     console.log(userId);
     
     if (!userId) {
@@ -109,7 +110,7 @@ const renderWalletPage = async (req: Request, res: Response) => {
  */
 const getPaginatedTransactionsAPI = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
     const page = parseInt(String(req.query.page)) || 1;
     const type = req.query.type || null;
     const limit = 10;
@@ -171,7 +172,7 @@ const getPaginatedTransactionsAPI = async (req: Request, res: Response) => {
  */
 const createRazorpayOrderHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
     const { amount, paymentMethod, description } = req.body;
 
     // Validation
@@ -251,7 +252,7 @@ const createRazorpayOrderHandler = async (req: Request, res: Response) => {
  */
 const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
     const { razorpayPaymentId, razorpayOrderId, razorpaysignature, transactionId } = req.body;
 
     // Validate signature
@@ -309,7 +310,7 @@ const verifyRazorpayPayment = async (req: Request, res: Response) => {
  */
 const addMoney = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
     const { amount, description } = req.body;
 
     // Validation
@@ -354,7 +355,7 @@ const addMoney = async (req: Request, res: Response) => {
  */
 const getWalletBalance = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
 
     const wallet = await walletService.getOrCreateWallet(userId);
 
@@ -378,7 +379,7 @@ const getWalletBalance = async (req: Request, res: Response) => {
  */
 const getWalletStatsAPI = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
 
     const stats = await walletService.getWalletStats(userId);
 
@@ -402,7 +403,7 @@ const getWalletStatsAPI = async (req: Request, res: Response) => {
  */
 const getTransaction = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
     const transactionId = String(req.params.transactionId);
 
     const transaction = await walletService.getTransactionById(userId, transactionId);
@@ -434,7 +435,7 @@ const getTransaction = async (req: Request, res: Response) => {
  */
 const debitWallet = async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId || req.user!._id;
+    const userId = requireUserId(req);
     const { amount, orderId, description } = req.body;
 
     // Validation

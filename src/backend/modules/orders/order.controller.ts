@@ -11,6 +11,7 @@ import paypal from '@paypal/checkout-server-sdk';
 import * as razorpayService from '../payments/razorpay.provider';
 import { getPagination } from '../../common/utils/pagination.util';
 import { wantsJson } from '../../common/utils/wants-json.util';
+import { currentUserId } from '../../common/utils/current-user.util';
 
 import {
   ORDER_STATUS,
@@ -28,7 +29,7 @@ import {
 // Get all orders for user
 const getUserOrders = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     const user: any = await User.findById(userId);
     if (!user) {
@@ -131,7 +132,7 @@ const getUserOrders = async (req: Request, res: Response) => {
 
 const getUserOrdersPaginated = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     const page = parseInt(String(req.query.page)) || 1;
     const limit = 4;
     const statusFilter = String(req.query.status || '');
@@ -314,7 +315,7 @@ function generatePageNumbers(currentPage: any, totalPages: any) {
 
 const searchOrders = async (req: Request, res: Response) => {
   try {
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
     const searchTerm = String(req.query.q || '');
 
     if (!searchTerm) {
@@ -378,7 +379,7 @@ const searchOrders = async (req: Request, res: Response) => {
 const getOrderDetails = async (req: Request, res: Response) => {
   try {
     const orderId = String(req.params.orderId);
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     if (!userId) {
       return res.redirect('/login');
@@ -564,7 +565,7 @@ const cancelOrder = async (req: Request, res: Response) => {
   try {
     const orderId = String(req.params.orderId);
     const { reason } = req.body;
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     //  DEBUGGING - Log all received data
     console.log('🔍 BACKEND DEBUG - Cancel Order:');
@@ -694,7 +695,7 @@ const cancelItem = async (req: Request, res: Response) => {
     const orderId = String(req.params.orderId);
     const itemId = String(req.params.itemId);
     const { reason } = req.body;
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     //  DEBUGGING - Log all received data
     console.log('🔍 BACKEND DEBUG - Cancel Item:');
@@ -826,7 +827,7 @@ const requestOrderReturn = async (req: Request, res: Response) => {
   try {
     const orderId = String(req.params.orderId);
     const { reason } = req.body;
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -885,7 +886,7 @@ const requestItemReturn = async (req: Request, res: Response) => {
     const orderId = String(req.params.orderId);
     const itemId = String(req.params.itemId);
     const { reason } = req.body;
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -943,7 +944,7 @@ const requestItemReturn = async (req: Request, res: Response) => {
 const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const orderId = String(req.params.orderId);
-    const userId = req.user ? req.user!._id : req.session.userId;
+    const userId = currentUserId(req);
 
     if (!userId) {
       return res.status(401).json({

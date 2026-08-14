@@ -2,7 +2,10 @@ import type { NextFunction, Request, Response } from 'express';
 
 const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (req.isAuthenticated() && req.session.role === 'admin') {
+    // Read off the user the JWT resolved, not a session mirror. jwt-auth picks
+    // the cookie pair by path, so on an /admin route req.user is only ever set
+    // from an admin token - a shopper token cannot satisfy this.
+    if (req.user?.role === 'admin') {
       return next();
     }
     req.flash('error', 'Admin access only');

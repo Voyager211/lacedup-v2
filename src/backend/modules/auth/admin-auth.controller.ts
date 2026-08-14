@@ -57,7 +57,6 @@ const postLogin = (req: Request, res: Response, next: NextFunction) => {
                 }
 
                 await issueSession(res, user, 'admin');
-                req.session.role = 'admin';
 
                 return res.redirect('/admin/dashboard');
             } catch (innerErr: any) {
