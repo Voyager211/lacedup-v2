@@ -15,9 +15,14 @@ export const BACKEND_ROOT = path.resolve(__dirname, '..');
 // <repo> - runtime/user data that deliberately lives outside the source tree
 export const PROJECT_ROOT = path.resolve(BACKEND_ROOT, '..', '..');
 
-// EJS templates are rendered by the backend, so they live alongside it.
-// Removed in Phase 5 as the renders are deleted.
-export const VIEWS_DIR = path.join(BACKEND_ROOT, 'views');
+/**
+ * EJS email templates.
+ *
+ * All that survives of the view layer, deleted in Phase 5. These are emails,
+ * not pages - they are rendered to a string and handed to the mailer, so they
+ * have nothing to do with the view engine the app no longer configures.
+ */
+export const EMAIL_TEMPLATES_DIR = path.join(BACKEND_ROOT, 'common', 'email-templates');
 
 /**
  * The compiled React app.

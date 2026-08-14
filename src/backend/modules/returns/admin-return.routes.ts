@@ -74,17 +74,6 @@ router.get('/export', returnController.exportReturns);
  */
 router.get('/api/filtered', returnController.getReturnsAPI);
 
-/**
- * @swagger
- * /admin/returns:
- *   get:
- *     tags: [Admin]
- *     summary: Returns management page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Returns list markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/', returnController.getAllReturns);
 
 /**
  * @swagger

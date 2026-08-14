@@ -75,17 +75,6 @@ router.patch('/api/:id/toggle', couponController.toggleCouponStatus);
  */
 router.delete('/api/:id', couponController.deleteCoupon);
 
-/**
- * @swagger
- * /admin/coupons:
- *   get:
- *     tags: [Admin]
- *     summary: Coupon management page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Coupon list markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/', couponController.loadCouponPage);
 
 /**
  * @swagger

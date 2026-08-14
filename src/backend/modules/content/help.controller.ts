@@ -1,21 +1,6 @@
 import type { Request, Response } from 'express';
 import sendEmail from '../../common/utils/send-email.util';
 
-// GET Help Page
-const getHelpPage = (req: Request, res: Response) => {
-  try {
-    res.render('user/help', {
-      title: 'Help & Support - LacedUp',
-      layout: 'user/layouts/user-layout',
-      active: 'home',
-    });
-  } catch (error: any) {
-    console.error('Error rendering help page:', error);
-    res.status(500).render('error', { 
-      message: 'Failed to load help page' 
-    });
-  }
-};
 
 // POST Contact Form
 const submitContactForm = async (req: Request, res: Response) => {
@@ -233,6 +218,5 @@ const submitContactForm = async (req: Request, res: Response) => {
 };
 
 export {
-    getHelpPage,
     submitContactForm
 }

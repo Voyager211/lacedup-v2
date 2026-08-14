@@ -109,177 +109,12 @@ const validateProfilePhone = (phone: any) => {
   return { isValid: true, trimmedValue: digitsOnly };
 };
 
-const loadProfile = async (req: Request, res: Response) => {
-  try {
-    // Get userId from session or req.user (Passport.js)
-    const userId = currentUserId(req);
-    
-    if (!userId) {
-      return res.redirect('/login');
-    }
 
-    const user: any = await User.findById(userId).select('-password').lean();
 
-    if (!user) {
-      return res.redirect('/login');
-    }
 
-    // Render the new minimalist profile page
-    res.render('user/profile', {
-      title: 'My Profile - LacedUp',
-      layout: 'user/layouts/user-layout',
-      active: 'profile',
-      user: user
-    });
-  } catch (error: any) {
-    console.error('Error loading profile:', error);
-    res.status(500).send('Server Error');
-  }
-};
-
-const loadEditProfile = async (req: Request, res: Response) => {
-  try {
-    const userId = currentUserId(req);
-    if (!userId) {
-      return res.redirect('/login');
-    }
-
-    const user: any = await User.findById(userId).select('-password').lean();
-
-    if (!user) {
-      return res.redirect('/login');
-    }
-
-    res.render('user/edit-profile', {
-      title: 'Edit Profile - LacedUp',
-      layout: 'user/layouts/user-layout',
-      active: 'profile',
-      user: user
-    });
-  } catch (error: any) {
-    console.error('Error loading edit profile:', error);
-    res.status(500).send('Server Error');
-  }
-};
-
-const loadChangePassword = async (req: Request, res: Response) => {
-  try {
-    const userId = currentUserId(req);
-    if (!userId) {
-      return res.redirect('/login');
-    }
-
-    const user: any = await User.findById(userId).select('name email profilePhoto');
-    if (!user) {
-      return res.redirect('/login');
-    }
-
-    res.render('user/change-password', {
-      user,
-      title: 'Change Password - LacedUp',
-      layout: 'user/layouts/user-layout',
-      active: 'profile'
-    });
-  } catch (error: any) {
-    console.error('Error loading change password page:', error);
-    res.status(500).render('error', { message: 'Error loading change password page' });
-  }
-};
-
-// Note: loadAddresses moved to addressController.js
-// This function is kept for backward compatibility but should use the address controller
-const loadAddresses = async (req: Request, res: Response) => {
-  // Redirect to the proper address controller route
-  res.redirect('/addresses');
-};
 
  
 
-const loadOrders = async (req: Request, res: Response) => {
-  try {
-    const userId = currentUserId(req);
-    if (!userId) {
-      return res.redirect('/login');
-    }
-
-    const user: any = await User.findById(userId).select('name email profilePhoto');
-    if (!user) {
-      return res.redirect('/login');
-    }
-
-    // Get orders for the user with populated product data and address
-    const orders: any = await Order.find({ user: userId })
-      .populate({
-        path: 'items.productId',
-        select: 'productName mainImage subImages'
-      })
-      .populate({
-        path: 'deliveryAddress.addressId',
-        select: 'address'
-      })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    // Flatten the orders to show individual items instead of grouped orders
-    const orderItems: any[] = [];
-    
-    orders.forEach((order: any) => {
-      // Get the actual delivery address from the populated address document
-      let actualDeliveryAddress = null;
-      if (order.deliveryAddress && order.deliveryAddress.addressId && (order.deliveryAddress.addressId as any).address) {
-        const addressIndex = order.deliveryAddress.addressIndex;
-        actualDeliveryAddress = (order.deliveryAddress.addressId as any).address[addressIndex];
-      }
-
-      order.items.forEach((item: any) => {
-        orderItems.push({
-          // Order information
-          orderId: order.orderId,
-          orderDate: order.createdAt,
-          paymentMethod: order.paymentMethod,
-          paymentStatus: order.paymentStatus,
-          deliveryAddress: actualDeliveryAddress || {
-            name: 'Address not found',
-            city: 'N/A',
-            state: 'N/A'
-          },
-          
-          // Item information
-          itemId: item._id,
-          productId: item.productId,
-          productName: item.productId ? (item.productId as any).productName : 'Product',
-          productImage: item.productId ? (item.productId as any).mainImage : null,
-          sku: item.sku,
-          size: item.size,
-          quantity: item.quantity,
-          price: item.price,
-          totalPrice: item.totalPrice,
-          status: item.status || order.status, // Use item status if available, otherwise order status
-          statusHistory: item.statusHistory || [],
-          cancellationReason: item.cancellationReason,
-          returnReason: item.returnReason,
-          cancellationDate: item.cancellationDate,
-          returnRequestDate: item.returnRequestDate
-        });
-      });
-    });
-
-    res.render('user/orders', {
-      user,
-      title: 'My Orders - LacedUp',
-      layout: 'user/layouts/user-layout',
-      active: 'orders',
-      orderItems: orderItems || [],
-      orders: [] // Keep empty for backward compatibility
-    });
-  } catch (error: any) {
-    console.error('Error loading orders page:', error);
-    res.status(500).render('errors/server-error', { 
-      message: 'Error loading orders page',
-      error: error.message 
-    });
-  }
-};
 
 // Simple email update function (for inline editing with OTP)
 const updateEmail = async (req: Request, res: Response) => {
@@ -652,37 +487,6 @@ const verifyCurrentEmail = async (req: Request, res: Response) => {
   }
 };
 
-// Load email change OTP page
-const loadEmailChangeOtp = async (req: Request, res: Response) => {
-  try {
-    const userId = currentUserId(req);
-    if (!userId) {
-      return res.redirect('/login');
-    }
-
-    const pending = await findEmailChange(userId);
-    if (!pending) {
-      return res.redirect('/profile/edit');
-    }
-
-    // Get user data
-    const user: any = await User.findById(userId).select('-password').lean();
-    if (!user) {
-      return res.redirect('/login');
-    }
-
-    res.render('user/email-change-otp', {
-      title: 'Verify Email Change - LacedUp',
-      layout: 'user/layouts/user-layout',
-      active: 'profile',
-      user: user,
-      email: pending.currentEmail
-    });
-  } catch (error: any) {
-    console.error('Error loading email change OTP page:', error);
-    res.status(500).send('Server Error');
-  }
-};
 
 // Verify OTP for email change
 const verifyEmailChangeOtp = async (req: Request, res: Response) => {
@@ -1012,7 +816,7 @@ const logout = async (req: Request, res: Response) => {
     const userId = currentUserId(req);
     
     if (!userId) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     // Destroy session and clear cookies
@@ -1091,17 +895,11 @@ const getAddressesPaginated = async (req: Request, res: Response) => {
 };
 
 export {
-  loadProfile,
-  loadEditProfile,
-  loadChangePassword,
-  loadAddresses,
-  loadOrders,
   updateEmail,
   verifyEmailUpdateOtp,
   resendEmailUpdateOtp,
   updateProfileData,
   verifyCurrentEmail,
-  loadEmailChangeOtp,
   verifyEmailChangeOtp,
   changeEmail,
   updatePassword,

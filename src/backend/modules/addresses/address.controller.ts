@@ -428,54 +428,6 @@ const setDefaultAddress = async (req: Request, res: Response) => {
   }
 };
 
-const loadAddresses = async (req: Request, res: Response) => {
-  try {
-    const userId = currentUserId(req);
-    
-    if (!userId) {
-      return res.redirect('/login');
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.redirect('/login');
-    }
-
-    const page = parseInt(String(req.query.page)) || 1;
-    const limit = 2;
-    const skip = (page - 1) * limit;
-
-    const userAddresses = await Address.findOne({ userId }).lean();
-    const allAddresses = userAddresses ? userAddresses.address : [];
-    
-    const totalAddresses = allAddresses.length;
-    const totalPages = Math.ceil(totalAddresses / limit) || 1;
-    const currentPage = Math.min(page, totalPages);
-    
-    const addresses = allAddresses.slice(skip, skip + limit);
-
-    console.log(`📍 Address Book - Page ${currentPage}/${totalPages} (${addresses.length} addresses, ${totalAddresses} total)`);
-
-    res.render('user/address-book', {
-      user,
-      addresses,
-      currentPage: currentPage,
-      totalPages: totalPages,
-      totalAddresses: totalAddresses,
-      hasPrevPage: currentPage > 1,
-      hasNextPage: currentPage < totalPages,
-      prevPage: currentPage - 1,
-      nextPage: currentPage + 1,
-      title: 'Address Book - LacedUp',
-      layout: 'user/layouts/user-layout',
-      active: 'addresses',
-      geoapifyApiKey: process.env.GEOAPIFY_API_KEY
-    });
-  } catch (error: any) {
-    console.error('Error loading addresses page:', error);
-    res.status(500).render('error', { message: 'Error loading addresses page' });
-  }
-};
 
 const getStatesAndDistricts = async (req: Request, res: Response) => {
   try {
@@ -563,7 +515,6 @@ export {
   getAddress,
   deleteAddress,
   setDefaultAddress,
-  loadAddresses,
   getStatesAndDistricts,
   getAddressesPaginated
 };

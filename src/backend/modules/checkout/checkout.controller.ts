@@ -237,7 +237,7 @@ const loadCheckout = async (req: Request, res: Response) => {
     // user
     const user = await User.findById(userId).select('fullname email profilePhoto');
     if (!user) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     // addresses
@@ -330,34 +330,12 @@ const loadCheckout = async (req: Request, res: Response) => {
 
     // The SPA asks for the same data under /api. paypalClientId is not sent:
     // it was always the empty string, so the PayPal button could never work.
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...checkout });
-    }
+    res.json({ success: true, ...checkout });
 
-    res.render('user/checkout', {
-      user,
-      ...checkout,
-      paypalClientId: '',
-      title: 'Checkout',
-      layout: 'user/layouts/user-layout',
-      active: 'checkout',
-      geoapifyApiKey: process.env.GEOAPIFY_API_KEY
-    });
   } catch (error: any) {
     console.error('Error loading checkout:', error);
 
-    if (wantsJson(req)) {
-      return res.status(500).json({ success: false, message: 'Error loading checkout page' });
-    }
-
-    // errors/server-error, not 'error' - that view has never existed, so the
-    // old path threw inside its own error handler (docs/defects.md).
-    res.status(500).render('errors/server-error', {
-      title: 'Server Error',
-      message: 'Error loading checkout page',
-      layout: 'user/layouts/user-layout',
-      active: 'checkout'
-    });
+    res.status(500).json({ success: false, message: 'Error loading checkout page' });
   }
 };
 
@@ -1481,13 +1459,13 @@ const loadOrderSuccess = async (req: Request, res: Response) => {
     const userId = requireUserId(req);
 
     if (!userId) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     // user
     const user = await User.findById(userId);
     if (!user) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     // order 
@@ -1572,17 +1550,8 @@ const loadOrderSuccess = async (req: Request, res: Response) => {
       createdAt: order.createdAt
     };
 
-    if (wantsJson(req)) {
-      return res.json({ success: true, orderData });
-    }
+    res.json({ success: true, orderData });
 
-    res.render('user/order-success', {
-      user,
-      orderData,
-      title: 'Order Placed Successfully',
-      layout: 'user/layouts/user-layout',
-      active: 'orders'
-    });
 
   } catch (error: any) {
     console.error('Error loading order success page:', error);
@@ -1597,7 +1566,7 @@ const loadOrderFailure = async (req: Request, res: Response) => {
     const { transactionId } = req.params;
 
     if (!userId) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     let paymentFailure = req.session.paymentFailure;
@@ -1740,16 +1709,7 @@ const loadOrderFailure = async (req: Request, res: Response) => {
       canRetry
     };
 
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...failure });
-    }
-
-    return res.render('user/order-failure', {
-      ...failure,
-      title: 'Order Failed',
-      layout: 'user/layouts/user-layout',
-      active: 'checkout'
-    });
+    res.json({ success: true, ...failure });
 
   } catch (error: any) {
     console.error('Error loading order failure page:', error);
@@ -1768,7 +1728,7 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
     const { transactionId } = req.params;
 
     if (!userId) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     const paymentFailure = req.session.paymentFailure;
@@ -1871,16 +1831,7 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
       orderData
     };
 
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...retry });
-    }
-
-    return res.render('user/retry-payment', {
-      ...retry,
-      title: 'Retry Payment',
-      layout: 'user/layouts/user-layout',
-      active: 'checkout'
-    });
+    res.json({ success: true, ...retry });
 
   } catch (error: any) {
     console.error('Error loading retry payment page:', error);

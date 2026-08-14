@@ -6,60 +6,6 @@ import sharp from 'sharp';
 import path from 'path';
 import { promises as fs } from 'fs';
 
-// List brands with search and filter
-const listBrands = async (req: Request, res: Response) => {
-  try {
-    const searchQuery = String(req.query.q || '');
-    const statusFilter = String(req.query.status || 'all');
-    const page = parseInt(String(req.query.page)) || 1;
-    const limit = 10;
-
-    // Build filter query
-    const query: Record<string, any> = {
-      name: { $regex: searchQuery, $options: 'i' },
-      isDeleted: false
-    };
-
-    // Apply status filter
-    if (statusFilter === 'active') {
-      query.isActive = true;
-    } else if (statusFilter === 'inactive') {
-      query.isActive = false;
-    }
-
-    const totalRecords = await Brand.countDocuments(query);
-
-    const { data: brands, totalPages } = await getPagination(
-      Brand.find(query).sort({ createdAt: -1 }),
-      Brand,
-      query,
-      page,
-      limit
-    );
-
-    res.render('admin/brands', {
-      brands,
-      currentPage: page,
-      totalPages,
-      totalRecords,
-      searchQuery,
-      statusFilter,
-      title: 'Brand Management'
-    });
-  } catch (error: any) {
-    console.error('Error listing brands:', error);
-    res.status(500).render('admin/brands', {
-      brands: [],
-      currentPage: 1,
-      totalPages: 1,
-      totalRecords: 0,
-      searchQuery: '',
-      statusFilter: 'all',
-      title: 'Brand Management',
-      error: 'Failed to load brands'
-    });
-  }
-};
 
 // Fetch-based brand listing
 const apiBrands = async (req: Request, res: Response) => {
@@ -329,7 +275,6 @@ const apiSoftDeleteBrand = async (req: Request, res: Response) => {
 };
 
 export {
-  listBrands,
   apiBrands,
   apiGetBrand,
   apiCreateBrand,

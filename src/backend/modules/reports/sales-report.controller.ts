@@ -210,52 +210,14 @@ const getSalesReport = async (req: Request, res: Response) => {
      * branch for that header, so it returned the whole page, layout and all,
      * every time.
      */
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...report });
-    }
+    res.json({ success: true, ...report });
 
-    res.render('admin/sales-report', {
-      title: 'Sales Report',
-      ...report,
-      layout: 'admin/layout'
-    });
 
   } catch (error: any) {
     console.error('Error fetching sales report:', error);
 
-    if (wantsJson(req)) {
-      return res.status(500).json({ success: false, message: 'Error loading sales report' });
-    }
+    res.status(500).json({ success: false, message: 'Error loading sales report' });
 
-    res.render('admin/sales-report', {
-      title: 'Sales Report',
-      error: 'Error loading sales report',
-      salesStats: {
-        totalRevenue: 0,
-        totalOrders: 0,
-        averageOrder: 0,
-        totalDiscount: 0,
-        netRevenue: 0
-      },
-      dailyAnalysis: [],
-      orders: [],
-      filters: {
-        timePeriod: 'monthly',
-        paymentMethod: 'all',
-        orderStatus: 'all',
-        startDate: '',
-        endDate: ''
-      },
-      pagination: {
-        currentPage: 1,
-        totalPages: 1,
-        totalOrders: 0,
-        itemsPerPage: 10,  // ADDED THIS
-        hasPrev: false,
-        hasNext: false
-      },
-      layout: 'admin/layout'
-    });
   }
 };
 

@@ -70,32 +70,13 @@ const getWishlist = async (req: Request, res: Response) => {
     // `GET /api/wishlist` are the same route - this router is dual-mounted -
     // so the response is chosen by what the caller asked for rather than by
     // adding a second endpoint that would duplicate all of the above.
-    if (wantsJson(req)) {
-      return res.json({ success: true, products, search, userWishlistProductIds });
-    }
+    res.json({ success: true, products, search, userWishlistProductIds });
 
-    res.render('user/wishlist', {
-      title: 'My Wishlist',
-      products,
-      search,
-      user: req.user,
-      layout: 'user/layouts/user-layout',
-      active: 'wishlist',
-      isWishlistPage: true,
-      userWishlistProductIds
-    });
 
   } catch (error: any) {
     console.error('Error fetching wishlist:', error);
 
-    if (wantsJson(req)) {
-      return res.status(500).json({ success: false, message: 'Unable to load wishlist' });
-    }
-
-    res.status(500).render('errors/server-error', {
-      title: 'Server Error',
-      message: 'Unable to load wishlist'
-    });
+    res.status(500).json({ success: false, message: 'Unable to load wishlist' });
   }
 };
 

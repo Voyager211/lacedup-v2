@@ -24,20 +24,10 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  // A request that arrived under /api wanted the API, whatever headers it
-  // sent - a 302 to an HTML login page gives an XHR caller nothing to act on.
-  if (wantsJson(req)) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required'
-    });
-  }
-
-  // Note: this flash is never rendered anywhere - see docs/defects.md. Left in
-  // place because the EJS layer's redirect behaviour is unchanged by this
-  // work; it goes when the flash system does.
-  req.flash('error', 'Please log in to continue');
-  res.redirect('/login');
+  res.status(401).json({
+    success: false,
+    message: 'Authentication required'
+  });
 };
 
 /**

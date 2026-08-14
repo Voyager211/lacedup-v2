@@ -16,13 +16,6 @@ import {
   startSignup
 } from './pending-signup.service'; 
 
-const getSignup = (req: Request, res: Response) => {
-  if (req.isAuthenticated()) return res.redirect('/home');
-  res.render('user/auth/signup', {
-    title: 'Sign Up',
-    layout: 'user/layouts/auth-layout'
-  });
-};
 
 const postSignup = async (req: Request, res: Response) => {
   const { name, email, phone, password, confirmPassword, referralCode } = req.body;
@@ -93,20 +86,6 @@ const postSignup = async (req: Request, res: Response) => {
 };
 
 
-const getLogin = (req: Request, res: Response) => {
-  if (req.isAuthenticated()) return res.redirect('/home');
-
-  let errorMessage = null;
-  if (req.query.error) {
-    errorMessage = decodeURIComponent(String(req.query.error));
-  }
-
-  res.render('user/auth/login', {
-    title: 'Login',
-    layout: 'user/layouts/auth-layout',
-    errorMessage: errorMessage
-  });
-};
 
 const postLogin = (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate('local', (err: any, user: any, info: any) => {
@@ -139,18 +118,6 @@ const logout = async (req: Request, res: Response) => {
   });
 };
 
-const getOtpPage = (req: Request, res: Response) => {
-  if (req.isAuthenticated()) return res.redirect('/home');
-  const { email } = req.query;
-
-  if (!email) return res.redirect('/signup');
-
-  res.render('user/auth/verify-otp', {
-    title: 'Verify OTP',
-    layout: 'user/layouts/auth-layout',
-    email
-  });
-};
 
 const postOtpVerification = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
@@ -329,12 +296,6 @@ const resendOtp = async (req: Request, res: Response) => {
 };
 
 
-const getForgotPassword = (req: Request, res: Response) => {
-  res.render('user/auth/forgot-password', {
-    title: 'Forgot Password',
-    layout: 'user/layouts/auth-layout'
-  });
-};
 
 const sendResetOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
@@ -375,17 +336,6 @@ const sendResetOtp = async (req: Request, res: Response) => {
   }
 };
 
-const getResetOtpPage = (req: Request, res: Response) => {
-  if (req.isAuthenticated()) return res.redirect('/home');
-  const { email } = req.query;
-  if (!email) return res.redirect('/forgot-password');
-
-  res.render('user/auth/reset-otp', {
-    title: 'Enter OTP',
-    layout: 'user/layouts/auth-layout',
-    email
-  });
-};
 
 const verifyResetOtp = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
@@ -416,17 +366,6 @@ const verifyResetOtp = async (req: Request, res: Response) => {
   }
 };
 
-const getResetPasswordPage = (req: Request, res: Response) => {
-  if (req.isAuthenticated()) return res.redirect('/home');
-  const { email } = req.query;
-  if (!email) return res.redirect('/forgot-password');
-
-  res.render('user/auth/reset-password', {
-    title: 'Reset Password',
-    layout: 'user/layouts/auth-layout',
-    email
-  });
-};
 
 const resendResetOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
@@ -496,19 +435,13 @@ const resetPassword = async (req: Request, res: Response) => {
 };
 
 export {
-  getSignup,
   postSignup,
-  getLogin,
   postLogin,
   logout,
-  getOtpPage,
   postOtpVerification,
   resendOtp,
-  getForgotPassword,
   sendResetOtp,
-  getResetOtpPage,
   verifyResetOtp,
-  getResetPasswordPage,
   resendResetOtp,
   resetPassword
 };

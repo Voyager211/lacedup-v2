@@ -53,7 +53,7 @@ function handleUserLogout(req: Request, res: Response, errorMessage: string) {
             return res.redirect('/login?error=' + encodeURIComponent(errorMessage));
           }
 
-          return res.redirect('/login');
+          return res.status(401).json({ success: false, message: 'Authentication required' });
         });
       } else {
         // Session already destroyed or doesn't exist

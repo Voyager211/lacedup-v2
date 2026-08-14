@@ -5,57 +5,6 @@ import User from './user.model';
 import { getPagination } from '../../common/utils/pagination.util';
 
 
-const listUsers = async (req: Request, res: Response) => {
-    try {
-        const q = String(req.query.q || '');
-        const status = String(req.query.status || 'all'); // all, blocked, unblocked
-        const page = parseInt(String(req.query.page)) || 1;
-        const limit = 10;
-
-        // Build query with role filter
-        const query: FilterQuery<IUser> = { role: 'user' };
-        
-        // Add search filter
-        if (q) {
-            query.$or = [
-                { name: { $regex: q, $options: 'i' } },
-                { email: { $regex: q, $options: 'i' } },
-                { phone: { $regex: q, $options: 'i' } }
-            ];
-        }
-        
-        // Add blocking status filter
-        if (status === 'blocked') {
-            query.isBlocked = true;
-        } else if (status === 'unblocked') {
-            query.isBlocked = false;
-        }
-        // 'all' - no isBlocked filter added
-        
-        const { data: users, totalPages } = await getPagination(
-            User.find(query).sort({ createdAt: -1 }),
-            User,
-            query,
-            page,
-            limit
-        );
-
-        const totalUserCount = await User.countDocuments({ role: 'user' });
-
-        res.render('admin/users', {
-            users,
-            currentPage: page,
-            totalPages,
-            searchQuery: q,
-            statusFilter: status,
-            totalUserCount,
-            title: 'User Management'
-        });
-    } catch (error: any) {
-        console.error('Error in listUsers:', error);
-        res.status(500).send('Internal Server Error');
-    }
-};
 
 
 // AJAX rendering
@@ -132,7 +81,6 @@ const apiUnblockUser = async (req: Request, res: Response) => {
 
 
 export {
-    listUsers,
     apiUsers,
     apiBlockUser,
     apiUnblockUser

@@ -16,15 +16,11 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 
   // A request that arrived under /api wanted the API, whatever headers it
   // sent - a 302 to an HTML login page gives an XHR caller nothing to act on.
-  if (wantsJson(req)) {
-    return res.status(401).json({
-      success: false,
-      message: 'You must be logged in to access this feature',
-      code: 'AUTHENTICATION_REQUIRED'
-    });
-  }
-
-  return res.redirect('/login');
+  return res.status(401).json({
+    success: false,
+    message: 'You must be logged in to access this feature',
+    code: 'AUTHENTICATION_REQUIRED'
+  });
 };
 
 const requireAuthAPI = (req: Request, res: Response, next: NextFunction) => {

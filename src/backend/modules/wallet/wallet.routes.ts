@@ -19,8 +19,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 
-  req.flash('error', 'Please log in to continue');
-  return res.redirect('/login');
+  return res.status(401).json({ success: false, message: 'Please log in to continue' });
 };
 
 /**

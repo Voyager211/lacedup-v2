@@ -121,9 +121,11 @@ describe('JWT auth flow (HTTP)', () => {
       // Present the shopper token under the admin cookie name.
       const forged = at.replace('user_at=', 'admin_at=');
 
+      // 403 rather than the old redirect to /admin/login: the admin panel is a
+      // React route now and decides for itself where to send the visitor. The
+      // point of the test is unchanged - a shopper token must not pass.
       const res = await request(app).get('/admin/dashboard').set('Cookie', forged);
-      expect(res.status).toBe(302);
-      expect(res.headers.location).toBe('/admin/login');
+      expect(res.status).toBe(403);
     });
   });
 

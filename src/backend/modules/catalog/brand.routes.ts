@@ -7,17 +7,6 @@ const router = express.Router();
 // Every route below requires an admin session.
 router.use(isAdmin);
 
-/**
- * @swagger
- * /admin/brands:
- *   get:
- *     tags: [Admin]
- *     summary: Brand management page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Brand list markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/', brandController.listBrands);
 
 /**
  * @swagger

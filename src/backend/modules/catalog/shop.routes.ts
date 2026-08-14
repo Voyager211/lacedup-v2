@@ -4,19 +4,6 @@ import ensureVisible from '../../common/middlewares/ensure-visible.middleware';
 
 const router = express.Router();
 
-/**
- * @swagger
- * /shop:
- *   get:
- *     tags: [Shop]
- *     summary: Shop page
- *     description: >
- *       Renders the initial shop page. Filtering and pagination afterwards go
- *       through GET /api/shop.
- *     responses:
- *       200: { description: Shop page markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/shop', shopController.loadShopPage);
 
 /**
  * @swagger
@@ -136,28 +123,6 @@ router.get('/api/search-suggestions', shopController.getSearchSuggestions);
  */
 router.get('/api/available-sizes', shopController.getAvailableSizes);
 
-/**
- * @swagger
- * /product/{slug}:
- *   get:
- *     tags: [Shop]
- *     summary: Product details page
- *     description: >
- *       Returns 404 when the product is unlisted or soft-deleted, or when its
- *       category has been deactivated - enforced by the ensureVisible
- *       middleware before the handler runs.
- *     parameters:
- *       - in: path
- *         name: slug
- *         required: true
- *         schema: { type: string }
- *         example: air-max-90
- *     responses:
- *       200: { description: Product page markup, content: { text/html: { schema: { type: string } } } }
- *       404: { description: Product unavailable, unlisted, or its category is disabled }
- *       500: { $ref: '#/components/responses/ServerError' }
- */
-router.get('/product/:slug', ensureVisible, shopController.loadProductDetails);
 
 /**
  * @swagger

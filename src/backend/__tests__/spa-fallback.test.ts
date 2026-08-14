@@ -45,15 +45,15 @@ describe.skipIf(!built)('SPA fallback', () => {
   );
 
   it.each(['/orders/ORD000123', '/admin/products/abc'])(
-    'still lets the EJS router claim %s (flips in step 5.4)',
+    'answers %s with JSON rather than redirecting to a page that no longer exists',
     async (route) => {
-      // These paths are owned by a root-mounted EJS page route with an auth
-      // guard, so signed out they redirect rather than reaching the fallback.
-      // When the renders are deleted these become shell responses; this test
-      // moves up into the block above at that point.
+      // These paths are still claimed by a router, so they do not reach the
+      // fallback - but signed out they now answer 401/403 JSON instead of a
+      // 302 to an EJS login page. The SPA decides where to send the visitor.
       const res = await request(app).get(route);
 
-      expect(res.status).toBe(302);
+      expect([401, 403]).toContain(res.status);
+      expect(res.headers['content-type']).toMatch(/json/);
     }
   );
 

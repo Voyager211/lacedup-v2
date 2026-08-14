@@ -35,18 +35,6 @@ const getDateRange = (period: string = 'monthly') => {
     return { startDate, endDate };
 };
 
-// RENDER DASHBOARD PAGE
-const renderDashboard = async (req: Request, res: Response) => {
-    try {
-        res.render('admin/dashboard', {
-            title: 'Admin Dashboard - LacedUp Co',
-            layout: 'admin/layout'
-        });
-    } catch (error: any) {
-        console.error('Error rendering dashboard:', error);
-        res.status(500).send('Error loading dashboard');
-    }
-};
 
 // GET DASHBOARD STATISTICS (FILTERED BY PERIOD)
 const getDashboardStats = async (req: Request, res: Response) => {
@@ -793,7 +781,6 @@ const exportLedgerPDF = async (req: Request, res: Response) => {
 
 // EXPORTS
 export {
-    renderDashboard,
     getDashboardStats,
     getSalesData,
     getRevenueDistribution,

@@ -7,18 +7,6 @@ const router = express.Router();
 // Every route below requires an admin session.
 router.use(isAdmin);
 
-/**
- * @swagger
- * /admin/users:
- *   get:
- *     tags: [Admin]
- *     summary: User management page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: User list markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /admin/login without an admin session }
- */
-router.get('/', userController.listUsers);
 
 /**
  * @swagger

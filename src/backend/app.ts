@@ -8,9 +8,7 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import flash from 'connect-flash';
 import passport from 'passport';
-import methodOverride from 'method-override';
 import cookieParser from 'cookie-parser';
-import expressLayouts from 'express-ejs-layouts';
 import morgan from 'morgan';
 import morganBody from 'morgan-body';
 import swaggerUi from 'swagger-ui-express';
@@ -18,7 +16,7 @@ import path from 'path';
 import fs from 'fs';
 
 // Middleware imports
-import { FRONTEND_DIST, PUBLIC_DIR, VIEWS_DIR } from './config/paths';
+import { FRONTEND_DIST, PUBLIC_DIR } from './config/paths';
 import { apiLimiter } from './common/middlewares/rate-limiting.middleware';
 import { addUserContext } from './common/middlewares/user-context.middleware';
 import checkUserBlocked from './common/middlewares/check-user-blocked.middleware';
@@ -37,9 +35,7 @@ import adminCouponRoutes from './modules/coupons/admin-coupon.routes';
 import adminSalesReportRoutes from './modules/reports/sales-report.routes';
 import adminDashboardRoutes from './modules/reports/dashboard.routes';
 
-import landingRoutes from './modules/content/landing.routes';
 import userAuthRoutes from './modules/auth/auth.routes';
-import userHomeRoutes from './modules/catalog/home.routes';
 import userShopRoutes from './modules/catalog/shop.routes';
 import userReviewRoutes from './modules/reviews/review.routes';
 import userProfileRoutes from './modules/users/profile.routes';
@@ -51,7 +47,6 @@ import checkoutRoutes from './modules/checkout/checkout.routes';
 import userOrderRoutes from './modules/orders/order.routes';
 import userWalletRoutes from './modules/wallet/wallet.routes';
 import userReferralRoutes from './modules/referrals/referral.routes';
-import aboutRoutes from './modules/content/about.routes';
 import helpRoutes from './modules/content/help.routes';
 
 import configurePassport from './modules/auth/auth.passport';
@@ -60,16 +55,9 @@ const app = express();
 
 configurePassport(passport);
 
-// View engine
-app.set('view engine', 'ejs');
-app.set('views', VIEWS_DIR);
-app.use(expressLayouts);
-app.set('layout', 'admin/layout');
-
 // Middlewares
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.json({ limit: '50mb' }));
-app.use(methodOverride('_method'));
 app.use(cookieParser());
 app.use(express.static(PUBLIC_DIR));
 app.use(flash());
@@ -179,7 +167,6 @@ const PREFIXED_ROUTES: Array<[string, Router]> = [
   ['/coupons', userCouponRoutes],
   ['/referrals', userReferralRoutes],
   ['/checkout', checkoutRoutes],
-  ['/about', aboutRoutes],
 
   ['/admin', adminAuthRoutes],
   ['/admin/users', adminUserRoutes],
@@ -202,9 +189,7 @@ const PREFIXED_ROUTES: Array<[string, Router]> = [
  * Mounting them again under /api would only produce /api/api/* duplicates.
  */
 const ROOT_ROUTES: Router[] = [
-  landingRoutes,
   userAuthRoutes,
-  userHomeRoutes,
   userShopRoutes,
   userReviewRoutes,
   userProfileRoutes,

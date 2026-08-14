@@ -3,20 +3,6 @@ import * as helpController from './help.controller';
 
 const router = express.Router();
 
-/**
- * @swagger
- * /help:
- *   get:
- *     tags: [Content]
- *     summary: Help and contact page
- *     responses:
- *       200:
- *         description: Help page markup
- *         content:
- *           text/html:
- *             schema: { type: string }
- */
-router.get('/', helpController.getHelpPage);
 
 /**
  * @swagger

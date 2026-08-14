@@ -7,17 +7,6 @@ const router = express.Router();
 // Every route below requires an admin session.
 router.use(isAdmin);
 
-/**
- * @swagger
- * /admin/dashboard:
- *   get:
- *     tags: [Admin]
- *     summary: Dashboard page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Dashboard markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/', dashboardController.renderDashboard);
 
 /**
  * @swagger

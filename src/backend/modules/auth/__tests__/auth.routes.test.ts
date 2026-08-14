@@ -33,10 +33,13 @@ describe('auth routes (HTTP)', () => {
   });
 
   describe('GET /login', () => {
-    it('serves the login page to a guest', async () => {
+    it('is no longer a server-rendered page', async () => {
+      // The EJS login view is gone. /login is a React route now, so this path
+      // reaches the SPA fallback (or 404s when the frontend is not built) -
+      // either way the server does not render a form.
       const res = await request(app).get('/login');
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('<form');
+
+      expect(res.text).not.toContain('<form');
     });
 
     // Page routes deliberately stay off /api - only the prefixed JSON routers
@@ -107,12 +110,11 @@ describe('auth routes (HTTP)', () => {
   });
 
   describe('route surface', () => {
-    it('serves the shop page as HTML and the shop data as JSON', async () => {
-      const page = await request(app).get('/shop');
-      expect(page.status).toBe(200);
-      expect(page.headers['content-type']).toMatch(/html/);
-
+    it('serves the shop data as JSON', async () => {
+      // /shop is a React route now - the EJS page render is gone, so that path
+      // reaches the SPA fallback and only /api/shop carries data.
       const data = await request(app).get('/api/shop');
+
       expect(data.status).toBe(200);
       expect(data.headers['content-type']).toMatch(/json/);
       expect(data.body).toHaveProperty('products');
@@ -127,27 +129,25 @@ describe('auth routes (HTTP)', () => {
       expect(prefixed.status).not.toBe(404);
     });
 
-    it('rejects an unauthenticated /api request with JSON, not a redirect', async () => {
-      // The two mounts deliberately answer differently. A browser hitting
-      // /cart should be sent to the login page; an XHR client hitting
-      // /api/cart can do nothing with a 302 to an HTML page, so it gets a 401
-      // it can act on - whatever headers it sent.
-      const legacy = await request(app).get('/cart');
-      expect(legacy.status).toBe(302);
-      expect(legacy.headers.location).toContain('/login');
+    it('rejects an unauthenticated request with JSON on either mount', async () => {
+      // The two mounts used to answer differently: a browser hitting /cart was
+      // redirected to the login page, an XHR client got a 401. There is no
+      // login page to redirect to any more, and the SPA handles the redirect
+      // itself, so both are now a 401 the client can act on.
+      for (const path of ['/cart', '/api/cart']) {
+        const res = await request(app).get(path);
 
-      const prefixed = await request(app).get('/api/cart');
-      expect(prefixed.status).toBe(401);
-      expect(prefixed.headers['content-type']).toMatch(/json/);
+        expect(res.status).toBe(401);
+        expect(res.headers['content-type']).toMatch(/json/);
+      }
     });
 
     // Regression guard: cart's auth guard read req.headers.accept without a
-    // null check, so a request with no Accept header 500'd instead of being
-    // redirected to login.
-    it('redirects unauthenticated cart access instead of erroring', async () => {
+    // null check, so a request with no Accept header 500'd. The guard no
+    // longer negotiates at all, but the case is cheap to keep pinned.
+    it('does not error on unauthenticated cart access without an Accept header', async () => {
       const res = await request(app).get('/cart').unset('Accept');
-      expect(res.status).not.toBe(500);
-      expect(res.status).toBeLessThan(500);
+      expect(res.status).toBe(401);
     });
 
     it('returns 401 JSON for unauthenticated cart access from an API client', async () => {

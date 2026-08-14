@@ -7,17 +7,6 @@ const router = express.Router();
 // Every route below requires an admin session.
 router.use(isAdmin);
 
-/**
- * @swagger
- * /admin/orders:
- *   get:
- *     tags: [Admin]
- *     summary: Orders management page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Orders list markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/', orderController.getAllOrders);
 
 /**
  * @swagger
@@ -131,7 +120,6 @@ router.get('/api/:orderId', orderController.getOrderDetailsJSON);
  *       400: { description: Invalid status transition }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get('/:orderId', orderController.getOrderDetails);
 router.patch('/:orderId', orderController.updateOrderStatus);
 
 /**

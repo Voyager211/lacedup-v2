@@ -31,57 +31,13 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!userId) {
     // A request that arrived under /api wanted the API, whatever headers it
     // sent - a 302 to an HTML login page gives an XHR caller nothing to act on.
-    if (wantsJson(req)) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
-    }
-
-    return res.redirect('/login');
+    return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
   next();
 };
 
-/**
- * @swagger
- * /profile:
- *   get:
- *     tags: [Profile]
- *     summary: Profile page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Profile page markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /login when not signed in }
- */
-router.get(['/profile', '/api/profile'], requireAuth, profileController.loadProfile);
 
-/**
- * @swagger
- * /profile/edit:
- *   get:
- *     tags: [Profile]
- *     summary: Edit profile page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Edit form markup, content: { text/html: { schema: { type: string } } } }
- *   post:
- *     tags: [Profile]
- *     summary: Update name and phone
- *     security: [{ sessionCookie: [] }]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name: { type: string }
- *               phone: { type: string }
- *     responses:
- *       200: { description: Profile updated, content: { application/json: { schema: { $ref: '#/components/schemas/Success' } } } }
- *       400: { description: Validation failed }
- *       401: { $ref: '#/components/responses/Unauthorized' }
- */
-router.get(['/profile/edit', '/api/profile/edit'], requireAuth, profileController.loadEditProfile);
 router.post(['/profile/edit', '/api/profile/edit'], requireAuth, profileController.updateProfileData);
 
 /**
@@ -145,52 +101,11 @@ router.post(['/profile/verify-email-update-otp', '/api/profile/verify-email-upda
 router.post(['/profile/resend-email-update-otp', '/api/profile/resend-email-update-otp'], requireAuth, profileController.resendEmailUpdateOtp);
 
 router.post(['/profile/verify-current-email', '/api/profile/verify-current-email'], requireAuth, profileController.verifyCurrentEmail);
-router.get(['/profile/email-change-otp', '/api/profile/email-change-otp'], requireAuth, profileController.loadEmailChangeOtp);
 router.post(['/profile/verify-email-otp', '/api/profile/verify-email-otp'], requireAuth, profileController.verifyEmailChangeOtp);
 router.post(['/profile/change-email', '/api/profile/change-email'], requireAuth, profileController.changeEmail);
 
-/**
- * @swagger
- * /profile/change-password:
- *   get:
- *     tags: [Profile]
- *     summary: Change password page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Change password markup, content: { text/html: { schema: { type: string } } } }
- *   post:
- *     tags: [Profile]
- *     summary: Change the account password
- *     security: [{ sessionCookie: [] }]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [currentPassword, newPassword]
- *             properties:
- *               currentPassword: { type: string, format: password }
- *               newPassword: { type: string, format: password }
- *     responses:
- *       200: { description: Password changed }
- *       400: { description: Current password incorrect, or the new one fails validation }
- *       401: { $ref: '#/components/responses/Unauthorized' }
- */
-router.get(['/profile/change-password', '/api/profile/change-password'], requireAuth, profileController.loadChangePassword);
 router.post(['/profile/change-password', '/api/profile/change-password'], requireAuth, profileController.updatePassword);
 
-/**
- * @swagger
- * /profile/addresses:
- *   get:
- *     tags: [Profile]
- *     summary: Address book, rendered inside the profile layout
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Address book markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get(['/profile/addresses', '/api/profile/addresses'], requireAuth, profileController.loadAddresses);
 
 router.get('/orders', requireAuth, orderController.getUserOrders);
 

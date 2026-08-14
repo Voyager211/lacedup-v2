@@ -75,7 +75,7 @@ describe('auth without the session mirror', () => {
   it('lets an admin token through the isAdmin guard', async () => {
     const cookies = await signIn('/admin/login', ADMIN.email, ADMIN.password);
 
-    const res = await request(app).get('/api/admin/users').set('Cookie', cookies);
+    const res = await request(app).get('/api/admin/users/api').set('Cookie', cookies);
 
     expect(res.status).toBe(200);
   });
@@ -86,7 +86,7 @@ describe('auth without the session mirror', () => {
     // stays unset, which is what isAdmin now depends on.
     const cookies = await signIn('/login', SHOPPER.email, SHOPPER.password);
 
-    const res = await request(app).get('/api/admin/users').set('Cookie', cookies);
+    const res = await request(app).get('/api/admin/users/api').set('Cookie', cookies);
 
     expect(res.status).not.toBe(200);
   });
@@ -99,7 +99,7 @@ describe('auth without the session mirror', () => {
     // than when the token expires.
     await User.updateOne({ email: ADMIN.email }, { role: 'user' });
 
-    const res = await request(app).get('/api/admin/users').set('Cookie', cookies);
+    const res = await request(app).get('/api/admin/users/api').set('Cookie', cookies);
 
     expect(res.status).not.toBe(200);
   });

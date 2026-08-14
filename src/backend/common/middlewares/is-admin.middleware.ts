@@ -8,11 +8,12 @@ const isAdmin = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role === 'admin') {
       return next();
     }
-    req.flash('error', 'Admin access only');
-    res.redirect('/admin/login');
+    // 403 rather than a redirect: the admin panel is a React route, and it
+    // decides where to send an unauthorised visitor.
+    res.status(403).json({ success: false, message: 'Admin access only' });
   } catch (error) {
     console.error('Error in isAdmin middleware:', error);
-    res.status(500).send('Internal Server Error');
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 };
 

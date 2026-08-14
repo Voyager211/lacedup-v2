@@ -14,41 +14,6 @@ import { publicUser } from '../users/user.serializer';
 
 const router = express.Router();
 
-/**
- * @swagger
- * /signup:
- *   get:
- *     tags: [Auth]
- *     summary: Signup page
- *     responses:
- *       200: { description: Signup form markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /home when already signed in }
- *   post:
- *     tags: [Auth]
- *     summary: Start signup
- *     description: >
- *       Creates a pending signup in the session and emails an OTP. No user row
- *       is written until the OTP is verified. Rate limited to 10 attempts per
- *       15 minutes per IP.
- *     requestBody:
- *       required: true
- *       content:
- *         application/x-www-form-urlencoded:
- *           schema:
- *             type: object
- *             required: [name, email, password]
- *             properties:
- *               name: { type: string }
- *               email: { type: string, format: email }
- *               password: { type: string, format: password }
- *               confirmPassword: { type: string, format: password }
- *               referralCode: { type: string, description: Optional referral code }
- *     responses:
- *       200: { description: OTP sent; continue at /verify-otp }
- *       400: { description: Validation failed or the email is already registered }
- *       429: { $ref: '#/components/responses/RateLimited' }
- */
-router.get('/signup', isGuest, preventBackNavigation, authController.getSignup);
 /*
  * Each of these is registered on its bare path and under /api.
  *
@@ -60,42 +25,6 @@ router.get('/signup', isGuest, preventBackNavigation, authController.getSignup);
  */
 router.post(['/signup', '/api/signup'], authLimiter, isGuest, authController.postSignup);
 
-/**
- * @swagger
- * /verify-otp:
- *   get:
- *     tags: [Auth]
- *     summary: OTP entry page
- *     description: Redirects to /signup unless a matching pending signup exists in the session.
- *     parameters:
- *       - in: query
- *         name: email
- *         required: true
- *         schema: { type: string, format: email }
- *     responses:
- *       200: { description: OTP form markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /signup when there is no pending signup }
- *   post:
- *     tags: [Auth]
- *     summary: Verify the signup OTP
- *     description: >
- *       On success the user is created and signed in. Rate limited to 5 attempts
- *       per 15 minutes, which is what stops a 6-digit code being brute-forced.
- *     requestBody:
- *       required: true
- *       content:
- *         application/x-www-form-urlencoded:
- *           schema:
- *             type: object
- *             required: [otp]
- *             properties:
- *               otp: { type: string, example: '123456' }
- *     responses:
- *       200: { description: Account created and signed in }
- *       400: { description: OTP incorrect or expired }
- *       429: { $ref: '#/components/responses/RateLimited' }
- */
-router.get('/verify-otp', isGuest, preventOtpBackNavigation, authController.getOtpPage);
 router.post(['/verify-otp', '/api/verify-otp'], otpLimiter, isGuest, authController.postOtpVerification);
 
 /**
@@ -110,99 +39,10 @@ router.post(['/verify-otp', '/api/verify-otp'], otpLimiter, isGuest, authControl
  */
 router.post(['/resend-otp', '/api/resend-otp'], otpLimiter, isGuest, authController.resendOtp);
 
-/**
- * @swagger
- * /login:
- *   get:
- *     tags: [Auth]
- *     summary: Login page
- *     responses:
- *       200: { description: Login form markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /home when already signed in }
- *   post:
- *     tags: [Auth]
- *     summary: Log in with email and password
- *     description: >
- *       Blocked accounts are refused even with correct credentials. Rate limited
- *       to 10 attempts per 15 minutes per IP.
- *     requestBody:
- *       required: true
- *       content:
- *         application/x-www-form-urlencoded:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email: { type: string, format: email }
- *               password: { type: string, format: password }
- *     responses:
- *       200: { description: Signed in; a session cookie is set }
- *       401: { description: Invalid credentials, or the account is blocked }
- *       429: { $ref: '#/components/responses/RateLimited' }
- */
-router.get('/login', isGuest, preventBackNavigation, authController.getLogin);
 router.post(['/login', '/api/login'], authLimiter, isGuest, authController.postLogin);
 
-/**
- * @swagger
- * /forgot-password:
- *   get:
- *     tags: [Auth]
- *     summary: Forgot password page
- *     responses:
- *       200: { description: Form markup, content: { text/html: { schema: { type: string } } } }
- *   post:
- *     tags: [Auth]
- *     summary: Send a password reset OTP
- *     description: Limited to 5 requests per hour per IP.
- *     requestBody:
- *       required: true
- *       content:
- *         application/x-www-form-urlencoded:
- *           schema:
- *             type: object
- *             required: [email]
- *             properties:
- *               email: { type: string, format: email }
- *     responses:
- *       200: { description: OTP sent if the account exists }
- *       429: { $ref: '#/components/responses/RateLimited' }
- */
-router.get('/forgot-password', isGuest, preventBackNavigation, authController.getForgotPassword);
 router.post(['/forgot-password', '/api/forgot-password'], passwordResetLimiter, isGuest, authController.sendResetOtp);
 
-/**
- * @swagger
- * /reset-otp:
- *   get:
- *     tags: [Auth]
- *     summary: Reset OTP entry page
- *     parameters:
- *       - in: query
- *         name: email
- *         required: true
- *         schema: { type: string, format: email }
- *     responses:
- *       200: { description: OTP form markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /forgot-password when the email is missing }
- *   post:
- *     tags: [Auth]
- *     summary: Verify the password reset OTP
- *     requestBody:
- *       required: true
- *       content:
- *         application/x-www-form-urlencoded:
- *           schema:
- *             type: object
- *             required: [otp]
- *             properties:
- *               otp: { type: string }
- *     responses:
- *       200: { description: OTP verified; continue at /reset-password }
- *       400: { description: OTP incorrect or expired }
- *       429: { $ref: '#/components/responses/RateLimited' }
- */
-router.get('/reset-otp', isGuest, preventOtpBackNavigation, authController.getResetOtpPage);
 router.post(['/reset-otp', '/api/reset-otp'], otpLimiter, isGuest, authController.verifyResetOtp);
 
 /**
@@ -217,39 +57,6 @@ router.post(['/reset-otp', '/api/reset-otp'], otpLimiter, isGuest, authControlle
  */
 router.post(['/resend-reset-otp', '/api/resend-reset-otp'], otpLimiter, isGuest, authController.resendResetOtp);
 
-/**
- * @swagger
- * /reset-password:
- *   get:
- *     tags: [Auth]
- *     summary: New password page
- *     parameters:
- *       - in: query
- *         name: email
- *         required: true
- *         schema: { type: string, format: email }
- *     responses:
- *       200: { description: Form markup, content: { text/html: { schema: { type: string } } } }
- *   post:
- *     tags: [Auth]
- *     summary: Set a new password
- *     requestBody:
- *       required: true
- *       content:
- *         application/x-www-form-urlencoded:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email: { type: string, format: email }
- *               password: { type: string, format: password }
- *               confirmPassword: { type: string, format: password }
- *     responses:
- *       200: { description: Password reset }
- *       400: { description: Validation failed, or the reset was not verified }
- *       429: { $ref: '#/components/responses/RateLimited' }
- */
-router.get('/reset-password', isGuest, preventOtpBackNavigation, authController.getResetPasswordPage);
 router.post(['/reset-password', '/api/reset-password'], passwordResetLimiter, isGuest, authController.resetPassword);
 
 /**

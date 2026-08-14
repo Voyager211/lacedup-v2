@@ -19,25 +19,9 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 
-  return res.redirect('/login');
+  return res.status(401).json({ success: false, message: 'Authentication required' });
 };
 
-/**
- * @swagger
- * /coupons:
- *   get:
- *     tags: [Coupons]
- *     summary: Coupons page
- *     description: Coupons available to the signed-in user, with eligibility already evaluated.
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Coupons page markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /login when not signed in }
- *       401: { $ref: '#/components/responses/Unauthorized' }
- */
-router.get('/', requireAuth, (req: Request, res: Response) => {
-  couponController.renderCouponsPage(req, res);
-});
 
 /**
  * @swagger

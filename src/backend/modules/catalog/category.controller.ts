@@ -6,58 +6,6 @@ import sharp from 'sharp';
 import path from 'path';
 import { promises as fs } from 'fs';
 
-// List categories with search and filter
-const listCategories = async (req: Request, res: Response) => {
-  try { 
-    const searchQuery = String(req.query.q || '');
-    const statusFilter = String(req.query.status || 'all');
-    const page = parseInt(String(req.query.page)) || 1;
-    const limit = 10;
-
-    const query: Record<string, any> = {
-      name: { $regex: searchQuery, $options: 'i' },
-      isDeleted: false
-    };
-
-    if (statusFilter === 'active') {
-      query.isActive = true;
-    } else if (statusFilter === 'inactive') {
-      query.isActive = false;
-    }
-
-    const totalRecords = await Category.countDocuments(query);
-
-    const { data: categories, totalPages } = await getPagination(
-      Category.find(query).sort({ createdAt: -1 }),
-      Category,
-      query,
-      page,
-      limit
-    );
-
-    res.render('admin/categories', {
-      categories,
-      currentPage: page,
-      totalPages,
-      totalRecords,
-      searchQuery,
-      statusFilter,
-      title: 'Category Management'
-    });
-  } catch (error: any) {
-    console.error('Error listing categories:', error);
-    res.status(500).render('admin/categories', {
-      categories: [],
-      currentPage: 1,
-      totalPages: 1,
-      totalRecords: 0,
-      searchQuery: '',
-      statusFilter: 'all',
-      title: 'Category Management',
-      error: 'Failed to load categories'
-    });
-  }
-};
 
 // Fetch-based category listing
 const apiCategories = async (req: Request, res: Response) => {
@@ -325,7 +273,6 @@ const apiSoftDeleteCategory = async (req: Request, res: Response) => {
 };
 
 export {
-  listCategories,
   apiCategories,
   apiGetCategory,
   apiCreateCategory,

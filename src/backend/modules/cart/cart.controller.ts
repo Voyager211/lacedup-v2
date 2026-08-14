@@ -447,37 +447,15 @@ const loadCart = async (req: Request, res: Response) => {
     const result = await buildCart(currentUserId(req));
 
     if (!result) {
-      return wantsJson(req)
-        ? res.status(401).json({ success: false, message: 'Not authenticated' })
-        : res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
-    if (wantsJson(req)) {
-      const { user: _user, ...cart } = result;
-      return res.json({ success: true, ...cart });
-    }
-
-    res.render('user/cart', {
-      ...result,
-      title: 'My Cart',
-      layout: 'user/layouts/user-layout',
-      active: 'cart'
-    });
+    // `user` is dropped: the client already knows who it is from /auth/me.
+    const { user: _user, ...cart } = result;
+    res.json({ success: true, ...cart });
   } catch (error: any) {
     console.error('Error loading cart:', error);
-
-    if (wantsJson(req)) {
-      return res.status(500).json({ success: false, message: 'Error loading cart' });
-    }
-
-    // errors/server-error, not 'error' - views/error.ejs has never existed, so
-    // the old path threw inside its own error handler (docs/defects.md).
-    res.status(500).render('errors/server-error', {
-      title: 'Server Error',
-      message: 'Error loading cart',
-      layout: 'user/layouts/user-layout',
-      active: 'cart'
-    });
+    res.status(500).json({ success: false, message: 'Error loading cart' });
   }
 };
 

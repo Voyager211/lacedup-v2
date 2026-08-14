@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import sendEmail from './send-email.util';
 import mockSendEmail from './mock-email.util';
-import { VIEWS_DIR } from '../../config/paths';
+import { EMAIL_TEMPLATES_DIR } from '../../config/paths';
 
 /**
  * Minimal user shape needed to address an OTP email.
@@ -31,7 +31,7 @@ const USE_MOCK_EMAIL =
   !process.env.EMAIL_USER || !process.env.EMAIL_PASS || process.env.MOCK_EMAIL === 'true';
 
 // Pre-compile template for faster rendering
-const templatePath = path.join(VIEWS_DIR, 'user', 'partials', 'otp-email.ejs');
+const templatePath = path.join(EMAIL_TEMPLATES_DIR, 'otp-email.ejs');
 
 type TemplateFn = (data: { user: OtpRecipient; otp: string }) => string;
 type FallbackFn = (user: OtpRecipient, otp: string) => string;

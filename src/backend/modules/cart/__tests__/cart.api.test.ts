@@ -59,18 +59,21 @@ describe('cart API', () => {
   });
 
   describe('content negotiation', () => {
-    it('serves the page on the bare mount and data under /api', async () => {
-      const page = await request(app).get('/cart').set('Cookie', cookies);
-      expect(page.headers['content-type']).toMatch(/html/);
+    it('answers JSON on both mounts now the page render is gone', async () => {
+      // Until Phase 5 the bare path rendered EJS and only /api answered data.
+      // Both are the same JSON endpoint now; the bare mount disappears with
+      // the duplicate mounts in 5.5.
+      for (const path of ['/cart', '/api/cart']) {
+        const res = await request(app).get(path).set('Cookie', cookies);
 
-      const data = await request(app).get('/api/cart').set('Cookie', cookies);
-      expect(data.headers['content-type']).toMatch(/json/);
-      expect(data.body).toHaveProperty('cartItems');
+        expect(res.headers['content-type']).toMatch(/json/);
+        expect(res.body).toHaveProperty('cartItems');
+      }
     });
 
-    it('redirects a signed-out browser but answers a signed-out API client', async () => {
+    it('answers a signed-out client with 401 rather than a redirect', async () => {
       const page = await request(app).get('/cart');
-      expect(page.status).toBe(302);
+      expect(page.status).toBe(401);
 
       const data = await request(app).get('/api/cart');
       expect(data.status).toBe(401);

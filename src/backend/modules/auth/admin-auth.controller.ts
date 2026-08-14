@@ -2,20 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { issueSession, endSession } from './auth.session';
 
-const getLogin = (req: Request, res: Response) => {
-    try {
-        if (req.isAuthenticated()) return res.redirect('/admin/dashboard');
-        res.render('admin/login', {
-            title: 'Admin Login',
-            layout: 'layouts/login-layout',
-            message: req.flash('error'),
-            formData: req.flash('formData')[0] || {}
-        });
-    } catch (error: any) {
-        console.error('Error rendering login page:', error);
-        res.status(500).send('Internal Server Error');
-    }
-};
 
 const postLogin = (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -128,7 +114,6 @@ function validateLoginForm(formData: { email?: string; password?: string; rememb
 }
 
 export {
-    getLogin,
     postLogin,
     logout
 }

@@ -20,15 +20,11 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  if (wantsJson(req)) {
-    return res.status(401).json({
-      success: false,
-      message: 'You must be logged in to access this feature',
-      code: 'AUTHENTICATION_REQUIRED'
-    });
-  }
-
-  return res.redirect('/login');
+  return res.status(401).json({
+    success: false,
+    message: 'You must be logged in to access this feature',
+    code: 'AUTHENTICATION_REQUIRED'
+  });
 };
 
 /** API guard: always answers JSON, never redirects. */

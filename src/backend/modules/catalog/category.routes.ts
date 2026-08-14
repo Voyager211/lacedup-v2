@@ -7,17 +7,6 @@ const router = express.Router();
 // Every route below requires an admin session.
 router.use(isAdmin);
 
-/**
- * @swagger
- * /admin/categories:
- *   get:
- *     tags: [Admin]
- *     summary: Category management page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Category list markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/', categoryController.listCategories);
 
 /**
  * @swagger

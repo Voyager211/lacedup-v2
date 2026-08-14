@@ -10,28 +10,12 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!currentUserId(req)) {
     // A request that arrived under /api wanted the API - a 302 to an HTML
     // login page gives an XHR caller nothing to act on.
-    if (wantsJson(req)) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
-    }
-
-    return res.redirect('/login');
+    return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
   next();
 };
 
-/**
- * @swagger
- * /addresses:
- *   get:
- *     tags: [Addresses]
- *     summary: Address book page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Address book markup, content: { text/html: { schema: { type: string } } } }
- *       302: { description: Redirected to /login when not signed in }
- */
-router.get('/addresses', requireAuth, addressController.loadAddresses);
 
 /**
  * @swagger

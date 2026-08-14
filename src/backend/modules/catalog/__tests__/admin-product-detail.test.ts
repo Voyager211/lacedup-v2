@@ -136,11 +136,10 @@ describe('admin product detail as JSON', () => {
     expect(res.status).not.toBe(200);
   });
 
-  it('still renders HTML on the bare admin path', async () => {
-    // The EJS page is still mounted until Phase 5 removes it.
+  it('answers JSON on the bare admin path too, now the EJS page is gone', async () => {
     const res = await request(app).get(`/admin/products/${productId}`).set('Cookie', cookies);
 
     expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toMatch(/html/);
+    expect(res.headers['content-type']).toMatch(/json/);
   });
 });

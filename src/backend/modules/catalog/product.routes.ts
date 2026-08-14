@@ -136,35 +136,7 @@ router.patch('/api/:id/delete', productController.apiSoftDeleteProduct);
  */
 router.patch('/api/:id/toggle', productController.apiToggleProductStatus);
 
-/**
- * @swagger
- * /admin/products/add:
- *   get:
- *     tags: [Admin]
- *     summary: Add product page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Add product form, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/add', productController.renderAddPage);
 
-/**
- * @swagger
- * /admin/products/{id}/edit:
- *   get:
- *     tags: [Admin]
- *     summary: Edit product page
- *     security: [{ sessionCookie: [] }]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200: { description: Edit form, content: { text/html: { schema: { type: string } } } }
- *       404: { $ref: '#/components/responses/NotFound' }
- */
-router.get('/:id/edit', productController.renderEditPage);
 
 /**
  * @swagger
@@ -184,16 +156,5 @@ router.get('/:id/edit', productController.renderEditPage);
  */
 router.get('/:id', productController.renderDetailPage);
 
-/**
- * @swagger
- * /admin/products:
- *   get:
- *     tags: [Admin]
- *     summary: Product management page
- *     security: [{ sessionCookie: [] }]
- *     responses:
- *       200: { description: Product list markup, content: { text/html: { schema: { type: string } } } }
- */
-router.get('/', productController.listProducts);
 
 export = router;

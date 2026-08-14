@@ -33,7 +33,7 @@ const getUserOrders = async (req: Request, res: Response) => {
 
     const user: any = await User.findById(userId);
     if (!user) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     const page = 1;
@@ -100,17 +100,8 @@ const getUserOrders = async (req: Request, res: Response) => {
     // The reason lists travel with the page rather than being mirrored in the
     // client: they are a server enum, and a copy would drift the moment one is
     // added.
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...list });
-    }
+    res.json({ success: true, ...list });
 
-    res.render('user/orders', {
-      user,
-      ...list,
-      title: 'My Orders',
-      layout: 'user/layouts/user-layout',
-      active: 'orders'
-    });
 
   } catch (error: any) {
     console.error('Error loading orders: ', error);
@@ -382,7 +373,7 @@ const getOrderDetails = async (req: Request, res: Response) => {
     const userId = currentUserId(req);
 
     if (!userId) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     // Extract enum values
@@ -392,7 +383,7 @@ const getOrderDetails = async (req: Request, res: Response) => {
     // Get user data
     const user: any = await User.findById(userId).select('name email profilePhoto');
     if (!user) {
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     // Get order details with populated product data and address
@@ -531,17 +522,8 @@ const getOrderDetails = async (req: Request, res: Response) => {
       ORDER_STATUS
     };
 
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...details });
-    }
+    res.json({ success: true, ...details });
 
-    res.render('user/order-details', {
-      user,
-      ...details,
-      title: `Order Details - ${orderId}`,
-      layout: 'user/layouts/user-layout',
-      active: 'orders'
-    });
 
   } catch (error: any) {
     console.error('Error loading order details:', error);

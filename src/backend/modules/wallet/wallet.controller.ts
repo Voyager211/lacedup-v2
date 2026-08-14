@@ -17,8 +17,7 @@ const renderWalletPage = async (req: Request, res: Response) => {
     console.log(userId);
     
     if (!userId) {
-      req.flash('error', 'Please log in to continue');
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'Please log in to continue' });
     }
 
     // Get user data
@@ -26,8 +25,7 @@ const renderWalletPage = async (req: Request, res: Response) => {
     const user = await User.findById(userId);
 
     if (!user) {
-      req.flash('error', 'User not found');
-      return res.redirect('/login');
+      return res.status(401).json({ success: false, message: 'User not found' });
     }
 
     // Get or create wallet
@@ -78,17 +76,8 @@ const renderWalletPage = async (req: Request, res: Response) => {
       stats
     };
 
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...payload });
-    }
+    res.json({ success: true, ...payload });
 
-    res.render('user/wallet', {
-      user,
-      ...payload,
-      title: 'My Wallet',
-      layout: 'user/layouts/user-layout',
-      active: 'wallet'
-    });
   } catch (error: any) {
     console.error('Error rendering wallet page:', error);
 

@@ -10,52 +10,6 @@ import { wantsJson } from '../../common/utils/wants-json.util';
 import sharp from 'sharp';
 import mongoose from 'mongoose';
 
-// List all products (page render)
-const listProducts = async (req: Request, res: Response) => {
-  try {
-    const q = String(req.query.q || '');
-    const page = parseInt(String(req.query.page)) || 1;
-    const limit = 10;
-    const query: Record<string, any> = { productName: { $regex: q, $options: 'i' }, isDeleted: false };
-
-    // Get total count of all non-deleted products
-    const totalRecords = await Product.countDocuments({ isDeleted: false });
-
-    const { data: products, totalPages } = await getPagination(
-      Product.find(query).populate('category').populate('brand').sort({ createdAt: -1 }),
-      Product,
-      query, 
-      page,
-      limit
-    );
-    const categories = await Category.find({ isDeleted: false }).sort({ name: 1 });
-    const brands = await Brand.find({ isDeleted: false }).sort({ name: 1 });
-
-    res.render('admin/products', {
-      products,
-      categories,
-      brands,
-      currentPage: page,
-      totalPages,
-      totalRecords,
-      searchQuery: q,
-      title: "Product Management"
-    });
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).render('admin/products', {
-      products: [],
-      categories: [],
-      brands: [],
-      currentPage: 1,
-      totalPages: 1,
-      totalRecords: 0,
-      searchQuery: '',
-      title: 'Product Management',
-      error: 'Failed to load products'
-    });
-  }
-}; 
 
 // Render product detail page
 const renderDetailPage = async (req: Request, res: Response) => {
@@ -166,14 +120,8 @@ const renderDetailPage = async (req: Request, res: Response) => {
       activeOffers
     };
 
-    if (wantsJson(req)) {
-      return res.json({ success: true, ...payload });
-    }
+    res.json({ success: true, ...payload });
 
-    res.render('admin/product-detail', {
-      title: `Product Details - ${product.productName}`,
-      ...payload
-    });
   } catch (err: any) {
     console.error('Render Detail Error:', err);
     res.status(500).send("Error rendering product detail page");
@@ -183,17 +131,6 @@ const renderDetailPage = async (req: Request, res: Response) => {
 
 
 
-// Render add product page
-const renderAddPage = async (req: Request, res: Response) => {
-  const categories = await Category.find({ isDeleted: false, isActive: true });
-  const brands = await Brand.find({ isDeleted: false, isActive: true }).sort({ name: 1 });
-  res.render('admin/add-product', {
-    title: "Add Product",
-    categories,
-    brands,
-    message: req.flash('error')
-  });
-};
 
 // API: Create new product via base64 images (fetch-based)
 const apiSubmitNewProduct = async (req: Request, res: Response) => {
@@ -476,53 +413,6 @@ const apiToggleProductStatus = async (req: Request, res: Response) => {
   }
 };
 
-// Render edit product page
-const renderEditPage = async (req: Request, res: Response) => {
-  try {
-    const product = await Product.findById(req.params.id).populate('category').populate('brand');
-    
-    if (!product) return res.status(404).send('Product not found');
-
-    // Get active categories for the dropdown
-    let categories = await Category.find({ isDeleted: false, isActive: true }).sort({ name: 1 });
-    
-    // If the product's current category is inactive, include it in the list so admin can see it
-    // but mark it as inactive for UI indication
-    if (product.category && !(product.category as any).isActive) {
-      const currentCategory = await Category.findById((product.category as any)._id);
-      if (currentCategory && !currentCategory.isDeleted) {
-        // Add the inactive category to the list with a flag
-        (currentCategory as any).isCurrentInactive = true;
-        categories.unshift(currentCategory);
-      }
-    }
-
-    // Get active brands for the dropdown
-    let brands = await Brand.find({ isDeleted: false, isActive: true }).sort({ name: 1 });
-    
-    // If the product's current brand is inactive, include it in the list so admin can see it
-    // but mark it as inactive for UI indication
-    if (product.brand && !(product.brand as any).isActive) {
-      const currentBrand = await Brand.findById((product.brand as any)._id);
-      if (currentBrand && !currentBrand.isDeleted) {
-        // Add the inactive brand to the list with a flag
-        (currentBrand as any).isCurrentInactive = true;
-        brands.unshift(currentBrand);
-      }
-    }
-
-    res.render('admin/edit-product', {
-      title: 'Edit Product',
-      product,
-      categories,
-      brands,
-      message: req.flash('error')
-    });
-  } catch (err: any) {
-    console.error('Render Edit Error:', err);
-    res.status(500).send("Error rendering edit page");
-  }
-};
 
 // API: Update product
 const apiUpdateProduct = async (req: Request, res: Response) => {
@@ -681,14 +571,11 @@ const apiUpdateProduct = async (req: Request, res: Response) => {
 
 
 export {
-  listProducts,
   renderDetailPage,
-  renderAddPage,
   apiSubmitNewProduct,
   softDeleteProduct,
   apiProducts,
   apiSoftDeleteProduct,
   apiToggleProductStatus,
-  renderEditPage,
   apiUpdateProduct
 };

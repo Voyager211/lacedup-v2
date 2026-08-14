@@ -2,80 +2,6 @@ import type { Request, Response } from 'express';
 import Coupon from './coupon.model';
 
 
-const loadCouponPage = async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(String(req.query.page)) || 1;
-    const limit = 8; // 12 coupons per page
-    const searchQuery = String(req.query.q || '');
-    const statusFilter = String(req.query.status || 'all');
-    
-    // Build query
-    let query: Record<string, any> = {};
-    
-    // Search filter
-    if (searchQuery) {
-      query.$or = [
-        { code: { $regex: searchQuery, $options: 'i' } },
-        { name: { $regex: searchQuery, $options: 'i' } }
-      ];
-    }
-    
-    // Status filter
-    if (statusFilter === 'active') {
-      query.isActive = true;
-      query.validTo = { $gte: new Date() };
-    } else if (statusFilter === 'inactive') {
-      query.isActive = false;
-    } else if (statusFilter === 'expired') {
-      query.validTo = { $lt: new Date() };
-    }
-    
-    // Pagination
-    const totalCoupons = await Coupon.countDocuments(query);
-    const totalPages = Math.ceil(totalCoupons / limit);
-    const skip = (page - 1) * limit;
-    
-    const coupons = await Coupon.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-    
-    // Generate page numbers
-    const maxPagesToShow = 5;
-    let startPage = Math.max(1, page - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-    
-    if (endPage - startPage + 1 < maxPagesToShow) {
-      startPage = Math.max(1, endPage - maxPagesToShow + 1);
-    }
-    
-    const pageNumbers: any[] = [];
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
-    }
-    
-    res.render('admin/coupons', {
-      title: 'Coupon Management',
-      coupons,
-      count: totalCoupons,
-      searchQuery,
-      statusFilter,
-      currentPage: page,
-      totalPages,
-      hasPrevPage: page > 1,
-      hasNextPage: page < totalPages,
-      prevPage: page - 1,
-      nextPage: page + 1,
-      pageNumbers
-    });
-  } catch (error: any) {
-    console.error('Error loading coupon page:', error);
-    res.status(500).render('admin/error', {
-      title: 'Error',
-      message: 'Failed to load coupons'
-    });
-  }
-};
 
 
 const getAllCouponsAPI = async (req: Request, res: Response) => {
@@ -607,7 +533,6 @@ const deleteCoupon = async (req: Request, res: Response) => {
 }
 
 export {
-    loadCouponPage,
     getAllCouponsAPI,
     createCoupon,
     getCouponById,

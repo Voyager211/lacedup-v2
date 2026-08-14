@@ -15,15 +15,11 @@ export const ensureAuthenticated = (req: Request, res: Response, next: NextFunct
 
   // A request that arrived under /api wanted the API, whatever headers it
   // sent - a 302 to an HTML login page gives an XHR caller nothing to act on.
-  if (wantsJson(req)) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required',
-      redirectUrl: '/login'
-    });
-  }
-
-  return res.redirect('/login');
+  return res.status(401).json({
+    success: false,
+    message: 'Authentication required',
+    redirectUrl: '/login'
+  });
 };
 
 // Middleware to ensure user is not authenticated (for login/register pages)
