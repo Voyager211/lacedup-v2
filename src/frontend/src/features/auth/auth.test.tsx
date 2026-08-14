@@ -49,7 +49,7 @@ describe('LoginPage', () => {
   it('validates before it touches the network', async () => {
     renderPage(<LoginPage />, '/login');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Log In' }));
 
     expect(await screen.findByText('Email is required')).toBeInTheDocument();
     expect(screen.getByText('Password is required')).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('LoginPage', () => {
 
     await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'old123');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Log In' }));
 
     expect(await screen.findByText('storefront home')).toBeInTheDocument();
   });
@@ -79,7 +79,7 @@ describe('LoginPage', () => {
 
     await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Log In' }));
 
     await screen.findByText('storefront home');
 
@@ -95,7 +95,7 @@ describe('LoginPage', () => {
 
     await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'wrongpassword');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Log In' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid credentials.');
   });
@@ -107,7 +107,7 @@ describe('LoginPage', () => {
 
     await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Log In' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/wait a moment/i);
   });
@@ -115,7 +115,7 @@ describe('LoginPage', () => {
   it('offers the Google flow as a real navigation, not a fetch', () => {
     renderPage(<LoginPage />, '/login');
 
-    expect(screen.getByRole('link', { name: /continue with google/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /sign in with google/i })).toHaveAttribute(
       'href',
       '/google'
     );
@@ -124,10 +124,11 @@ describe('LoginPage', () => {
 
 describe('SignupPage', () => {
   const fill = async () => {
-    await userEvent.type(screen.getByLabelText('Full name'), 'Alice Example');
+    await userEvent.type(screen.getByLabelText('Full Name'), 'Alice Example');
+    await userEvent.type(screen.getByLabelText('Phone Number'), '9876543210');
     await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
-    await userEvent.type(screen.getByLabelText('Confirm password'), 'correcthorse1');
+    await userEvent.type(screen.getByLabelText('Confirm Password'), 'correcthorse1');
   };
 
   it('sends the visitor to verification, carrying the email', async () => {
@@ -136,7 +137,7 @@ describe('SignupPage', () => {
     const router = renderPage(<SignupPage />, '/signup');
 
     await fill();
-    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
 
     await vi.waitFor(() => {
       expect(router.state.location.pathname).toBe('/verify-otp');
@@ -150,7 +151,7 @@ describe('SignupPage', () => {
     renderPage(<SignupPage />, '/signup');
 
     await fill();
-    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
 
     expect(await screen.findByText('Email already in use.')).toBeInTheDocument();
   });
@@ -161,8 +162,8 @@ describe('SignupPage', () => {
     renderPage(<SignupPage />, '/signup');
 
     await fill();
-    await userEvent.type(screen.getByLabelText('Referral code'), 'NOPE');
-    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await userEvent.type(screen.getByLabelText('Referral Code (Optional)'), 'NOPE');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
 
     expect(await screen.findByText(/invalid referral code/i)).toBeInTheDocument();
   });
@@ -170,11 +171,12 @@ describe('SignupPage', () => {
   it('catches a password mismatch before submitting', async () => {
     renderPage(<SignupPage />, '/signup');
 
-    await userEvent.type(screen.getByLabelText('Full name'), 'Alice Example');
+    await userEvent.type(screen.getByLabelText('Full Name'), 'Alice Example');
+    await userEvent.type(screen.getByLabelText('Phone Number'), '9876543210');
     await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
-    await userEvent.type(screen.getByLabelText('Confirm password'), 'somethingelse1');
-    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await userEvent.type(screen.getByLabelText('Confirm Password'), 'somethingelse1');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
 
     expect(await screen.findByText('Passwords do not match')).toBeInTheDocument();
     expect(mock.history.post).toHaveLength(0);

@@ -72,7 +72,7 @@ const AccountMenu = () => {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-full p-2 text-ink transition-colors hover:bg-card"
+        className="flex items-center gap-2 rounded-full p-2 text-white transition-colors hover:bg-white/10"
       >
         {user?.profilePhoto ? (
           <img src={user.profilePhoto} alt="" className="size-6 rounded-full object-cover" />

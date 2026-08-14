@@ -76,6 +76,10 @@ export const loginSchema = z.object({
 export const signupSchema = z
   .object({
     name: nameSchema,
+    // Required on the form, though the server treats it as optional - the
+    // signup design asks for it, and an account with no phone number is a
+    // support problem later when a delivery needs chasing.
+    phone: phoneSchema,
     email: emailSchema,
     password: newPasswordSchema,
     confirmPassword: z.string().min(1, 'Confirm your password'),

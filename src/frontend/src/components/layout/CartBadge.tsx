@@ -24,7 +24,7 @@ const CartBadge = ({ enabled }: { enabled: boolean }) => {
   return (
     <Link
       to="/cart"
-      className="relative rounded-full p-2 text-ink transition-colors hover:bg-card"
+      className="relative rounded-full p-2 text-white transition-colors hover:bg-white/10"
       aria-label={count > 0 ? `Cart, ${count} item${count === 1 ? '' : 's'}` : 'Cart'}
     >
       <BsCart className="size-5" aria-hidden="true" />

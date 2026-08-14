@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import Logo from '@/components/Logo';
 
 /**
  * The storefront footer.
@@ -52,7 +53,7 @@ const Footer = () => (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
       <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="font-display text-2xl tracking-wide">LACEDUP</p>
+          <Logo onDark width={150} />
           <p className="mt-3 max-w-xs text-sm text-white/60">
             Where style meets street culture.
           </p>

@@ -83,7 +83,7 @@ describe('AdminLoginPage', () => {
 
     await userEvent.type(screen.getByLabelText('Email'), 'admin@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Log In' }));
 
     expect(await screen.findByText('admin dashboard')).toBeInTheDocument();
     // The shopper endpoints must not be touched.
@@ -98,7 +98,7 @@ describe('AdminLoginPage', () => {
 
     await userEvent.type(screen.getByLabelText('Email'), 'shopper@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'correcthorse1');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Log In' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Not authorized as admin');
   });

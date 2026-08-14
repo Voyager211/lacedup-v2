@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import AccountMenu from './AccountMenu';
 import CartBadge from './CartBadge';
 import SearchTypeahead from './SearchTypeahead';
+import Logo from '@/components/Logo';
 
 /**
  * The storefront navbar.
@@ -58,25 +59,25 @@ const Navbar = () => {
 
   const linkClasses = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'text-sm transition-colors hover:text-brand',
-      isActive ? 'font-semibold text-brand' : 'text-ink'
+      'text-sm transition-colors hover:text-white',
+      isActive ? 'font-semibold text-white' : 'text-white/70'
     );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white">
+    <header className="sticky top-0 z-40 bg-ink text-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label="Open menu"
           aria-expanded={menuOpen}
-          className="rounded p-2 text-ink transition-colors hover:bg-card lg:hidden"
+          className="rounded p-2 text-white transition-colors hover:bg-white/10 lg:hidden"
         >
           <BsList className="size-5" aria-hidden="true" />
         </button>
 
-        <Link to="/" className="shrink-0 font-display text-2xl tracking-wide text-ink">
-          LACEDUP
+        <Link to="/" className="shrink-0" aria-label="LacedUp home">
+          <Logo onDark width={132} />
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
@@ -95,7 +96,7 @@ const Navbar = () => {
               <Link
                 to="/wishlist"
                 aria-label="Wishlist"
-                className="hidden rounded-full p-2 text-ink transition-colors hover:bg-card sm:block"
+                className="hidden rounded-full p-2 text-white transition-colors hover:bg-white/10 sm:block"
               >
                 <BsHeart className="size-5" aria-hidden="true" />
               </Link>
@@ -106,7 +107,7 @@ const Navbar = () => {
             <div className="flex items-center gap-2">
               <Link
                 to="/login"
-                className="rounded-md px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-card"
+                className="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
               >
                 Sign in
               </Link>
@@ -121,7 +122,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      <div className="border-t border-line px-4 py-2 md:hidden">
+      <div className="border-t border-white/15 px-4 py-2 md:hidden">
         <SearchTypeahead />
       </div>
 
@@ -138,7 +139,8 @@ const Navbar = () => {
             className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
           >
             <div className="flex h-16 items-center justify-between border-b border-line px-4">
-              <span className="font-display text-xl tracking-wide text-ink">LACEDUP</span>
+              {/* The drawer panel is white, so the mark is inverted here. */}
+              <Logo width={116} />
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}

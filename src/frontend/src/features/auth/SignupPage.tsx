@@ -8,6 +8,7 @@ import Button from '@/components/Button';
 import { TextField } from '@/components/form/TextField';
 import PasswordField from '@/components/form/PasswordField';
 import AuthHeading from './AuthHeading';
+import { AuthDivider, FILLED_INPUT, GoogleButton } from './AuthBits';
 
 /**
  * Create an account.
@@ -50,17 +51,7 @@ const SignupPage = () => {
 
   return (
     <>
-      <AuthHeading
-        title="Create an account"
-        subtitle={
-          <>
-            Already have one?{' '}
-            <Link to="/login" className="font-medium text-brand hover:underline">
-              Sign in
-            </Link>
-          </>
-        }
-      />
+      <AuthHeading title="Create your account" />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         {errors.root && (
@@ -70,21 +61,45 @@ const SignupPage = () => {
         )}
 
         <TextField
-          label="Full name"
+          label="Full Name"
           autoComplete="name"
           required
+          placeholder="Fullname"
+          className={FILLED_INPUT}
           error={errors.name?.message}
           {...register('name')}
+        />
+
+        <TextField
+          label="Phone Number"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel"
+          required
+          placeholder="Phone"
+          className={FILLED_INPUT}
+          error={errors.phone?.message}
+          {...register('phone')}
         />
 
         <TextField
           label="Email"
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="Email address"
           required
+          className={FILLED_INPUT}
           error={errors.email?.message}
           {...register('email')}
+        />
+
+        <TextField
+          label="Referral Code (Optional)"
+          placeholder="Enter referral code if you have one"
+          hint="Enter a referral code to help a friend earn rewards"
+          className={FILLED_INPUT}
+          error={errors.referralCode?.message}
+          {...register('referralCode')}
         />
 
         <PasswordField
@@ -93,30 +108,38 @@ const SignupPage = () => {
           required
           showStrength
           value={password}
+          placeholder="Password"
+          className={FILLED_INPUT}
           hint="At least 8 characters, with a letter and a number"
           error={errors.password?.message}
           {...register('password')}
         />
 
         <PasswordField
-          label="Confirm password"
+          label="Confirm Password"
           autoComplete="new-password"
           required
+          placeholder="Confirm Password"
+          className={FILLED_INPUT}
           error={errors.confirmPassword?.message}
           {...register('confirmPassword')}
         />
 
-        <TextField
-          label="Referral code"
-          hint="Optional — if a friend gave you one, you both get wallet credit"
-          error={errors.referralCode?.message}
-          {...register('referralCode')}
-        />
-
-        <Button type="submit" fullWidth loading={isSubmitting}>
-          Create account
+        <Button type="submit" variant="secondary" fullWidth loading={isSubmitting}>
+          Sign Up
         </Button>
       </form>
+
+      <AuthDivider />
+
+      <GoogleButton>Sign up with Google</GoogleButton>
+
+      <p className="mt-6 text-center text-sm text-ink-muted">
+        Already have an account?{' '}
+        <Link to="/login" className="font-medium text-brand hover:underline">
+          Log In
+        </Link>
+      </p>
     </>
   );
 };

@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/app/store';
 import { bootstrapSession, selectSession, signOut } from '@/features/auth/authSlice';
 import { cn } from '@/lib/cn';
 import { ADMIN_NAV, adminCrumbs } from './adminNav';
+import Logo from '@/components/Logo';
 
 /**
  * The admin shell.
@@ -143,9 +144,9 @@ const AdminLayout = () => {
       <aside className="hidden w-60 shrink-0 flex-col bg-ink lg:flex">
         <Link
           to="/admin/dashboard"
-          className="flex h-16 items-center px-5 font-display text-xl tracking-wide text-white"
+          className="flex h-16 items-center px-5"
         >
-          LACEDUP
+          <Logo variant="admin" onDark width={150} />
           <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[0.625rem] font-sans font-semibold uppercase tracking-wider">
             Admin
           </span>
@@ -162,7 +163,7 @@ const AdminLayout = () => {
           />
           <aside className="absolute inset-y-0 left-0 flex w-60 flex-col bg-ink shadow-xl">
             <div className="flex h-16 items-center justify-between px-5">
-              <span className="font-display text-xl tracking-wide text-white">LACEDUP</span>
+              <Logo variant="admin" onDark width={140} />
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}

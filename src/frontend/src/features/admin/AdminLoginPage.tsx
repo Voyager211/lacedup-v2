@@ -7,6 +7,8 @@ import { loginSchema, type LoginValues } from '@/lib/schemas';
 import Button from '@/components/Button';
 import { TextField } from '@/components/form/TextField';
 import PasswordField from '@/components/form/PasswordField';
+import Logo from '@/components/Logo';
+import { FILLED_INPUT } from '@/features/auth/AuthBits';
 
 /**
  * Admin sign in.
@@ -44,40 +46,55 @@ const AdminLoginPage = () => {
 
   return (
     <div className="w-full max-w-sm">
-      <div className="rounded-xl border border-line bg-white p-8 shadow-sm">
-        <header className="mb-6 text-center">
-          <p className="font-display text-2xl tracking-wide text-ink">LACEDUP</p>
-          <h1 className="mt-1 text-sm font-semibold uppercase tracking-widest text-ink-muted">
-            Admin
-          </h1>
+      <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
+        {/*
+          No side photograph here, unlike the shopper pages - just the mark
+          above the form.
+
+          It sits on a dark plate because the asset is white artwork on
+          transparency with a blue "Admin" badge. Inverting it, as the shopper
+          mark is inverted for light backgrounds, would turn that badge orange;
+          a dark plate keeps the brand colours and reads as a header band.
+        */}
+        <header className="flex justify-center bg-ink px-8 py-7">
+          <Logo variant="admin" onDark width={190} />
+          <h1 className="sr-only">Admin sign in</h1>
         </header>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          {errors.root && (
-            <p role="alert" className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">
-              {errors.root.message}
-            </p>
-          )}
+        <div className="p-8">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            {errors.root && (
+              <p role="alert" className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">
+                {errors.root.message}
+              </p>
+            )}
 
-          <TextField
-            label="Email"
-            type="email"
-            autoComplete="email"
-            error={errors.email?.message}
-            {...register('email')}
-          />
+            <TextField
+              label="Email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Email address"
+              className={FILLED_INPUT}
+              error={errors.email?.message}
+              {...register('email')}
+            />
 
-          <PasswordField
-            label="Password"
-            autoComplete="current-password"
-            error={errors.password?.message}
-            {...register('password')}
-          />
+            <PasswordField
+              label="Password"
+              required
+              autoComplete="current-password"
+              placeholder="Password"
+              className={FILLED_INPUT}
+              error={errors.password?.message}
+              {...register('password')}
+            />
 
-          <Button type="submit" fullWidth loading={isSubmitting}>
-            Sign in
-          </Button>
-        </form>
+            <Button type="submit" variant="secondary" fullWidth loading={isSubmitting}>
+              Log In
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

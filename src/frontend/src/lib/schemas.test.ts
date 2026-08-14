@@ -95,6 +95,7 @@ describe('loginSchema', () => {
 describe('signupSchema', () => {
   const valid = {
     name: 'Test Shopper',
+    phone: '9876543210',
     email: 'shopper@example.com',
     password: 'correcthorse1',
     confirmPassword: 'correcthorse1'
@@ -102,6 +103,15 @@ describe('signupSchema', () => {
 
   it('accepts a complete signup', () => {
     expect(ok(signupSchema, valid)).toBe(true);
+  });
+
+  it('requires a phone number', () => {
+    // The server treats phone as optional, but the signup form asks for it -
+    // an account with no number is a support problem when a delivery needs
+    // chasing. Stated here so the choice is visible rather than incidental.
+    const { phone: _phone, ...withoutPhone } = valid;
+
+    expect(ok(signupSchema, withoutPhone)).toBe(false);
   });
 
   it('reports a mismatch against the confirm field, not the password field', () => {

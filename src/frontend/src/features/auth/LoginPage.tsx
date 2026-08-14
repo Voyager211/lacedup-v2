@@ -10,6 +10,7 @@ import Button from '@/components/Button';
 import { TextField } from '@/components/form/TextField';
 import PasswordField from '@/components/form/PasswordField';
 import AuthHeading from './AuthHeading';
+import { AuthDivider, FILLED_INPUT, GoogleButton } from './AuthBits';
 
 /**
  * Sign in.
@@ -66,17 +67,7 @@ const LoginPage = () => {
 
   return (
     <>
-      <AuthHeading
-        title="Sign in"
-        subtitle={
-          <>
-            New here?{' '}
-            <Link to="/signup" className="font-medium text-brand hover:underline">
-              Create an account
-            </Link>
-          </>
-        }
-      />
+      <AuthHeading title="Log into your account" />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         {errors.root && (
@@ -88,47 +79,45 @@ const LoginPage = () => {
         <TextField
           label="Email"
           type="email"
+          required
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="Email address"
+          className={FILLED_INPUT}
           error={errors.email?.message}
           {...register('email')}
         />
 
         <PasswordField
           label="Password"
+          required
           autoComplete="current-password"
+          placeholder="Password"
+          className={FILLED_INPUT}
           error={errors.password?.message}
           {...register('password')}
         />
 
         <div className="flex justify-end">
           <Link to="/forgot-password" className="text-sm text-ink-muted hover:text-brand">
-            Forgot your password?
+            Forgot Password?
           </Link>
         </div>
 
-        <Button type="submit" fullWidth loading={isSubmitting}>
-          Sign in
+        <Button type="submit" variant="secondary" fullWidth loading={isSubmitting}>
+          Log In
         </Button>
       </form>
 
-      <div className="my-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-line" />
-        <span className="text-xs uppercase tracking-widest text-ink-muted">or</span>
-        <span className="h-px flex-1 bg-line" />
-      </div>
+      <AuthDivider />
 
-      {/*
-        A full page navigation, not a fetch: OAuth needs the browser to leave
-        for Google and come back. The dev server proxies /google to the backend
-        so this works the same in both environments.
-      */}
-      <a
-        href="/google"
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-line font-medium text-ink transition-colors hover:bg-card"
-      >
-        Continue with Google
-      </a>
+      <GoogleButton>Sign in with Google</GoogleButton>
+
+      <p className="mt-6 text-center text-sm text-ink-muted">
+        Don&apos;t have an account?{' '}
+        <Link to="/signup" className="font-medium text-brand hover:underline">
+          Sign Up
+        </Link>
+      </p>
     </>
   );
 };
