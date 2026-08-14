@@ -31,6 +31,10 @@ import AddressBookPage from '@/features/addresses/AddressBookPage';
 import AdminLoginPage from '@/features/admin/AdminLoginPage';
 import ProductsPage from '@/features/admin/ProductsPage';
 import ProductFormPage from '@/features/admin/ProductFormPage';
+import AdminOrdersPage from '@/features/admin/AdminOrdersPage';
+import AdminOrderDetailsPage from '@/features/admin/AdminOrderDetailsPage';
+import AdminReturnsPage from '@/features/admin/AdminReturnsPage';
+import AdminUsersPage from '@/features/admin/AdminUsersPage';
 import CouponsPage from '@/features/admin/CouponsPage';
 import { BrandsPage, CategoriesPage } from '@/features/admin/CategoriesPage';
 
@@ -138,10 +142,10 @@ export const router = createBrowserRouter([
               { path: 'categories', element: <CategoriesPage /> },
               { path: 'brands', element: <BrandsPage /> },
               { path: 'coupons', element: <CouponsPage /> },
-              { path: 'orders', element: <Placeholder title="Orders" step={10} /> },
-              { path: 'orders/:orderId', element: <Placeholder title="Order details" step={10} note="The largest page in the app — 2,320 lines, 23 SweetAlert calls." /> },
-              { path: 'returns', element: <Placeholder title="Returns" step={10} note="The only page using filters-bar, the model for <FilterBar>." /> },
-              { path: 'users', element: <Placeholder title="Users" step={10} note="Block and unblock only." /> },
+              { path: 'orders', element: <AdminOrdersPage /> },
+              { path: 'orders/:orderId', element: <AdminOrderDetailsPage /> },
+              { path: 'returns', element: <AdminReturnsPage /> },
+              { path: 'users', element: <AdminUsersPage /> },
               { path: 'sales-report', element: <Placeholder title="Sales report" step={11} note="Needs a JSON endpoint — it scrapes its own HTML today." /> }
             ]
           }

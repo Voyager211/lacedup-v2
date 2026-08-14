@@ -30,9 +30,9 @@ and a cross-origin setup would need CORS plus `SameSite=None` on every one of th
 
 ## Status
 
-**Steps 0–9 are complete** — the scaffold, the primitives, the shells, auth, browse,
-cart, wishlist, checkout, orders, the account pages and the admin catalog. Every route
-resolves; unbuilt pages render a placeholder naming the step that replaces them. When
+**Steps 0–10 are complete** — the scaffold, the primitives, the shells, auth, browse,
+cart, wishlist, checkout, orders, the account pages and the whole admin panel bar
+reporting. Only the dashboard and the sales report still render placeholders. When
 nothing renders a placeholder, Phase 4 is done.
 
 See the primitives running at **http://localhost:5173/_gallery** (development only — it is
@@ -135,8 +135,17 @@ Landing, shop and product details, plus `<ProductCard>` and the catalog API slic
 | Categories, Brands, Coupons, Products lists | |
 | `<ProductFormPage>` + `<ImageUploader>` | add and edit in one component; 3–6 images |
 
-**Next: step 10, admin orders, returns and users** — includes the 2,320-line order-details
-page, the largest in the app.
+### Step 10 — admin operations
+
+| Built | Notes |
+|---|---|
+| `<AdminOrdersPage>` | item-level list, filters and paging from the URL |
+| `<AdminOrderDetailsPage>` | status transitions, per-item status changes |
+| `<AdminReturnsPage>` | approve and reject, with a reason the shopper sees |
+| `<AdminUsersPage>` | block and unblock |
+
+**Next: step 11, dashboard and sales report** — the last step. The sales report needs a
+JSON endpoint; it scrapes its own HTML today.
 
 ### Notes on what these steps changed
 
@@ -445,7 +454,7 @@ resist the urge to start on pages before they're done.
 | 7 | ~~**Orders & returns**~~ | ✅ done |
 | 8 | ~~**Profile, addresses, wallet, referrals**~~ | ✅ done — the `/coupons` page is still an open decision |
 | 9 | ~~**Admin catalog**~~ | ✅ done |
-| 10 | **Admin orders, returns, users** | `admin/order-details` is the largest page in the app |
+| 10 | ~~**Admin orders, returns, users**~~ | ✅ done |
 | 11 | **Admin dashboard & sales report** | last — the sales report needs a new backend endpoint |
 
 ### The four highest-leverage consolidations
@@ -533,7 +542,7 @@ duplicate bare route mounts in `app.ts` (keep only `/api`).
 
 ## Testing
 
-**Backend: 154 tests. Frontend: 339.** Both suites pass and both typecheck clean under
+**Backend: 154 tests. Frontend: 350.** Both suites pass and both typecheck clean under
 `strict`. Keep it that way — run `npm test` on both sides before and after touching anything
 shared.
 
