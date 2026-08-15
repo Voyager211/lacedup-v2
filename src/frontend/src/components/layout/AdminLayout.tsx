@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router-dom';
-import { BsBoxArrowRight, BsChevronRight, BsList, BsPersonCircle, BsX } from 'react-icons/bs';
+import { CircleUserRound, LogOut, Menu, X } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/app/store';
 import { bootstrapSession, selectSession, signOut } from '@/features/auth/authSlice';
 import { cn } from '@/lib/cn';
 import { ADMIN_NAV, adminCrumbs } from './adminNav';
 import Logo from '@/components/Logo';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 /**
  * The admin shell.
@@ -79,7 +80,7 @@ const AdminIdentity = () => {
         aria-haspopup="menu"
         className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink transition-colors hover:bg-card"
       >
-        <BsPersonCircle className="size-5 text-ink-muted" aria-hidden="true" />
+        <CircleUserRound className="size-5 text-ink-muted" aria-hidden="true" />
         <span className="hidden max-w-[12rem] truncate sm:inline">
           {user?.name ?? 'Admin'}
         </span>
@@ -105,7 +106,7 @@ const AdminIdentity = () => {
             }}
             className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-danger transition-colors hover:bg-card"
           >
-            <BsBoxArrowRight className="size-4" aria-hidden="true" />
+            <LogOut className="size-4" aria-hidden="true" />
             Sign out
           </button>
         </div>
@@ -170,7 +171,7 @@ const AdminLayout = () => {
                 aria-label="Close menu"
                 className="rounded p-2 text-white/70 transition-colors hover:bg-white/10"
               >
-                <BsX className="size-5" aria-hidden="true" />
+                <X className="size-5" aria-hidden="true" />
               </button>
             </div>
             <AdminSidebarLinks onNavigate={() => setSidebarOpen(false)} />
@@ -179,39 +180,26 @@ const AdminLayout = () => {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center gap-3 border-b border-line bg-white px-4 sm:px-6">
+        {/*
+          Not a navbar - deliberately. There is no bar: no background, no
+          border, no fixed height. The trail and the identity menu sit directly
+          on the page at the top of the content column, so the sidebar is the
+          only chrome and the content starts where the eye already is.
+        */}
+        <div className="flex items-center gap-3 px-4 pt-5 sm:px-6">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
-            className="rounded p-2 text-ink transition-colors hover:bg-card lg:hidden"
+            className="-ml-2 rounded-md p-2 text-ink transition-colors hover:bg-card lg:hidden"
           >
-            <BsList className="size-5" aria-hidden="true" />
+            <Menu className="size-5" aria-hidden="true" />
           </button>
 
-          <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
-            <ol className="flex items-center gap-1.5 text-sm">
-              {crumbs.map((crumb, index) => (
-                <li key={`${crumb.label}-${index}`} className="flex items-center gap-1.5">
-                  {index > 0 && (
-                    <BsChevronRight className="size-3 text-ink-muted/50" aria-hidden="true" />
-                  )}
-                  {crumb.to ? (
-                    <Link to={crumb.to} className="text-ink-muted transition-colors hover:text-ink">
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span className="truncate font-medium text-ink" aria-current="page">
-                      {crumb.label}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </nav>
+          <Breadcrumbs items={crumbs} className="flex-1" />
 
           <AdminIdentity />
-        </header>
+        </div>
 
         <main id="main" className="min-w-0 flex-1 p-4 sm:p-6">
           <Outlet />

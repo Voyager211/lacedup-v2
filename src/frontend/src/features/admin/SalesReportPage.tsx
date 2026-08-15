@@ -11,6 +11,7 @@ import { SelectField, TextField } from '@/components/form/TextField';
 import { formatDate, formatINR, formatNumber } from '@/lib/format';
 import { ORDER_STATUS, PAYMENT_METHODS, type OrderStatus } from '@/types/domain';
 import { cn } from '@/lib/cn';
+import { ROW_HOVER, RowNumber, RowNumberHeader } from '@/components/table';
 
 /**
  * The sales report.
@@ -164,6 +165,7 @@ const SalesReportPage = () => {
           <table className="w-full text-sm">
             <thead className="border-b border-line bg-card/50 text-left">
               <tr>
+                <RowNumberHeader />
                 <th className="px-4 py-3 font-medium text-ink">Order</th>
                 <th className="px-4 py-3 font-medium text-ink">Date</th>
                 <th className="px-4 py-3 font-medium text-ink">Customer</th>
@@ -176,8 +178,9 @@ const SalesReportPage = () => {
             </thead>
 
             <tbody className="divide-y divide-line">
-              {orders.map((order) => (
-                <tr key={order._id} className="hover:bg-card/40">
+              {orders.map((order, index) => (
+                <tr key={order._id} className={ROW_HOVER}>
+                  <RowNumber index={index} page={data?.pagination.currentPage ?? 1} />
                   <td className="px-4 py-3 font-mono text-ink">{order.orderId}</td>
                   <td className="px-4 py-3 text-ink-muted">
                     {/* The raw createdAt, so this date reads like every other

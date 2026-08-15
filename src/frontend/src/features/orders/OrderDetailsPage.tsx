@@ -8,6 +8,8 @@ import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonText } from '@/components/Skeleton';
 import { formatDate, formatDateTime, formatINR } from '@/lib/format';
 import { ORDER_STATUS, type OrderStatus, type PaymentStatus } from '@/types/domain';
+import { FileText, Home, Receipt } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 /**
  * A single order.
@@ -127,13 +129,14 @@ const OrderDetailsPage = () => {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <nav aria-label="Breadcrumb" className="mb-4 text-sm text-ink-muted">
-        <Link to="/orders" className="hover:text-brand">
-          Orders
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-ink">{orderId}</span>
-      </nav>
+      <Breadcrumbs
+        className="mb-4"
+        items={[
+          { label: 'Home', to: '/', icon: Home },
+          { label: 'Orders', to: '/orders', icon: FileText },
+          { label: String(orderId), icon: Receipt }
+        ]}
+      />
 
       <QueryBoundary
         isLoading={isLoading}

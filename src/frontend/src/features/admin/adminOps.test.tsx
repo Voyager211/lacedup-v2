@@ -213,7 +213,7 @@ describe('AdminReturnsPage', () => {
 
     renderAt(<AdminReturnsPage />, '/admin/returns-x', '/admin/returns-x');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+    await userEvent.click(await screen.findByRole('button', { name: /approve return/i }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/₹1,500 goes back/i)).toBeInTheDocument();
@@ -225,9 +225,11 @@ describe('AdminReturnsPage', () => {
 
     renderAt(<AdminReturnsPage />, '/admin/returns-x', '/admin/returns-x');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Reject' }));
+    await userEvent.click(await screen.findByRole('button', { name: /reject return/i }));
 
     const dialog = await screen.findByRole('dialog');
+    // The dialog's own confirm button is still labelled "Reject"; only the row
+    // action was renamed when it became an icon.
     await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/choose a reason/i);
@@ -240,7 +242,7 @@ describe('AdminReturnsPage', () => {
     renderAt(<AdminReturnsPage />, '/admin/returns-x', '/admin/returns-x');
 
     expect(await screen.findByText('Decided')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /approve return/i })).not.toBeInTheDocument();
   });
 });
 
@@ -264,7 +266,7 @@ describe('AdminUsersPage', () => {
 
     renderAt(<AdminUsersPage />, '/admin/users-x', '/admin/users-x');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Block' }));
+    await userEvent.click(await screen.findByRole('button', { name: /block user/i }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/signed out immediately/i)).toBeInTheDocument();
@@ -277,7 +279,7 @@ describe('AdminUsersPage', () => {
 
     renderAt(<AdminUsersPage />, '/admin/users-x', '/admin/users-x');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Unblock' }));
+    await userEvent.click(await screen.findByRole('button', { name: /unblock user/i }));
 
     await vi.waitFor(() => {
       expect(mock.history.patch.some((r) => r.url === '/admin/users/u1/unblock')).toBe(true);

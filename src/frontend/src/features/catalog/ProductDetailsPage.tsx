@@ -19,6 +19,8 @@ import { discountPercent } from '@/lib/pricing';
 import { cn } from '@/lib/cn';
 import { productFeatures } from '@/types/catalog';
 import type { Variant } from '@/types/catalog';
+import { Home, LayoutGrid, Package, Store } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 /**
  * The product page.
@@ -151,19 +153,23 @@ const ProductDetailsPage = () => {
       >
         {product && (
           <>
-            <nav aria-label="Breadcrumb" className="mb-6 text-sm text-ink-muted">
-              <Link to="/shop" className="hover:text-brand">
-                Shop
-              </Link>
-              {product.category?.name && (
-                <>
-                  <span className="mx-2">/</span>
-                  <Link to={`/shop?category=${product.category._id}`} className="hover:text-brand">
-                    {product.category.name}
-                  </Link>
-                </>
-              )}
-            </nav>
+            <Breadcrumbs
+              className="mb-6"
+              items={[
+                { label: 'Home', to: '/', icon: Home },
+                { label: 'Shop', to: '/shop', icon: Store },
+                ...(product.category?.name
+                  ? [
+                      {
+                        label: product.category.name,
+                        to: `/shop?category=${product.category._id}`,
+                        icon: LayoutGrid
+                      }
+                    ]
+                  : []),
+                { label: product.productName, icon: Package }
+              ]}
+            />
 
             <div className="grid gap-10 lg:grid-cols-2">
               <div>

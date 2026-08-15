@@ -8,6 +8,7 @@ import QueryBoundary from '@/components/QueryBoundary';
 import { Skeleton } from '@/components/Skeleton';
 import { formatINR } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { ROW_HOVER, RowNumber, RowNumberHeader } from '@/components/table';
 
 /**
  * The admin product detail view - read-only.
@@ -197,6 +198,7 @@ const AdminProductDetailPage = () => {
                   <table className="w-full text-sm">
                     <thead className="border-b border-line bg-card/50 text-left">
                       <tr>
+                        <RowNumberHeader />
                         <th className="px-4 py-3 font-medium text-ink">Size</th>
                         <th className="px-4 py-3 font-medium text-ink">SKU</th>
                         <th className="px-4 py-3 font-medium text-ink">Stock</th>
@@ -207,8 +209,9 @@ const AdminProductDetailPage = () => {
                     </thead>
 
                     <tbody className="divide-y divide-line">
-                      {variants.map((variant) => (
-                        <tr key={variant._id} className="hover:bg-card/40">
+                      {variants.map((variant, index) => (
+                        <tr key={variant._id} className={ROW_HOVER}>
+                          <RowNumber index={index} perPage={variants.length} />
                           <td className="px-4 py-3 text-ink">{variant.size}</td>
                           <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                             {variant.sku ?? '—'}

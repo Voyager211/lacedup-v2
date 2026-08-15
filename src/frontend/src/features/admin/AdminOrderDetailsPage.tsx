@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   useGetAdminOrderQuery,
   useGetOrderTransitionsQuery,
@@ -90,13 +90,7 @@ const AdminOrderDetailsPage = () => {
 
   return (
     <div className="max-w-4xl">
-      <nav aria-label="Breadcrumb" className="mb-4 text-sm text-ink-muted">
-        <Link to="/admin/orders" className="hover:text-brand">
-          Orders
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-ink">{orderId}</span>
-      </nav>
+
 
       <QueryBoundary
         isLoading={isLoading}

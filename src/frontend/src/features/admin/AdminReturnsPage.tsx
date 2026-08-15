@@ -16,6 +16,8 @@ import { useToast } from '@/components/toast';
 import { formatDate, formatINR } from '@/lib/format';
 import { RETURN_STATUS, type ReturnStatus } from '@/types/domain';
 import { cn } from '@/lib/cn';
+import { Check, X as XIcon } from 'lucide-react';
+import { ROW_HOVER, RowAction, RowActions, RowNumber, RowNumberHeader } from '@/components/table';
 
 /**
  * Return requests.
@@ -136,6 +138,7 @@ const AdminReturnsPage = () => {
           <table className="w-full text-sm">
             <thead className="border-b border-line bg-card/50 text-left">
               <tr>
+                <RowNumberHeader />
                 <th className="px-4 py-3 font-medium text-ink">Order</th>
                 <th className="px-4 py-3 font-medium text-ink">Reason</th>
                 <th className="px-4 py-3 font-medium text-ink">Refund</th>
@@ -146,11 +149,12 @@ const AdminReturnsPage = () => {
             </thead>
 
             <tbody className="divide-y divide-line">
-              {returns.map((row) => {
+              {returns.map((row, index) => {
                 const pending = row.status === RETURN_STATUS.PENDING;
 
                 return (
-                  <tr key={row._id} className="hover:bg-card/40">
+                  <tr key={row._id} className={ROW_HOVER}>
+                    <RowNumber index={index} page={data?.currentPage ?? 1} />
                     <td className="px-4 py-3 font-mono text-ink">
                       {String(row.orderId ?? row.returnId ?? '—')}
                     </td>
@@ -173,22 +177,19 @@ const AdminReturnsPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       {pending ? (
-                        <div className="flex justify-end gap-3">
-                          <button
-                            type="button"
+                        <RowActions>
+                          <RowAction
+                            icon={Check}
+                            label="Approve return"
                             onClick={() => onApprove(row)}
-                            className="text-ink-muted hover:text-success"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
+                          />
+                          <RowAction
+                            icon={XIcon}
+                            label="Reject return"
                             onClick={() => onReject(row)}
-                            className="text-ink-muted hover:text-danger"
-                          >
-                            Reject
-                          </button>
-                        </div>
+                            tone="danger"
+                          />
+                        </RowActions>
                       ) : (
                         // Already decided - the decision is not reversible from
                         // here, so no buttons rather than ones that fail.

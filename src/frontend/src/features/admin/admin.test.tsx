@@ -157,7 +157,7 @@ describe('ResourceListPage (via CategoriesPage)', () => {
 
     renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Deactivate' }));
+    await userEvent.click(await screen.findByRole('button', { name: /deactivate/i }));
 
     await vi.waitFor(() => {
       expect(mock.history.patch.some((r) => r.url === '/admin/categories/api/c1/toggle')).toBe(true);
@@ -172,7 +172,7 @@ describe('ResourceListPage (via CategoriesPage)', () => {
 
     renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
 
-    expect(await screen.findByRole('button', { name: 'Activate' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /activate/i })).toBeInTheDocument();
     // Scoped to the table: the status filter also has an "Inactive" option.
     expect(within(screen.getByRole('table')).getByText('Inactive')).toBeInTheDocument();
   });
@@ -182,7 +182,7 @@ describe('ResourceListPage (via CategoriesPage)', () => {
 
     renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    await userEvent.click(await screen.findByRole('button', { name: /delete category/i }));
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(mock.history.delete).toHaveLength(0);
@@ -204,7 +204,7 @@ describe('ResourceListPage (via CategoriesPage)', () => {
 
     renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    await userEvent.click(await screen.findByRole('button', { name: /edit category/i }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByLabelText('Name')).toHaveValue('Running');

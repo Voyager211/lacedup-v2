@@ -17,6 +17,14 @@ import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonTable } from '@/components/Skeleton';
 import { useConfirm } from '@/components/confirm/useConfirm';
 import { useToast } from '@/components/toast';
+import {
+  ACTION_ICONS,
+  ROW_HOVER,
+  RowAction,
+  RowActions,
+  RowNumber,
+  RowNumberHeader
+} from '@/components/table';
 import { cn } from '@/lib/cn';
 
 /**
@@ -179,6 +187,7 @@ const ResourceListPage = ({
           <table className="w-full text-sm">
             <thead className="border-b border-line bg-card/50 text-left">
               <tr>
+                <RowNumberHeader />
                 {columns.map((column) => (
                   <th key={column.header} className={cn('px-4 py-3 font-medium text-ink', column.className)}>
                     {column.header}
@@ -189,11 +198,13 @@ const ResourceListPage = ({
             </thead>
 
             <tbody className="divide-y divide-line">
-              {items.map((record) => {
+              {items.map((record, index) => {
                 const enabled = isEnabled(record);
 
                 return (
-                  <tr key={record._id} className="hover:bg-card/40">
+                  <tr key={record._id} className={ROW_HOVER}>
+                    <RowNumber index={index} page={data?.currentPage ?? page} />
+
                     {columns.map((column) => (
                       <td key={column.header} className={cn('px-4 py-3 text-ink', column.className)}>
                         {column.cell(record)}
@@ -201,36 +212,31 @@ const ResourceListPage = ({
                     ))}
 
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
+                      <RowActions>
                         {rowActions?.(record)}
 
                         {onEdit && (
-                          <button
-                            type="button"
+                          <RowAction
+                            icon={ACTION_ICONS.edit}
+                            label={`Edit ${singular.toLowerCase()}`}
                             onClick={() => onEdit(record)}
-                            className="text-ink-muted hover:text-brand"
-                          >
-                            Edit
-                          </button>
+                          />
                         )}
 
-                        <button
-                          type="button"
+                        <RowAction
+                          icon={enabled ? ACTION_ICONS.disable : ACTION_ICONS.enable}
+                          label={enabled ? 'Deactivate' : 'Activate'}
                           onClick={() => onToggle(record)}
                           disabled={busyId === record._id}
-                          className="text-ink-muted hover:text-ink disabled:opacity-50"
-                        >
-                          {enabled ? 'Deactivate' : 'Activate'}
-                        </button>
+                        />
 
-                        <button
-                          type="button"
+                        <RowAction
+                          icon={ACTION_ICONS.delete}
+                          label={`Delete ${singular.toLowerCase()}`}
                           onClick={() => onDelete(record)}
-                          className="text-ink-muted hover:text-danger"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                          tone="danger"
+                        />
+                      </RowActions>
                     </td>
                   </tr>
                 );

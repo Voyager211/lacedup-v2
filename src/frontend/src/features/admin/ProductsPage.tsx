@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { ACTION_ICONS, RowAction } from '@/components/table';
 import ResourceListPage, { StatusCell } from './ResourceListPage';
 import { formatINR } from '@/lib/format';
 
@@ -33,13 +34,11 @@ const ProductsPage = () => {
       onCreate={() => navigate('/admin/products/add')}
       onEdit={(record) => navigate(`/admin/products/${record._id}/edit`)}
       rowActions={(record) => (
-        <button
-          type="button"
+        <RowAction
+          icon={ACTION_ICONS.view}
+          label="View product"
           onClick={() => navigate(`/admin/products/${record._id}`)}
-          className="text-ink-muted hover:text-brand"
-        >
-          View
-        </button>
+        />
       )}
       columns={[
         {

@@ -9,6 +9,7 @@ import { SkeletonTable } from '@/components/Skeleton';
 import { formatDate, formatINR } from '@/lib/format';
 import { ORDER_STATUS, PAYMENT_STATUS, type OrderStatus, type PaymentStatus } from '@/types/domain';
 import { cn } from '@/lib/cn';
+import { ROW_HOVER, RowNumber, RowNumberHeader } from '@/components/table';
 
 /**
  * Admin orders.
@@ -97,6 +98,7 @@ const AdminOrdersPage = () => {
           <table className="w-full text-sm">
             <thead className="border-b border-line bg-card/50 text-left">
               <tr>
+                <RowNumberHeader />
                 <th className="px-4 py-3 font-medium text-ink">Order</th>
                 <th className="px-4 py-3 font-medium text-ink">Customer</th>
                 <th className="px-4 py-3 font-medium text-ink">Item</th>
@@ -109,7 +111,9 @@ const AdminOrdersPage = () => {
 
             <tbody className="divide-y divide-line">
               {rows.map((row, index) => (
-                <tr key={`${row._id}-${index}`} className="hover:bg-card/40">
+                <tr key={`${row._id}-${index}`} className={ROW_HOVER}>
+                  <RowNumber index={index} page={data?.currentPage ?? 1} />
+
                   <td className="px-4 py-3">
                     <Link
                       to={`/admin/orders/${row.orderId}`}

@@ -222,7 +222,10 @@ describe('AdminLayout', () => {
     renderShell(<AdminLayout />, '/admin/orders/abc123', '/admin/orders/:orderId');
 
     const breadcrumb = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(breadcrumb).getByText('Details')).toHaveAttribute('aria-current', 'page');
+
+    // The label sits in a truncating span inside the current-page element, so
+    // the attribute is on an ancestor rather than on the text node's own tag.
+    expect(within(breadcrumb).getByText('Details').closest('[aria-current="page"]')).not.toBeNull();
     expect(within(breadcrumb).getByRole('link', { name: 'Orders' })).toBeInTheDocument();
   });
 

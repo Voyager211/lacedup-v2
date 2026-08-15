@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ADMIN_NAV, adminCrumbs } from './adminNav';
 
+/** A crumb without its icon, so these assertions stay about structure. */
+const trail = (crumbs: Array<{ label: string; to?: string }>) =>
+  crumbs.map(({ label, to }) => (to ? { label, to } : { label }));
+
+
 describe('ADMIN_NAV', () => {
   it('keeps the nine destinations the EJS sidebar had, in order', () => {
     expect(ADMIN_NAV.map((item) => item.label)).toEqual([
@@ -18,7 +23,8 @@ describe('ADMIN_NAV', () => {
 
   it('gives every item an icon - the original had none', () => {
     for (const item of ADMIN_NAV) {
-      expect(item.icon).toBeTypeOf('function');
+      // lucide icons are forwardRef objects, not plain functions.
+      expect(item.icon).toBeTruthy();
     }
   });
 
@@ -37,18 +43,18 @@ describe('ADMIN_NAV', () => {
 
 describe('adminCrumbs', () => {
   it('shows the dashboard alone at the dashboard', () => {
-    expect(adminCrumbs('/admin/dashboard')).toEqual([{ label: 'Dashboard' }]);
+    expect(trail(adminCrumbs('/admin/dashboard'))).toEqual([{ label: 'Dashboard' }]);
   });
 
   it('does not link the section the visitor is already on', () => {
-    expect(adminCrumbs('/admin/products')).toEqual([
+    expect(trail(adminCrumbs('/admin/products'))).toEqual([
       { label: 'Dashboard', to: '/admin/dashboard' },
       { label: 'Products' }
     ]);
   });
 
   it('links back to the section from a detail page', () => {
-    expect(adminCrumbs('/admin/orders/abc123')).toEqual([
+    expect(trail(adminCrumbs('/admin/orders/abc123'))).toEqual([
       { label: 'Dashboard', to: '/admin/dashboard' },
       { label: 'Orders', to: '/admin/orders' },
       { label: 'Details' }
@@ -56,19 +62,19 @@ describe('adminCrumbs', () => {
   });
 
   it('accepts a caller-supplied label, so an id can become a name', () => {
-    expect(adminCrumbs('/admin/products/abc123', 'Air Max 90').at(-1)).toEqual({
+    expect(trail(adminCrumbs('/admin/products/abc123', 'Air Max 90')).at(-1)).toEqual({
       label: 'Air Max 90'
     });
   });
 
   it('names the add and edit pages, which had no breadcrumbs at all before', () => {
-    expect(adminCrumbs('/admin/products/add').at(-1)).toEqual({ label: 'New Product' });
-    expect(adminCrumbs('/admin/products/abc123/edit').at(-1)).toEqual({ label: 'Edit' });
+    expect(trail(adminCrumbs('/admin/products/add')).at(-1)).toEqual({ label: 'New Product' });
+    expect(trail(adminCrumbs('/admin/products/abc123/edit')).at(-1)).toEqual({ label: 'Edit' });
   });
 
   it('singularises the section name sensibly', () => {
-    expect(adminCrumbs('/admin/categories/add').at(-1)).toEqual({ label: 'New Category' });
-    expect(adminCrumbs('/admin/coupons/add').at(-1)).toEqual({ label: 'New Coupon' });
+    expect(trail(adminCrumbs('/admin/categories/add')).at(-1)).toEqual({ label: 'New Category' });
+    expect(trail(adminCrumbs('/admin/coupons/add')).at(-1)).toEqual({ label: 'New Coupon' });
   });
 
   it('always starts at the dashboard', () => {

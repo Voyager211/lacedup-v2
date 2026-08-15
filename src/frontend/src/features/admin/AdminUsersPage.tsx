@@ -15,6 +15,7 @@ import { useConfirm } from '@/components/confirm/useConfirm';
 import { useToast } from '@/components/toast';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { ACTION_ICONS, ROW_HOVER, RowAction, RowActions, RowNumber, RowNumberHeader } from '@/components/table';
 
 /**
  * Users.
@@ -115,6 +116,7 @@ const AdminUsersPage = () => {
           <table className="w-full text-sm">
             <thead className="border-b border-line bg-card/50 text-left">
               <tr>
+                <RowNumberHeader />
                 <th className="px-4 py-3 font-medium text-ink">Name</th>
                 <th className="px-4 py-3 font-medium text-ink">Email</th>
                 <th className="px-4 py-3 font-medium text-ink">Joined</th>
@@ -124,8 +126,9 @@ const AdminUsersPage = () => {
             </thead>
 
             <tbody className="divide-y divide-line">
-              {users.map((user) => (
-                <tr key={user._id} className="hover:bg-card/40">
+              {users.map((user, index) => (
+                <tr key={user._id} className={ROW_HOVER}>
+                  <RowNumber index={index} page={data?.currentPage ?? 1} />
                   <td className="px-4 py-3 font-medium text-ink">{user.name}</td>
                   <td className="px-4 py-3 text-ink-muted">{user.email}</td>
                   <td className="px-4 py-3 text-ink-muted">{formatDate(user.createdAt)}</td>
@@ -134,17 +137,15 @@ const AdminUsersPage = () => {
                       {user.isBlocked ? 'Blocked' : 'Active'}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => toggleBlocked(user)}
-                      className={cn(
-                        'text-ink-muted',
-                        user.isBlocked ? 'hover:text-success' : 'hover:text-danger'
-                      )}
-                    >
-                      {user.isBlocked ? 'Unblock' : 'Block'}
-                    </button>
+                  <td className="px-4 py-3">
+                    <RowActions>
+                      <RowAction
+                        icon={user.isBlocked ? ACTION_ICONS.enable : ACTION_ICONS.disable}
+                        label={user.isBlocked ? 'Unblock user' : 'Block user'}
+                        onClick={() => toggleBlocked(user)}
+                        tone={user.isBlocked ? 'default' : 'danger'}
+                      />
+                    </RowActions>
                   </td>
                 </tr>
               ))}
