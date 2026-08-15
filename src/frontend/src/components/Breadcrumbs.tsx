@@ -5,10 +5,11 @@ import { cn } from '@/lib/cn';
 /**
  * The breadcrumb trail, shared by the storefront and the admin panel.
  *
- * The trail sits on a white card of its own, hugging its contents rather than
+ * The trail sits on a card of its own, hugging its contents rather than
  * spanning the column, so it reads as a control on the page rather than a line
- * of text at the top of it. Both shells put it on the warm canvas, which is
- * what gives the card its edge.
+ * of text at the top of it. The page ground is white, so the card is defined by
+ * its border and shadow rather than by contrast - which is why the border is at
+ * full strength here and not the half-tint that was enough on the old cream.
  *
  * Each crumb inside is a pill rather than plain text: links tint red and take a
  * soft red ground on hover, so the clickable part of the trail is obvious
@@ -36,7 +37,7 @@ const Breadcrumbs = ({ items, className }: BreadcrumbsProps) => (
     <ol
       className={cn(
         'flex w-fit max-w-full flex-wrap items-center gap-1 text-sm',
-        'rounded-xl border border-line/60 bg-white px-2 py-1.5 shadow-sm'
+        'rounded-xl border border-line bg-white px-2 py-1.5 shadow-sm'
       )}
     >
       {items.map((crumb, index) => {

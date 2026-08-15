@@ -21,8 +21,10 @@
   --color-brand: #e03a2f;
   --color-brand-hover: #c22e24;
 
-  /* Surfaces and text - the "smoked concrete" palette from user.css */
-  --color-canvas: #fdf8f3;
+  /* Surfaces and text - the "smoked concrete" palette from user.css.
+     `canvas` is the page ground. It was the warm cream #fdf8f3 the EJS
+     storefront used; it is plain white now, on both sides of the app. */
+  --color-canvas: #ffffff;
   --color-card: #f2f2f2;
   --color-line: #d1d1d1;
   --color-ink: #1a1a1a;

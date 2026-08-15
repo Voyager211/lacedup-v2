@@ -90,7 +90,9 @@ theme: {
     colors: {
       brand:  { DEFAULT: '#E03A2F', hover: '#c22e24' },
       ink:    { DEFAULT: '#1A1A1A', muted: '#555555' },
-      canvas: '#fdf8f3',
+      // Shipped as #ffffff: the page ground is plain white on both sides of
+      // the app. The cream above is what the EJS storefront rendered.
+      canvas: '#ffffff',
       card:   '#F2F2F2',
       line:   '#D1D1D1',
       accent: '#3A7DFF',
