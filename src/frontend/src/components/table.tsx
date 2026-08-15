@@ -21,10 +21,22 @@ import { cn } from '@/lib/cn';
  * `relative` matters: without a stacking context the raised row's shadow is
  * painted under its neighbours and the lift is invisible.
  */
-export const ROW_HOVER = cn(
+const ROW_LIFT = cn(
   'relative transition-[transform,box-shadow,background-color] duration-150 ease-out',
   'hover:z-10 hover:-translate-y-px hover:bg-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.07)]'
 );
+
+/** Rows that lead somewhere: the lift, plus a pointer to say so. */
+export const ROW_HOVER = cn(ROW_LIFT, 'cursor-pointer');
+
+/**
+ * The same lift without the pointer, for a table that is purely a readout.
+ *
+ * The sales report is the one of these that reports rather than navigates -
+ * its rows are figures for an accountant, with nothing behind them to open. A
+ * pointer there would promise a click that does nothing.
+ */
+export const ROW_HOVER_STATIC = ROW_LIFT;
 
 /** Header cell for the row-number column. */
 export const RowNumberHeader = () => (

@@ -11,7 +11,7 @@ import { SelectField, TextField } from '@/components/form/TextField';
 import { formatDate, formatINR, formatNumber } from '@/lib/format';
 import { ORDER_STATUS, PAYMENT_METHODS, type OrderStatus } from '@/types/domain';
 import { cn } from '@/lib/cn';
-import { ROW_HOVER, RowNumber, RowNumberHeader } from '@/components/table';
+import { ROW_HOVER_STATIC, RowNumber, RowNumberHeader } from '@/components/table';
 
 /**
  * The sales report.
@@ -179,7 +179,7 @@ const SalesReportPage = () => {
 
             <tbody className="divide-y divide-line">
               {orders.map((order, index) => (
-                <tr key={order._id} className={ROW_HOVER}>
+                <tr key={order._id} className={ROW_HOVER_STATIC}>
                   <RowNumber index={index} page={data?.pagination.currentPage ?? 1} />
                   <td className="px-4 py-3 font-mono text-ink">{order.orderId}</td>
                   <td className="px-4 py-3 text-ink-muted">
