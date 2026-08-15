@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BsPlus } from 'react-icons/bs';
+import { CirclePlus } from 'lucide-react';
 import {
   useDeleteAdminRecordMutation,
   useGetAdminListQuery,
@@ -12,6 +12,7 @@ import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import EmptyState from '@/components/EmptyState';
 import FilterBar, { type FilterDefinition } from '@/components/FilterBar';
+import PageHeader, { HeaderAction } from '@/components/PageHeader';
 import Pagination from '@/components/Pagination';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -50,6 +51,8 @@ export interface ResourceListPageProps {
   title: string;
   /** Used in confirmations: "Delete this category?" */
   singular: string;
+  /** One line under the heading, on what this list is for. */
+  subtitle: string;
   columns: Column[];
   filters?: FilterDefinition[];
   searchPlaceholder?: string;
@@ -69,6 +72,7 @@ const ResourceListPage = ({
   resource,
   title,
   singular,
+  subtitle,
   columns,
   filters,
   searchPlaceholder,
@@ -136,16 +140,21 @@ const ResourceListPage = ({
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold text-ink">{title}</h1>
-          {data && (
-            <p className="mt-0.5 text-sm text-ink-muted" aria-live="polite">
-              {data.totalRecords} total
-            </p>
-          )}
-        </div>
-      </div>
+      {/* "Product Management", "Category Management" - derived rather than
+          passed, so the four pages cannot word their headings differently. */}
+      <PageHeader
+        title={`${singular} Management`}
+        count={data?.totalRecords}
+        subtitle={subtitle}
+        actions={
+          <HeaderAction
+            icon={<CirclePlus className="size-4" aria-hidden="true" />}
+            onClick={onCreate}
+          >
+            Add {singular}
+          </HeaderAction>
+        }
+      />
 
       <FilterBar
         search={q}
@@ -155,11 +164,6 @@ const ResourceListPage = ({
         values={{ status }}
         onFilterChange={setParam}
         onReset={() => setParams({})}
-        actions={
-          <Button icon={<BsPlus className="size-4" aria-hidden="true" />} onClick={onCreate}>
-            Add {singular.toLowerCase()}
-          </Button>
-        }
       />
 
       <QueryBoundary

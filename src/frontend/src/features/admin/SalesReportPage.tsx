@@ -1,9 +1,9 @@
 import { useSearchParams } from 'react-router-dom';
-import { BsDownload } from 'react-icons/bs';
+import { FileText, Sheet } from 'lucide-react';
 import { useGetSalesReportQuery } from './reports.api';
 import Badge, { ORDER_STATUS_TONE, paymentMethodTone } from '@/components/Badge';
-import Button from '@/components/Button';
 import EmptyState from '@/components/EmptyState';
+import PageHeader, { HeaderAction } from '@/components/PageHeader';
 import Pagination from '@/components/Pagination';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -67,30 +67,32 @@ const SalesReportPage = () => {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-heading text-2xl font-semibold text-ink">Sales report</h1>
+      <PageHeader
+        title="Sales Report"
+        subtitle="Comprehensive sales analytics and performance insights"
+        actions={
+          <>
+            <HeaderAction
+              icon={<FileText className="size-4" aria-hidden="true" />}
+              onClick={() =>
+                window.open(`/api/admin/sales-report/export-pdf?${exportQuery}`, '_blank')
+              }
+            >
+              Export PDF
+            </HeaderAction>
 
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            icon={<BsDownload className="size-4" aria-hidden="true" />}
-            onClick={() => window.open(`/api/admin/sales-report/export-pdf?${exportQuery}`, '_blank')}
-          >
-            PDF
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            icon={<BsDownload className="size-4" aria-hidden="true" />}
-            onClick={() =>
-              window.open(`/api/admin/sales-report/export-excel?${exportQuery}`, '_blank')
-            }
-          >
-            Excel
-          </Button>
-        </div>
-      </div>
+            <HeaderAction
+              tone="success"
+              icon={<Sheet className="size-4" aria-hidden="true" />}
+              onClick={() =>
+                window.open(`/api/admin/sales-report/export-excel?${exportQuery}`, '_blank')
+              }
+            >
+              Export Excel
+            </HeaderAction>
+          </>
+        }
+      />
 
       <div className="mb-5 grid gap-3 rounded-lg border border-line bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
         <SelectField

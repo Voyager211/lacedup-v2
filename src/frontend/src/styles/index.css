@@ -29,6 +29,14 @@
   --color-ink-muted: #555555;
   --color-accent: #3a7dff;
 
+  /* The admin page-header panel.
+     Navy rather than the near-black `ink` used by the sidebar: the bar sits on
+     the warm canvas with content either side of it, and a flat black block
+     there reads as a hole in the page. The pair is a gradient, light to dark
+     across the bar. */
+  --color-panel: #1b2438;
+  --color-panel-deep: #0f1626;
+
   /* Semantic */
   --color-success: #198754;
   --color-success-hover: #157347;

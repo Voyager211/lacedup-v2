@@ -121,7 +121,8 @@ describe('ResourceListPage (via CategoriesPage)', () => {
     renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
 
     expect(await screen.findByText('Running')).toBeInTheDocument();
-    expect(screen.getByText('14 total')).toBeInTheDocument();
+    // The count sits in the page header now: "Category Management (14)".
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Category Management (14)');
     expect(screen.getByText('10%')).toBeInTheDocument();
   });
 
@@ -325,7 +326,9 @@ describe('CouponsPage', () => {
 
     renderAt(<CouponsPage />, '/admin/coupons', '/admin/coupons');
 
-    expect(await screen.findByText('25 total')).toBeInTheDocument();
+    // Wait for the rows: the heading renders before the count arrives.
+    expect(await screen.findByText('SAVE10')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Coupon Management (25)');
   });
 });
 

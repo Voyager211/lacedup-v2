@@ -35,7 +35,7 @@ const apiUsers = async (req: Request, res: Response) => {
         }
         // 'all' - no isBlocked filter added
         
-        const { data: users, totalPages } = await getPagination(
+        const { data: users, totalPages, totalRecords } = await getPagination(
             User.find(query).sort({ createdAt: -1 }),
             User,
             query,
@@ -43,7 +43,9 @@ const apiUsers = async (req: Request, res: Response) => {
             limit
         );
 
-        res.json({ users, currentPage: page, totalPages, statusFilter: status });
+        // totalUsers is what the admin header counts. It is the filtered total,
+        // so it agrees with the rows on screen rather than with the collection.
+        res.json({ users, currentPage: page, totalPages, totalUsers: totalRecords, statusFilter: status });
     } catch (err: any) {
         console.error('Error fetching user data: ', err);
         res.status(500).json({ message: 'Internal Server Error' });

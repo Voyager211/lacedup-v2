@@ -22,9 +22,10 @@ import {
   type RankedItem
 } from './reports.api';
 import EmptyState from '@/components/EmptyState';
+import PageHeader, { HeaderPill } from '@/components/PageHeader';
 import QueryBoundary from '@/components/QueryBoundary';
 import { Skeleton } from '@/components/Skeleton';
-import { formatINR, formatNumber } from '@/lib/format';
+import { formatDate, formatINR, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/cn';
 
 /**
@@ -132,9 +133,15 @@ const DashboardPage = () => {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-heading text-2xl font-semibold text-ink">Dashboard</h1>
+      <PageHeader
+        title="Dashboard Overview"
+        subtitle="Real-time business insights and analytics for LacedUp Co"
+        actions={<HeaderPill>{formatDate(new Date(), 'full')}</HeaderPill>}
+      />
 
+      {/* The period toggle scopes the charts below, not the whole page, so it
+          sits with them rather than on the bar. */}
+      <div className="mb-5 flex justify-end">
         <div className="flex gap-1 rounded-md border border-line bg-white p-1">
           {PERIODS.map((option) => (
             <button

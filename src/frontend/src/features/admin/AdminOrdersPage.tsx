@@ -3,6 +3,7 @@ import { useGetAdminOrdersQuery } from './adminOps.api';
 import Badge, { ORDER_STATUS_TONE, PAYMENT_STATUS_TONE, paymentMethodTone } from '@/components/Badge';
 import EmptyState from '@/components/EmptyState';
 import FilterBar from '@/components/FilterBar';
+import PageHeader from '@/components/PageHeader';
 import Pagination from '@/components/Pagination';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -49,10 +50,13 @@ const AdminOrdersPage = () => {
 
   return (
     <div>
-      <h1 className="mb-1 font-heading text-2xl font-semibold text-ink">Orders</h1>
-      <p className="mb-5 text-sm text-ink-muted">
-        One row per item — an order with several items appears more than once.
-      </p>
+      <PageHeader
+        title="Order Management"
+        count={data?.totalCount}
+        // The item-level note stays: the row count not matching the order
+        // count is the first thing that looks like a bug here.
+        subtitle="Manage and track all customer orders — one row per item, so an order with several items appears more than once."
+      />
 
       <FilterBar
         search={search}

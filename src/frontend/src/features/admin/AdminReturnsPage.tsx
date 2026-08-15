@@ -8,6 +8,7 @@ import {
 import Badge, { RETURN_STATUS_TONE } from '@/components/Badge';
 import EmptyState from '@/components/EmptyState';
 import FilterBar from '@/components/FilterBar';
+import PageHeader from '@/components/PageHeader';
 import Pagination from '@/components/Pagination';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -107,7 +108,11 @@ const AdminReturnsPage = () => {
 
   return (
     <div>
-      <h1 className="mb-5 font-heading text-2xl font-semibold text-ink">Returns</h1>
+      <PageHeader
+        title="Return Management"
+        count={data?.totalReturns}
+        subtitle="Manage and process customer return requests"
+      />
 
       <FilterBar
         search={search}

@@ -8,6 +8,7 @@ import {
 import Badge from '@/components/Badge';
 import EmptyState from '@/components/EmptyState';
 import FilterBar from '@/components/FilterBar';
+import PageHeader from '@/components/PageHeader';
 import Pagination from '@/components/Pagination';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -82,7 +83,11 @@ const AdminUsersPage = () => {
 
   return (
     <div>
-      <h1 className="mb-5 font-heading text-2xl font-semibold text-ink">Users</h1>
+      <PageHeader
+        title="User Management"
+        count={data?.totalUsers}
+        subtitle="Manage and monitor all registered users"
+      />
 
       <FilterBar
         search={q}

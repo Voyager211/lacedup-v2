@@ -61,6 +61,7 @@ const CouponsPage = () => {
         resource="coupons"
         title="Coupons"
         singular="Coupon"
+        subtitle="Manage discount coupons and promotional offers"
         searchPlaceholder="Search by code or name…"
         filters={[
           {

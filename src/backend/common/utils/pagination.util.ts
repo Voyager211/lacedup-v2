@@ -3,6 +3,8 @@ import type { FilterQuery, Model, Query } from 'mongoose';
 export interface PaginatedResult<T> {
   data: T[];
   totalPages: number;
+  /** Matching documents across every page, not just this one. */
+  totalRecords: number;
 }
 
 /**
@@ -29,5 +31,7 @@ export const getPagination = async <T>(
 
   const totalPages = Math.ceil(count / limit);
 
-  return { data, totalPages };
+  // The count is already paid for by the page maths, so returning it costs
+  // nothing and saves callers a second countDocuments for the same filter.
+  return { data, totalPages, totalRecords: count };
 };

@@ -19,6 +19,7 @@ const ProductsPage = () => {
       resource="products"
       title="Products"
       singular="Product"
+      subtitle="Manage your product inventory"
       searchPlaceholder="Search by name…"
       filters={[
         {

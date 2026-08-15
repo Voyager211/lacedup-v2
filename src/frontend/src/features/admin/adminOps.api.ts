@@ -28,7 +28,17 @@ export interface AdminOrdersPage {
   orders: AdminOrderRow[];
   currentPage: number;
   totalPages: number;
-  totalOrders?: number;
+  /**
+   * Rows across every page, which is what the header bar counts.
+   *
+   * `totalCount` and not `totalOrders`: the controller sends both names for
+   * different things - `data.totalCount` is the row total, while
+   * `data.statistics.totalOrders` is a separate statistic. This interface
+   * declared `totalOrders` at the top level, where nothing sends it. Nothing
+   * read it either, so it was a latent lie rather than a live bug; the header
+   * would have found it the hard way.
+   */
+  totalCount?: number;
 }
 
 export interface AdminOrderDetails {
@@ -152,8 +162,14 @@ export const adminOpsApi = api.injectEndpoints({
           Object.entries(params).filter(([, value]) => value !== '' && value != null)
         )
       }),
-      transformResponse: (response: { data?: { returns: AdminReturnRow[]; currentPage: number; totalPages: number } }) =>
-        response.data ?? { returns: [], currentPage: 1, totalPages: 1 },
+      transformResponse: (response: {
+        data?: {
+          returns: AdminReturnRow[];
+          currentPage: number;
+          totalPages: number;
+          totalReturns?: number;
+        };
+      }) => response.data ?? { returns: [], currentPage: 1, totalPages: 1 },
       providesTags: ['Return']
     }),
 
@@ -177,7 +193,7 @@ export const adminOpsApi = api.injectEndpoints({
     }),
 
     getAdminUsers: build.query<
-      { users: AdminUserRow[]; currentPage: number; totalPages: number },
+      { users: AdminUserRow[]; currentPage: number; totalPages: number; totalUsers?: number },
       Record<string, unknown>
     >({
       query: (params) => ({

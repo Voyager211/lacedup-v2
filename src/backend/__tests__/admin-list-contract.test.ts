@@ -139,6 +139,54 @@ describe('admin list response contract', () => {
     for (const entry of entries) expect(typeof entry.name).toBe('string');
   });
 
+  /*
+   * The totals the admin page headers count with.
+   *
+   * Three endpoints, three different names for the same idea, and none of them
+   * is `totalRecords`. The orders one is the trap: `data.totalCount` is the row
+   * total while `data.statistics.totalOrders` is a separate figure, and the
+   * client interface declared a top-level `totalOrders` that nothing sends.
+   * Nothing read it, so it sat there wrong until the header needed a number.
+   */
+  it('orders count under data.totalCount', async () => {
+    const res = await get('/api/admin/orders/api/filtered');
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.data.totalCount).toBe('number');
+    expect(res.body.data).not.toHaveProperty('totalRecords');
+  });
+
+  it('returns count under data.totalReturns', async () => {
+    const res = await get('/api/admin/returns/api/filtered');
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.data.totalReturns).toBe('number');
+  });
+
+  it('users count under totalUsers, at the top level with the rows', async () => {
+    const res = await get('/api/admin/users/api');
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.totalUsers).toBe('number');
+  });
+
+  it('counts what the filter matched, not the whole collection', async () => {
+    // A count that ignores the filter reads as a bug the moment an admin
+    // searches: 1 row on screen, 27 in the heading.
+    // The list is shoppers only, so the admin created above does not count.
+    await User.create({
+      name: 'Shopper One',
+      email: 'shopper-one@example.com',
+      password: 'CorrectHorse1!'
+    });
+
+    const all = await get('/api/admin/users/api');
+    const filtered = await get('/api/admin/users/api?q=nobody-by-this-name');
+
+    expect(all.body.totalUsers).toBeGreaterThan(0);
+    expect(filtered.body.totalUsers).toBe(0);
+  });
+
   it('nests a single coupon under data.coupon too', async () => {
     const list = await get('/api/admin/coupons/api');
     const id = list.body.data.coupons[0]._id;

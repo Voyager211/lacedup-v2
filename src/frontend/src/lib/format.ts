@@ -42,12 +42,15 @@ const toDate = (value: string | number | Date | null | undefined): Date | null =
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-type DateStyle = 'short' | 'long' | 'numeric';
+type DateStyle = 'short' | 'long' | 'numeric' | 'full';
 
 const DATE_FORMATS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   short: { day: 'numeric', month: 'short', year: 'numeric' },
   long: { day: 'numeric', month: 'long', year: 'numeric' },
-  numeric: { day: '2-digit', month: '2-digit', year: 'numeric' }
+  numeric: { day: '2-digit', month: '2-digit', year: 'numeric' },
+  // With the weekday, for the admin page headers - "when was this placed" is
+  // easier to answer from "Tuesday" than from the date alone.
+  full: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
 };
 
 /** One date format for the whole app. `en-IN`, day first. */

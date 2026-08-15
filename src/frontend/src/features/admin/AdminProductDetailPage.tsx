@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BsPencil, BsArrowLeft } from 'react-icons/bs';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, SquarePen } from 'lucide-react';
 import { useGetAdminProductDetailQuery } from './admin.api';
 import Badge from '@/components/Badge';
-import Button from '@/components/Button';
+import PageHeader, { HeaderAction } from '@/components/PageHeader';
 import QueryBoundary from '@/components/QueryBoundary';
 import { Skeleton } from '@/components/Skeleton';
 import { formatINR } from '@/lib/format';
@@ -55,30 +55,29 @@ const AdminProductDetailPage = () => {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/admin/products"
-            className="text-ink-muted transition-colors hover:text-ink"
-            aria-label="Back to products"
-          >
-            <BsArrowLeft className="size-5" aria-hidden="true" />
-          </Link>
-          <h1 className="font-heading text-2xl font-semibold text-ink">
-            {product?.productName ?? 'Product'}
-          </h1>
-        </div>
+      <PageHeader
+        title={product?.productName ?? 'Product'}
+        actions={
+          <>
+            <HeaderAction
+              tone="neutral"
+              to="/admin/products"
+              icon={<ArrowLeft className="size-4" aria-hidden="true" />}
+            >
+              Back to List
+            </HeaderAction>
 
-        {product && (
-          <Button
-            size="sm"
-            icon={<BsPencil className="size-4" aria-hidden="true" />}
-            onClick={() => navigate(`/admin/products/${product._id}/edit`)}
-          >
-            Edit
-          </Button>
-        )}
-      </div>
+            {product && (
+              <HeaderAction
+                icon={<SquarePen className="size-4" aria-hidden="true" />}
+                onClick={() => navigate(`/admin/products/${product._id}/edit`)}
+              >
+                Edit Product
+              </HeaderAction>
+            )}
+          </>
+        }
+      />
 
       <QueryBoundary
         isLoading={isLoading}

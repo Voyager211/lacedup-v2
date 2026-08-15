@@ -44,11 +44,13 @@ const CatalogPage = ({
   resource,
   title,
   singular,
+  subtitle,
   offerField
 }: {
   resource: Extract<ResourceKey, 'categories' | 'brands'>;
   title: string;
   singular: string;
+  subtitle: string;
   offerField: string;
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -65,6 +67,7 @@ const CatalogPage = ({
         resource={resource}
         title={title}
         singular={singular}
+        subtitle={subtitle}
         filters={[STATUS_FILTER]}
         onCreate={() => open(null)}
         onEdit={open}
@@ -98,10 +101,17 @@ export const CategoriesPage = () => (
     resource="categories"
     title="Categories"
     singular="Category"
+    subtitle="Organize and manage product categories"
     offerField="categoryOffer"
   />
 );
 
 export const BrandsPage = () => (
-  <CatalogPage resource="brands" title="Brands" singular="Brand" offerField="brandOffer" />
+  <CatalogPage
+    resource="brands"
+    title="Brands"
+    singular="Brand"
+    subtitle="Organize and manage product brands"
+    offerField="brandOffer"
+  />
 );

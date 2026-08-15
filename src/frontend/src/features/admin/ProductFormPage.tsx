@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BsPlus, BsTrash } from 'react-icons/bs';
+import { ArrowLeft } from 'lucide-react';
 import {
   useCreateAdminRecordMutation,
   useGetAdminRecordQuery,
@@ -8,6 +9,7 @@ import {
 } from './admin.api';
 import { useGetFilterOptionsQuery } from '@/features/catalog/catalog.api';
 import Button from '@/components/Button';
+import PageHeader, { HeaderAction } from '@/components/PageHeader';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonText } from '@/components/Skeleton';
 import ImageUploader from '@/components/form/ImageUploader';
@@ -198,166 +200,183 @@ const ProductFormPage = () => {
   };
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="mb-6 font-heading text-2xl font-semibold text-ink">
-        {isEdit ? 'Edit product' : 'Add product'}
-      </h1>
+    <>
+      <PageHeader
+        title={isEdit ? 'Edit Product' : 'Add Product'}
+        subtitle={
+          isEdit
+            ? 'Update this product, its variants and its images'
+            : 'Add a new product to your inventory'
+        }
+        actions={
+          <HeaderAction
+            tone="neutral"
+            to="/admin/products"
+            icon={<ArrowLeft className="size-4" aria-hidden="true" />}
+          >
+            Back to List
+          </HeaderAction>
+        }
+      />
 
-      <QueryBoundary
-        isLoading={isEdit && existing.isLoading}
-        error={isEdit ? existing.error : undefined}
-        skeleton={<SkeletonText lines={10} />}
-        onRetry={existing.refetch}
-      >
-        <div className="space-y-6 rounded-lg border border-line bg-white p-6">
-          {error && (
-            <p role="alert" className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">
-              {error}
-            </p>
-          )}
+      {/* Only the form is held to a readable width; the bar spans the column. */}
+      <div className="max-w-3xl">
+        <QueryBoundary
+          isLoading={isEdit && existing.isLoading}
+          error={isEdit ? existing.error : undefined}
+          skeleton={<SkeletonText lines={10} />}
+          onRetry={existing.refetch}
+        >
+          <div className="space-y-6 rounded-lg border border-line bg-white p-6">
+            {error && (
+              <p role="alert" className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+            )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label="Product name"
-              required
-              containerClassName="sm:col-span-2"
-              value={productName}
-              onChange={(event) => setProductName(event.target.value)}
-            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                label="Product name"
+                required
+                containerClassName="sm:col-span-2"
+                value={productName}
+                onChange={(event) => setProductName(event.target.value)}
+              />
 
-            <TextAreaField
-              label="Description"
-              containerClassName="sm:col-span-2"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
+              <TextAreaField
+                label="Description"
+                containerClassName="sm:col-span-2"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
 
-            <SelectField
-              label="Category"
-              required
-              placeholder="Choose a category…"
-              options={(options?.categories ?? []).map((c) => ({ value: c._id, label: c.name }))}
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-            />
+              <SelectField
+                label="Category"
+                required
+                placeholder="Choose a category…"
+                options={(options?.categories ?? []).map((c) => ({ value: c._id, label: c.name }))}
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+              />
 
-            <SelectField
-              label="Brand"
-              required
-              placeholder="Choose a brand…"
-              options={(options?.brands ?? []).map((b) => ({ value: b._id, label: b.name }))}
-              value={brand}
-              onChange={(event) => setBrand(event.target.value)}
-            />
+              <SelectField
+                label="Brand"
+                required
+                placeholder="Choose a brand…"
+                options={(options?.brands ?? []).map((b) => ({ value: b._id, label: b.name }))}
+                value={brand}
+                onChange={(event) => setBrand(event.target.value)}
+              />
 
-            <TextField
-              label="Regular price"
-              type="number"
-              required
-              hint="Shown struck through — every variant must be cheaper"
-              value={regularPrice}
-              onChange={(event) => setRegularPrice(event.target.value)}
-            />
+              <TextField
+                label="Regular price"
+                type="number"
+                required
+                hint="Shown struck through — every variant must be cheaper"
+                value={regularPrice}
+                onChange={(event) => setRegularPrice(event.target.value)}
+              />
 
-            <TextField
-              label="Product offer (%)"
-              type="number"
-              min={0}
-              max={100}
-              value={productOffer}
-              onChange={(event) => setProductOffer(event.target.value)}
-            />
+              <TextField
+                label="Product offer (%)"
+                type="number"
+                min={0}
+                max={100}
+                value={productOffer}
+                onChange={(event) => setProductOffer(event.target.value)}
+              />
 
-            <TextField
-              label="Features"
-              hint="Comma separated"
-              containerClassName="sm:col-span-2"
-              value={features}
-              onChange={(event) => setFeatures(event.target.value)}
-            />
-          </div>
-
-          <ImageUploader
-            value={images}
-            onChange={setImages}
-            mainIndex={mainIndex}
-            onMainIndexChange={setMainIndex}
-          />
-
-          <section>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium text-ink">Sizes</p>
-              <Button
-                size="sm"
-                variant="outline"
-                icon={<BsPlus className="size-4" aria-hidden="true" />}
-                onClick={() => setVariants((current) => [...current, emptyVariant()])}
-              >
-                Add size
-              </Button>
+              <TextField
+                label="Features"
+                hint="Comma separated"
+                containerClassName="sm:col-span-2"
+                value={features}
+                onChange={(event) => setFeatures(event.target.value)}
+              />
             </div>
 
-            <ul className="space-y-3">
-              {variants.map((variant, index) => (
-                <li key={index} className="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-5">
-                  <TextField
-                    label="Size"
-                    value={variant.size}
-                    onChange={(event) => setVariant(index, { size: event.target.value })}
-                  />
-                  <TextField
-                    label="Stock"
-                    type="number"
-                    min={0}
-                    value={variant.stock}
-                    onChange={(event) => setVariant(index, { stock: event.target.value })}
-                  />
-                  <TextField
-                    label="Base price"
-                    type="number"
-                    value={variant.basePrice}
-                    onChange={(event) => setVariant(index, { basePrice: event.target.value })}
-                  />
-                  <TextField
-                    label="Offer (%)"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={variant.variantSpecificOffer}
-                    onChange={(event) =>
-                      setVariant(index, { variantSpecificOffer: event.target.value })
-                    }
-                  />
+            <ImageUploader
+              value={images}
+              onChange={setImages}
+              mainIndex={mainIndex}
+              onMainIndexChange={setMainIndex}
+            />
 
-                  <div className="flex items-end">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={variants.length === 1}
-                      icon={<BsTrash className="size-4" aria-hidden="true" />}
-                      onClick={() =>
-                        setVariants((current) => current.filter((_, i) => i !== index))
+            <section>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-medium text-ink">Sizes</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={<BsPlus className="size-4" aria-hidden="true" />}
+                  onClick={() => setVariants((current) => [...current, emptyVariant()])}
+                >
+                  Add size
+                </Button>
+              </div>
+
+              <ul className="space-y-3">
+                {variants.map((variant, index) => (
+                  <li key={index} className="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-5">
+                    <TextField
+                      label="Size"
+                      value={variant.size}
+                      onChange={(event) => setVariant(index, { size: event.target.value })}
+                    />
+                    <TextField
+                      label="Stock"
+                      type="number"
+                      min={0}
+                      value={variant.stock}
+                      onChange={(event) => setVariant(index, { stock: event.target.value })}
+                    />
+                    <TextField
+                      label="Base price"
+                      type="number"
+                      value={variant.basePrice}
+                      onChange={(event) => setVariant(index, { basePrice: event.target.value })}
+                    />
+                    <TextField
+                      label="Offer (%)"
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={variant.variantSpecificOffer}
+                      onChange={(event) =>
+                        setVariant(index, { variantSpecificOffer: event.target.value })
                       }
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
+                    />
 
-          <div className="flex gap-3 border-t border-line pt-5">
-            <Button loading={isCreating || isUpdating} onClick={submit}>
-              {isEdit ? 'Save changes' : 'Add product'}
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/admin/products')}>
-              Cancel
-            </Button>
+                    <div className="flex items-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={variants.length === 1}
+                        icon={<BsTrash className="size-4" aria-hidden="true" />}
+                        onClick={() =>
+                          setVariants((current) => current.filter((_, i) => i !== index))
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <div className="flex gap-3 border-t border-line pt-5">
+              <Button loading={isCreating || isUpdating} onClick={submit}>
+                {isEdit ? 'Save changes' : 'Add product'}
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/admin/products')}>
+                Cancel
+              </Button>
+            </div>
           </div>
-        </div>
-      </QueryBoundary>
-    </div>
+        </QueryBoundary>
+      </div>
+    </>
   );
 };
 
