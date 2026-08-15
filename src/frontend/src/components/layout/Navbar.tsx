@@ -57,15 +57,31 @@ const Navbar = () => {
     };
   }, [menuOpen]);
 
+  /**
+   * The nav links, with the underline that slides in.
+   *
+   * The rule is drawn as an `::after` scaled on the X axis rather than as a
+   * border, because a border can only appear and disappear - there is nothing
+   * to animate between. Scaling from `origin-left` gives the wipe, and
+   * transform animates on the compositor, so it does not cause layout work on
+   * hover.
+   *
+   * The active link is simply the same rule already at full width, so moving
+   * between pages and hovering read as one idea rather than two effects.
+   */
   const linkClasses = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'text-sm transition-colors hover:text-white',
-      isActive ? 'font-semibold text-white' : 'text-white/70'
+      'relative py-1 text-base transition-colors',
+      "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:bg-brand after:content-['']",
+      'after:origin-left after:transition-transform after:duration-300 after:ease-out',
+      isActive
+        ? 'font-bold text-white after:scale-x-100'
+        : 'font-medium text-white/75 after:scale-x-0 hover:text-white hover:after:scale-x-100'
     );
 
   return (
     <header className="sticky top-0 z-40 bg-ink text-white">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-20 max-w-7xl items-center gap-5 px-4 sm:px-6">
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
@@ -77,10 +93,10 @@ const Navbar = () => {
         </button>
 
         <Link to="/" className="shrink-0" aria-label="LacedUp home">
-          <Logo onDark width={132} />
+          <Logo onDark width={168} />
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
+        <nav aria-label="Main" className="hidden items-center gap-8 lg:flex">
           {LINKS.map(({ to, label, end }) => (
             <NavLink key={to} to={to} end={end} className={linkClasses}>
               {label}
@@ -107,13 +123,13 @@ const Navbar = () => {
             <div className="flex items-center gap-2">
               <Link
                 to="/login"
-                className="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                className="rounded-md px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
               >
                 Sign in
               </Link>
               <Link
                 to="/signup"
-                className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
+                className="rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
               >
                 Sign up
               </Link>

@@ -71,6 +71,43 @@ describe('StorefrontLayout', () => {
     expect(mock.history.get.filter((r) => r.url === '/cart/count')).toHaveLength(0);
   });
 
+  it('offers exactly one way to clear the search', async () => {
+    /*
+     * There were two crosses in the field: WebKit draws its own inside
+     * type="search", alongside the button below.
+     *
+     * Only half of that is testable here. jsdom does not implement
+     * ::-webkit-search-cancel-button, so the duplicate this regressed from is
+     * invisible to the suite either way - the class that suppresses it is
+     * asserted separately below, and the rendering was checked in a browser.
+     */
+    mock.onGet('/auth/me').reply(401);
+    mock.onGet('/shop/search-suggestions').reply(200, { suggestions: [] });
+
+    renderShell(<StorefrontLayout />, '/', '/');
+
+    const input = (await screen.findAllByRole('combobox'))[0]!;
+    await userEvent.type(input, 'air max');
+
+    // One per rendered search, not two per search.
+    expect(screen.getAllByRole('button', { name: 'Clear search' })).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(input).toHaveValue('');
+  });
+
+  it('suppresses the browser-drawn clear control', async () => {
+    // Coupled to the class on purpose: it is the whole mechanism, and jsdom
+    // cannot render the pseudo-element it removes. If this class is dropped the
+    // second cross comes back, silently.
+    mock.onGet('/auth/me').reply(401);
+
+    renderShell(<StorefrontLayout />, '/', '/');
+
+    const input = (await screen.findAllByRole('combobox'))[0]!;
+    expect(input.className).toContain('[&::-webkit-search-cancel-button]:appearance-none');
+  });
+
   it('highlights About, which never highlighted in the EJS navbar', async () => {
     mock.onGet('/auth/me').reply(401);
 

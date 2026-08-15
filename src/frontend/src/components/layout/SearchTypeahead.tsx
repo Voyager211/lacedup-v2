@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BsSearch, BsX } from 'react-icons/bs';
 import { useGetSearchSuggestionsQuery } from '@/features/catalog/catalog.api';
@@ -21,6 +21,16 @@ import Spinner from '../Spinner';
 const DEBOUNCE_MS = 300;
 
 const SearchTypeahead = ({ className }: { className?: string }) => {
+  /*
+   * The navbar renders this twice - once for desktop, once in the bar below it
+   * on small screens - so hardcoded ids appeared twice in the DOM. The label
+   * bound to whichever input came first, leaving the other unlabelled, and
+   * aria-controls and aria-activedescendant pointed at the wrong copy's list.
+   */
+  const uid = useId();
+  const inputId = `search-${uid}`;
+  const listId = `suggestions-${uid}`;
+  const optionId = (index: number) => `${listId}-${index}`;
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -99,7 +109,7 @@ const SearchTypeahead = ({ className }: { className?: string }) => {
           if (query.trim()) submit(query.trim());
         }}
       >
-        <label htmlFor="navbar-search" className="sr-only">
+        <label htmlFor={inputId} className="sr-only">
           Search products
         </label>
 
@@ -109,17 +119,17 @@ const SearchTypeahead = ({ className }: { className?: string }) => {
         />
 
         <input
-          id="navbar-search"
+          id={inputId}
           type="search"
           value={query}
           placeholder="Search for sneakers…"
           autoComplete="off"
           role="combobox"
           aria-expanded={showDropdown}
-          aria-controls="search-suggestions"
+          aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={
-            highlighted >= 0 ? `search-suggestion-${highlighted}` : undefined
+            highlighted >= 0 ? optionId(highlighted) : undefined
           }
           onChange={(event) => {
             setQuery(event.target.value);
@@ -127,7 +137,18 @@ const SearchTypeahead = ({ className }: { className?: string }) => {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="w-full rounded-full border border-line bg-white py-2 pl-10 pr-9 text-sm text-ink placeholder:text-ink-muted/70 focus-visible:border-brand"
+          className={cn(
+            'w-full rounded-full border border-line bg-white py-2.5 pl-11 pr-9 text-sm text-ink',
+            'placeholder:text-ink-muted/70 focus-visible:border-brand',
+            /*
+             * WebKit draws its own clear button inside type="search", which sat
+             * next to the one below - two crosses, only one of which cleared the
+             * suggestions. The type is kept for the search-key mobile keyboard
+             * and the searchbox role; only its decoration is suppressed.
+             */
+            '[&::-webkit-search-cancel-button]:appearance-none',
+            '[&::-webkit-search-decoration]:appearance-none'
+          )}
         />
 
         {query && (
@@ -147,7 +168,7 @@ const SearchTypeahead = ({ className }: { className?: string }) => {
 
       {showDropdown && (
         <div
-          id="search-suggestions"
+          id={listId}
           role="listbox"
           aria-label="Search suggestions"
           className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-lg border border-line bg-white shadow-lg"
@@ -168,7 +189,7 @@ const SearchTypeahead = ({ className }: { className?: string }) => {
           {suggestions.map((suggestion, index) => (
             <button
               key={suggestion._id}
-              id={`search-suggestion-${index}`}
+              id={optionId(index)}
               type="button"
               role="option"
               aria-selected={index === highlighted}
