@@ -100,15 +100,13 @@ const RankedList = ({
     >
       <ol className="space-y-2">
         {items.slice(0, 5).map((item, index) => (
-          <li key={item._id ?? index} className="flex items-center justify-between gap-3 text-sm">
+          <li key={item.id} className="flex items-center justify-between gap-3 text-sm">
             <span className="flex min-w-0 items-center gap-2">
               <span className="w-4 shrink-0 text-ink-muted">{index + 1}</span>
-              <span className="truncate text-ink">
-                {item.productName ?? item.name ?? 'Unknown'}
-              </span>
+              <span className="truncate text-ink">{item.label}</span>
             </span>
             <span className="shrink-0 text-ink-muted">
-              {formatNumber(Number(item.totalSold ?? item.count ?? 0))} sold
+              {formatNumber(item.quantity)} sold
             </span>
           </li>
         ))}
@@ -127,16 +125,10 @@ const DashboardPage = () => {
   const categories = useGetBestSellingCategoriesQuery(period);
   const brands = useGetBestSellingBrandsQuery(period);
 
-  const salesData = (sales.data ?? []).map((point) => ({
-    label: String(point.label ?? point.date ?? point._id ?? ''),
-    revenue: Number(point.revenue ?? 0),
-    orders: Number(point.orders ?? 0)
-  }));
-
-  const distribution = (revenue.data ?? []).map((slice) => ({
-    name: String(slice.name ?? slice._id ?? 'Other'),
-    value: Number(slice.revenue ?? slice.count ?? 0)
-  }));
+  // Both already normalised in reports.api - see the note there about the
+  // shapes these endpoints actually return.
+  const salesData = sales.data ?? [];
+  const distribution = revenue.data ?? [];
 
   return (
     <div>
@@ -178,8 +170,8 @@ const DashboardPage = () => {
           loading={stats.isLoading}
         />
         <StatCard
-          label="Products"
-          value={formatNumber(Number(stats.data?.totalProducts ?? 0))}
+          label="Pending orders"
+          value={formatNumber(Number(stats.data?.pendingOrders ?? 0))}
           loading={stats.isLoading}
         />
       </div>

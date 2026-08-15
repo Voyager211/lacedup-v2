@@ -48,22 +48,41 @@ beforeEach(() => {
 afterEach(() => mock.restore());
 
 describe('DashboardPage', () => {
-  const stubDashboard = (period = 'monthly') => {
+  /**
+   * The shapes these endpoints really return.
+   *
+   * Copied from dashboard.controller, not invented. The first version of this
+   * file guessed - it stubbed sales as an array of points when the endpoint
+   * sends two parallel arrays - so the suite passed while the page threw
+   * "(sales.data ?? []).map is not a function" on first paint. A mock is only
+   * worth as much as its fidelity to the thing it stands in for.
+   */
+  const stubDashboard = () => {
+    // stats: no product count; it reports pending orders instead.
     mock.onGet('/admin/dashboard/api/stats').reply(200, {
-      data: { totalRevenue: 125000, totalOrders: 84, totalCustomers: 61, totalProducts: 16 }
+      success: true,
+      data: { totalRevenue: 125000, totalOrders: 84, totalCustomers: 61, pendingOrders: 7 }
     });
+
+    // sales: labels and values as two parallel arrays, revenue only.
     mock.onGet('/admin/dashboard/api/sales').reply(200, {
-      data: [{ label: 'Jan', revenue: 40000, orders: 20 }]
+      success: true,
+      data: { labels: ['Jan', 'Feb'], salesData: [40000, 52000] }
     });
+
+    // revenue-distribution: keyed by payment method, percentage as a string.
     mock.onGet('/admin/dashboard/api/revenue-distribution').reply(200, {
-      data: [{ name: 'Running', revenue: 80000 }]
+      success: true,
+      data: [{ paymentMethod: 'razorpay', revenue: 80000, percentage: '64.00' }]
     });
+
+    // the ranked lists: totalQuantity, and a differently-named label per list.
     mock.onGet('/admin/dashboard/api/best-selling-products').reply(200, {
-      data: [{ _id: 'p1', productName: 'Air Max 90', totalSold: 12 }]
+      success: true,
+      data: [{ _id: 'p1', productName: 'Air Max 90', totalQuantity: 12, totalRevenue: 96000 }]
     });
-    mock.onGet('/admin/dashboard/api/best-selling-categories').reply(200, { data: [] });
-    mock.onGet('/admin/dashboard/api/best-selling-brands').reply(200, { data: [] });
-    return period;
+    mock.onGet('/admin/dashboard/api/best-selling-categories').reply(200, { success: true, data: [] });
+    mock.onGet('/admin/dashboard/api/best-selling-brands').reply(200, { success: true, data: [] });
   };
 
   it('shows the headline figures', async () => {
@@ -73,6 +92,40 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('₹1,25,000')).toBeInTheDocument();
     expect(screen.getByText('84')).toBeInTheDocument();
+  });
+
+  it('reports pending orders, which is what the stats endpoint actually sends', async () => {
+    stubDashboard();
+
+    renderAt(<DashboardPage />);
+
+    // Awaited, not queried immediately: the label is static markup and renders
+    // while the card is still a skeleton, so asserting on it proves nothing
+    // about the value having arrived.
+    expect(screen.getByText('Pending orders')).toBeInTheDocument();
+    expect(await screen.findByText('7')).toBeInTheDocument();
+    // There is no product count in the payload; a card for it read zero forever.
+    expect(screen.queryByText('Products')).not.toBeInTheDocument();
+  });
+
+  it('renders without throwing on the real sales shape', async () => {
+    // The regression: sales sends { labels, salesData }, and mapping over it
+    // as though it were an array took the whole page down.
+    stubDashboard();
+
+    renderAt(<DashboardPage />);
+
+    expect(await screen.findByText('Revenue over time')).toBeInTheDocument();
+    expect(screen.queryByText(/is not a function/i)).not.toBeInTheDocument();
+  });
+
+  it('names ranked rows from whichever key the list uses', async () => {
+    stubDashboard();
+
+    renderAt(<DashboardPage />);
+
+    expect(await screen.findByText('Air Max 90')).toBeInTheDocument();
+    expect(screen.getByText('12 sold')).toBeInTheDocument();
   });
 
   it('refetches every panel when the period changes', async () => {
