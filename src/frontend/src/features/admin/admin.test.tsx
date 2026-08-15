@@ -249,9 +249,33 @@ describe('ResourceListPage (via CategoriesPage)', () => {
 });
 
 describe('CouponsPage', () => {
+  /**
+   * The envelope the coupons endpoint really uses.
+   *
+   * Unlike categories, brands and products - which return their rows at the top
+   * level - coupons wraps everything one level deeper. These fixtures are
+   * copied from admin-coupon.controller, not invented: the previous ones put
+   * `coupons` at the top level, so the suite passed while the page rendered an
+   * empty table against the real server.
+   *
+   * The server side of the same contract is pinned in
+   * backend/__tests__/admin-list-contract.test.ts.
+   */
+  const envelope = (coupons: unknown[], pagination = {}, totalCount = coupons.length) => ({
+    success: true,
+    message: 'Coupons fetched successfully',
+    data: {
+      coupons,
+      count: coupons.length,
+      totalCount,
+      pagination: { currentPage: 1, totalPages: 1, hasPrevPage: false, hasNextPage: false, ...pagination }
+    }
+  });
+
   it('formats a percentage and a fixed discount differently', async () => {
-    mock.onGet('/admin/coupons/api').reply(200, {
-      coupons: [
+    mock.onGet('/admin/coupons/api').reply(
+      200,
+      envelope([
         {
           _id: 'k1',
           code: 'SAVE10',
@@ -270,9 +294,8 @@ describe('CouponsPage', () => {
           validTo: '2026-12-31T00:00:00Z',
           isActive: true
         }
-      ],
-      pagination: { currentPage: 1, totalPages: 1, totalCoupons: 2 }
-    });
+      ])
+    );
 
     renderAt(<CouponsPage />, '/admin/coupons', '/admin/coupons');
 
@@ -280,11 +303,25 @@ describe('CouponsPage', () => {
     expect(screen.getByText('₹500')).toBeInTheDocument();
   });
 
-  it('reads coupons out of their nested pagination shape', async () => {
-    mock.onGet('/admin/coupons/api').reply(200, {
-      coupons: [{ _id: 'k1', code: 'SAVE10', name: 'Ten off', isActive: true }],
-      pagination: { currentPage: 1, totalPages: 3, totalCoupons: 25 }
-    });
+  it('finds the rows even though they are nested under data', async () => {
+    // The regression: the normaliser read only the top level, found `data` -
+    // an object, not an array - and the page rendered nothing.
+    mock
+      .onGet('/admin/coupons/api')
+      .reply(200, envelope([{ _id: 'k1', code: 'SAVE10', name: 'Ten off', isActive: true }]));
+
+    renderAt(<CouponsPage />, '/admin/coupons', '/admin/coupons');
+
+    expect(await screen.findByText('SAVE10')).toBeInTheDocument();
+  });
+
+  it('reads the total out of data.totalCount, not totalRecords', async () => {
+    mock
+      .onGet('/admin/coupons/api')
+      .reply(
+        200,
+        envelope([{ _id: 'k1', code: 'SAVE10', name: 'Ten off', isActive: true }], { totalPages: 3 }, 25)
+      );
 
     renderAt(<CouponsPage />, '/admin/coupons', '/admin/coupons');
 

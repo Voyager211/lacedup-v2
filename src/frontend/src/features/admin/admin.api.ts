@@ -92,23 +92,51 @@ export interface AdminListResponse {
  * their array lives under, and coupons nests its pagination. Normalising here
  * keeps that out of the page.
  */
+/** The key each endpoint puts its rows under. */
+const COLLECTION_KEYS = ['categories', 'brands', 'coupons', 'products'] as const;
+
+/**
+ * Finds the rows and the paging, wherever the endpoint chose to put them.
+ *
+ * Three of the four are flat - `{ categories, currentPage, totalPages,
+ * totalRecords }`. Coupons wraps everything one level deeper:
+ *
+ *   { success, message, data: { coupons, count, totalCount, pagination: {…} } }
+ *
+ * The old version only looked at the top level, so for coupons it fell through
+ * to `response.data` - an object, not an array - and the page rendered nothing.
+ * Unwrapping `data` first when it holds a collection covers both without the
+ * caller needing to know which sort of endpoint it is talking to.
+ */
 const normaliseList = (response: Record<string, unknown>): AdminListResponse => {
+  const data = response.data as Record<string, unknown> | undefined;
+
+  const holdsRows = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value) &&
+    typeof value === 'object' &&
+    COLLECTION_KEYS.some((key) => Array.isArray((value as Record<string, unknown>)[key]));
+
+  // The envelope that actually carries the rows.
+  const body = holdsRows(data) ? data : response;
+
   const items =
-    (response.categories as AdminRecord[]) ??
-    (response.brands as AdminRecord[]) ??
-    (response.coupons as AdminRecord[]) ??
-    (response.products as AdminRecord[]) ??
-    (response.data as AdminRecord[]) ??
+    (COLLECTION_KEYS.map((key) => body[key]).find(Array.isArray) as AdminRecord[] | undefined) ??
+    (Array.isArray(response.data) ? (response.data as AdminRecord[]) : undefined) ??
     [];
 
-  const pagination = (response.pagination ?? response) as Record<string, unknown>;
+  const pagination = (body.pagination ?? body) as Record<string, unknown>;
 
   return {
     items,
     currentPage: Number(pagination.currentPage ?? 1),
     totalPages: Number(pagination.totalPages ?? 1),
     totalRecords: Number(
-      pagination.totalRecords ?? pagination.totalCoupons ?? pagination.total ?? items.length
+      // `totalCount` is the coupons endpoint's name for it.
+      pagination.totalRecords ??
+        body.totalCount ??
+        pagination.totalCoupons ??
+        pagination.total ??
+        items.length
     )
   };
 };
@@ -158,13 +186,23 @@ export const adminApi = api.injectEndpoints({
 
     getAdminRecord: build.query<AdminRecord, { resource: ResourceKey; id: string }>({
       query: ({ resource, id }) => ({ url: RESOURCE_PATHS[resource].one(id) }),
-      transformResponse: (response: Record<string, unknown>) =>
-        (response.category ??
+      /*
+       * Same split as the list endpoints: most return the record at the top
+       * level, coupons nests it as `{ data: { coupon } }`. Unwrap `data` first
+       * when it holds one, or the dialog opens with every field empty.
+       */
+      transformResponse: (response: Record<string, unknown>) => {
+        const data = (response.data ?? {}) as Record<string, unknown>;
+        const nested = data.coupon ?? data.category ?? data.brand ?? data.product;
+
+        return (nested ??
+          response.category ??
           response.brand ??
           response.coupon ??
           response.product ??
           response.data ??
-          response) as AdminRecord
+          response) as AdminRecord;
+      }
     }),
 
     createAdminRecord: build.mutation<
