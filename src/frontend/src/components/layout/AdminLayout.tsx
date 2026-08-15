@@ -27,13 +27,17 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 /**
  * Marks the panel as the admin one, beside the wordmark.
  *
- * Brand red on white rather than white-on-white-at-10%: the old version was
- * grey text on a barely-there ground, which is exactly the thing you cannot
- * afford to have unreadable - it is the only marker distinguishing this from
- * the storefront.
+ * A pale slate ground with dark text: legible on the black sidebar without
+ * competing with it, where the original was grey on white-at-ten-percent and
+ * effectively invisible. It stays off brand red deliberately - red is what the
+ * page's actions use, and a label that is not clickable should not borrow their
+ * colour.
+ *
+ * `shrink-0` matters: the wordmark beside it is an image with its own intrinsic
+ * width, so without it the flex row squeezes the badge instead.
  */
 const AdminBadge = () => (
-  <span className="ml-2 rounded bg-brand px-2 py-0.5 text-[0.6875rem] font-sans font-bold uppercase tracking-wider text-white">
+  <span className="ml-2 shrink-0 rounded bg-slate-300 px-2 py-0.5 text-[0.6875rem] font-sans font-bold uppercase tracking-wider text-slate-900">
     Admin
   </span>
 );
@@ -166,7 +170,9 @@ const AdminLayout = () => {
           to="/admin/dashboard"
           className="flex h-16 items-center px-5"
         >
-          <Logo onDark width={150} />
+          {/* Sized so the pair fits the 200px between the sidebar's gutters.
+              At 150 the badge overflowed and ended up pinned to the edge. */}
+          <Logo onDark width={124} />
           <AdminBadge />
         </Link>
         <AdminSidebarLinks />
@@ -182,7 +188,7 @@ const AdminLayout = () => {
           <aside className="absolute inset-y-0 left-0 flex w-60 flex-col bg-ink shadow-xl">
             <div className="flex h-16 items-center justify-between px-5">
               <span className="flex items-center">
-                <Logo onDark width={140} />
+                <Logo onDark width={116} />
                 <AdminBadge />
               </span>
               <button
