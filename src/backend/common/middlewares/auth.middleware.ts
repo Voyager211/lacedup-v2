@@ -11,12 +11,12 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
-  return res.redirect('/'); // Landing page
+  return res.status(401).json({ success: false, message: 'Authentication required' });
 };
 
 export const isGuest = (req: Request, res: Response, next: NextFunction) => {
   if (!req.isAuthenticated()) return next();
-  return res.redirect('/home'); // Redirect logged-in users
+  return res.status(403).json({ success: false, message: 'Already signed in' });
 };
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
@@ -28,5 +28,5 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
     return res.status(401).json({ message: 'Authentication required' });
   }
   // For page routes, redirect to login
-  return res.redirect('/admin/login');
+  return res.status(403).json({ success: false, message: 'Admin access only' });
 };

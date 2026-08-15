@@ -25,7 +25,7 @@ export const ensureAuthenticated = (req: Request, res: Response, next: NextFunct
 // Middleware to ensure user is not authenticated (for login/register pages)
 export const ensureNotAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (isSignedIn(req)) {
-    return res.redirect('/');
+    return res.status(403).json({ success: false, message: 'Already signed in' });
   }
 
   return next();

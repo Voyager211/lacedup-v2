@@ -2,7 +2,6 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import passport from 'passport';
 import * as authController from './auth.controller';
-import { preventBackNavigation, preventOtpBackNavigation } from '../../common/middlewares/prevent-back-navigation.middleware';
 import { isGuest } from '../../common/middlewares/auth.middleware';
 import {
   authLimiter,

@@ -270,6 +270,8 @@ router.post('/reset-quantity', requireAuthAPI, cartController.resetCartItemQuant
  *     responses:
  *       302: { description: Redirected to /checkout }
  */
+// Kept as a redirect deliberately: this one is reached by a browser
+// navigation from an old /cart/checkout link, not by a fetch.
 router.get('/checkout', (_req: Request, res: Response) => res.redirect('/checkout'));
 
 export = router;

@@ -290,7 +290,14 @@ const loadCheckout = async (req: Request, res: Response) => {
     }
 
     if (cartItems.length === 0) {
-      return res.redirect('/cart');
+      // 409 rather than a redirect: the SPA decides to send them to the cart.
+      // As a 302 this reached the SPA fallback and the client received
+      // index.html with a 200, so checkout rendered blank on an empty cart.
+      return res.status(409).json({
+        success: false,
+        message: 'Your cart is empty.',
+        code: 'CART_EMPTY'
+      });
     }
 
     // calculate totals
@@ -1570,8 +1577,11 @@ const loadOrderFailure = async (req: Request, res: Response) => {
     }
 
     if (!failedOrder) {
-      console.log(' Failed order not found in database');
-      return res.redirect('/cart');
+      return res.status(404).json({
+        success: false,
+        message: 'No failed order found.',
+        code: 'NO_FAILED_ORDER'
+      });
     }
 
     const canRetry = failedOrder.status !== ORDER_STATUS.FAILED;
@@ -1639,7 +1649,7 @@ const loadOrderFailure = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error loading order failure page:', error);
-    return res.redirect('/cart');
+    return res.status(500).json({ success: false, message: 'Could not load the order.' });
   }
 };
 
@@ -1683,16 +1693,22 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
           const product = await Product.findById((item.productId as any)._id).lean();
           
           if (!product || !product.isListed || product.isDeleted) {
-            //  Redirect instead of render error
-            return res.redirect('/cart');
+            return res.status(409).json({
+              success: false,
+              message: 'An item in this order is no longer available.',
+              code: 'PRODUCT_UNAVAILABLE'
+            });
           }
 
           // Check variant stock
           if (item.variantId && product.variants) {
             const variant = product.variants.find(v => v._id!.toString() === item.variantId.toString());
             if (!variant || variant.stock === 0 || variant.stock < item.quantity) {
-              //  Redirect instead of render error
-              return res.redirect('/cart');
+              return res.status(409).json({
+                success: false,
+                message: 'An item in this order is out of stock.',
+                code: 'OUT_OF_STOCK'
+              });
             }
           }
         } catch (itemError: any) {
@@ -1759,8 +1775,7 @@ const loadRetryPaymentPage = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error loading retry payment page:', error);
-    //  Redirect to cart on error instead of render error
-    return res.redirect('/cart');
+    return res.status(500).json({ success: false, message: 'Could not load the retry page.' });
   }
 };
 

@@ -263,7 +263,9 @@ export const adminApi = api.injectEndpoints({
      * page is to show which offer the backend actually applied.
      */
     getAdminProductDetail: build.query<AdminProductDetail, string>({
-      query: (id) => ({ url: `/api/admin/products/${id}` }),
+      // No leading /api: the axios client's baseURL already supplies it, so
+      // writing it here produced /api/api/admin/products/:id and a 404.
+      query: (id) => ({ url: `/admin/products/${id}` }),
       providesTags: ['Product']
     })
   })

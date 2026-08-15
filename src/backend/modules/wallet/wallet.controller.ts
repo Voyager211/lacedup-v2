@@ -87,7 +87,7 @@ const renderWalletPage = async (req: Request, res: Response) => {
 
     // This flash is written but never rendered anywhere (docs/defects.md), so
     // the redirect below is silent to the user.
-    res.redirect('/');
+    res.status(500).json({ success: false, message: 'Failed to load wallet' });
   }
 };
 

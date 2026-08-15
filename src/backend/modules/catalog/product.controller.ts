@@ -245,7 +245,7 @@ const apiSubmitNewProduct = async (req: Request, res: Response) => {
 const softDeleteProduct = async (req: Request, res: Response) => {
   try {
     await Product.findByIdAndUpdate(req.params.id, { isDeleted: true });
-    res.redirect('/admin/products');
+    res.json({ success: true });
   } catch (err: any) {
     console.error(err);
     res.status(500).send("Error deleting Product");

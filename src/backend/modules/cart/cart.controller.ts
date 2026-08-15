@@ -898,7 +898,7 @@ const checkAuth = async (req: Request, res: Response) => {
 
 // Load checkout page
 const loadCheckout = async (req: Request, res: Response) => {
-  return res.redirect('/checkout');
+  return res.json({ success: true, redirectUrl: '/checkout' });
 };
 
 const validateCheckoutStock = async (req: Request, res: Response) => {

@@ -85,6 +85,33 @@ beforeEach(() => {
 afterEach(() => mock.restore());
 
 describe('CheckoutPage', () => {
+  it('treats an empty cart as empty, not as a failure', async () => {
+    /*
+     * The server reports this as 409 CART_EMPTY. It used to be a 302 to /cart,
+     * which the SPA fallback answered with index.html - so the client got a 200
+     * whose body was HTML, read cartItems off a string, and rendered nothing.
+     *
+     * Left as a plain error this would say "something went wrong" for the most
+     * ordinary situation there is: arriving at checkout with nothing to buy.
+     */
+    mock.onGet('/checkout').reply(409, { success: false, code: 'CART_EMPTY' });
+
+    renderPage();
+
+    expect(await screen.findByText(/your cart is empty/i)).toBeInTheDocument();
+    expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+  });
+
+  it('still reports a genuine failure as one', async () => {
+    // The empty-cart case is special-cased by code, not by status, so a real
+    // server error must not be swallowed into the empty state.
+    mock.onGet('/checkout').reply(500, { success: false, message: 'Boom' });
+
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
   it('shows the server totals rather than recomputing them', async () => {
     // The server re-prices the cart as it reads it, so anything computed here
     // could disagree with what is actually charged.

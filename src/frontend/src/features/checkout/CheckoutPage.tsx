@@ -56,6 +56,12 @@ const CheckoutPage = () => {
 
   const { data, isLoading, error, refetch } = useGetCheckoutQuery();
 
+  /** The server reports an empty cart as 409 CART_EMPTY rather than as data. */
+  const cartIsEmpty =
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { data?: { code?: string } }).data?.code === 'CART_EMPTY';
+
   const [validateStock] = useValidateCheckoutStockMutation();
   const [applyCoupon, { isLoading: isApplyingCoupon }] = useApplyCouponMutation();
   const [removeCoupon] = useRemoveCouponMutation();
@@ -210,8 +216,13 @@ const CheckoutPage = () => {
 
       <QueryBoundary
         isLoading={isLoading}
-        error={error}
-        isEmpty={(data?.cartItems.length ?? 0) === 0}
+        /*
+         * An empty cart is a 409 from the server, not a failure. Left as an
+         * error it would show "something went wrong" for the most ordinary
+         * situation there is - arriving at checkout with nothing in the basket.
+         */
+        error={cartIsEmpty ? undefined : error}
+        isEmpty={cartIsEmpty || (data?.cartItems.length ?? 0) === 0}
         skeleton={<SkeletonText lines={8} />}
         empty={
           <EmptyState

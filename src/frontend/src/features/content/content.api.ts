@@ -17,7 +17,9 @@ export interface ContactInput {
 export const contentApi = api.injectEndpoints({
   endpoints: (build) => ({
     submitContact: build.mutation<{ success: boolean; message?: string }, ContactInput>({
-      query: (body) => ({ url: '/api/help/contact', method: 'POST', data: body })
+      // No leading /api - the client's baseURL adds it. With it, this posted
+      // to /api/api/help/contact and every enquiry 404'd.
+      query: (body) => ({ url: '/help/contact', method: 'POST', data: body })
     })
   })
 });

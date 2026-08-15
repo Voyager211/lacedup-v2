@@ -41,7 +41,7 @@ function handleUserLogout(req: Request, res: Response, errorMessage: string) {
     // Fallback for any unexpected errors
     console.error('Error in handleUserLogout:', error);
     res.clearCookie('connect.sid');
-    return res.redirect('/login?error=' + encodeURIComponent(errorMessage));
+    return res.status(401).json({ success: false, message: errorMessage });
   }
 }
 
