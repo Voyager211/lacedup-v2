@@ -24,6 +24,20 @@ import Breadcrumbs from '@/components/Breadcrumbs';
  * notifications API and never was.
  */
 
+/**
+ * Marks the panel as the admin one, beside the wordmark.
+ *
+ * Brand red on white rather than white-on-white-at-10%: the old version was
+ * grey text on a barely-there ground, which is exactly the thing you cannot
+ * afford to have unreadable - it is the only marker distinguishing this from
+ * the storefront.
+ */
+const AdminBadge = () => (
+  <span className="ml-2 rounded bg-brand px-2 py-0.5 text-[0.6875rem] font-sans font-bold uppercase tracking-wider text-white">
+    Admin
+  </span>
+);
+
 const AdminSidebarLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
   <nav aria-label="Admin sections" className="flex flex-col gap-1 p-3">
     {ADMIN_NAV.map(({ to, label, icon: Icon }) => (
@@ -152,10 +166,8 @@ const AdminLayout = () => {
           to="/admin/dashboard"
           className="flex h-16 items-center px-5"
         >
-          <Logo variant="admin" onDark width={150} />
-          <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[0.625rem] font-sans font-semibold uppercase tracking-wider">
-            Admin
-          </span>
+          <Logo onDark width={150} />
+          <AdminBadge />
         </Link>
         <AdminSidebarLinks />
       </aside>
@@ -169,7 +181,10 @@ const AdminLayout = () => {
           />
           <aside className="absolute inset-y-0 left-0 flex w-60 flex-col bg-ink shadow-xl">
             <div className="flex h-16 items-center justify-between px-5">
-              <Logo variant="admin" onDark width={140} />
+              <span className="flex items-center">
+                <Logo onDark width={140} />
+                <AdminBadge />
+              </span>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}

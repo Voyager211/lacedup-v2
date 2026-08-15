@@ -72,6 +72,14 @@ describe('RESOURCE_PATHS', () => {
 });
 
 describe('AdminLoginPage', () => {
+  it('says on the page which login this is', () => {
+    // It is otherwise indistinguishable from the shopper login, and shopper
+    // credentials here fail with a message about the account's role.
+    renderAt(<AdminLoginPage />, '/admin/login', '/admin/login');
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Admin Login');
+  });
+
   it('signs in against the admin audience, not the shopper one', async () => {
     mock.onPost('/admin/login').reply(200, { success: true });
     mock.onGet('/admin/auth/me').reply(200, {

@@ -5,11 +5,15 @@ import { cn } from '@/lib/cn';
 /**
  * The admin page-header bar.
  *
- * Every admin page opens with the same block: the page's name on a dark navy
- * panel, what the page is for underneath it, and the page's actions on the
- * right. The EJS admin had a version of this on each page, written out again
- * every time - which is why the titles, the paddings and the button colours all
- * drifted apart.
+ * Every admin page opens with the same block: the page's name on a dark panel,
+ * what the page is for underneath it, and the page's actions on the right. The
+ * EJS admin had a version of this on each page, written out again every time -
+ * which is why the titles, the paddings and the button colours all drifted
+ * apart.
+ *
+ * The panel is `ink`, the same flat black as the sidebar. Two dark surfaces on
+ * one screen have to be the same dark or they read as a mistake, and the
+ * sidebar is the one that sets it.
  *
  * It carries the count of what is listed, because "Products" and "Products
  * (16)" answer different questions, and the second is the one an admin opening
@@ -34,7 +38,7 @@ export interface PageHeaderProps {
 const PageHeader = ({ title, count, subtitle, actions, className }: PageHeaderProps) => (
   <header
     className={cn(
-      'mb-6 rounded-2xl bg-linear-to-br from-panel to-panel-deep px-6 py-6 sm:px-8',
+      'mb-6 rounded-2xl bg-ink px-6 py-6 sm:px-8',
       className
     )}
   >

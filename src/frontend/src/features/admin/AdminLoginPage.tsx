@@ -49,19 +49,21 @@ const AdminLoginPage = () => {
       <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
         {/*
           No side photograph here, unlike the shopper pages - just the mark
-          above the form.
-
-          It sits on a dark plate because the asset is white artwork on
-          transparency with a blue "Admin" badge. Inverting it, as the shopper
-          mark is inverted for light backgrounds, would turn that badge orange;
-          a dark plate keeps the brand colours and reads as a header band.
+          above the form, on a dark band so the white artwork reads without
+          being inverted.
         */}
         <header className="flex justify-center bg-ink px-8 py-7">
-          <Logo variant="admin" onDark width={190} />
-          <h1 className="sr-only">Admin sign in</h1>
+          <Logo onDark width={190} />
         </header>
 
         <div className="p-8">
+          {/* Named on the page, not just to screen readers: this login looks
+              identical to the shopper one, and typing shopper credentials into
+              it fails with a message about the account's role. */}
+          <h1 className="mb-5 text-center font-heading text-lg font-semibold text-ink">
+            Admin Login
+          </h1>
+
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
             {errors.root && (
               <p role="alert" className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">
