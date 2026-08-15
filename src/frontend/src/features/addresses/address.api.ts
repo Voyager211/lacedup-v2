@@ -65,8 +65,27 @@ export const addressApi = api.injectEndpoints({
      */
     getStatesDistricts: build.query<StatesDistricts, void>({
       query: () => ({ url: '/states-districts' }),
-      transformResponse: (response: { states?: StatesDistricts } | StatesDistricts) =>
-        (response as { states?: StatesDistricts }).states ?? (response as StatesDistricts),
+      /*
+       * The map is nested: `{ success, data: { 'kerala': { name, districts } } }`.
+       * Unwrapped here, because without it `Object.values(response)` yielded
+       * `[true, {…}]` - the `success` flag alongside the map - and reading
+       * `.name` off `true` threw "Cannot read properties of undefined
+       * (reading 'localeCompare')" while sorting, which took checkout down.
+       */
+      transformResponse: (
+        response: { data?: StatesDistricts; states?: StatesDistricts } | StatesDistricts
+      ): StatesDistricts => {
+        const wrapped = response as { data?: StatesDistricts; states?: StatesDistricts };
+        const map = wrapped.data ?? wrapped.states ?? (response as StatesDistricts);
+
+        // Guard the shape as well as the nesting: one malformed entry should
+        // leave the state list short, not break the page it is rendered on.
+        return Object.fromEntries(
+          Object.entries(map ?? {}).filter(
+            ([, entry]) => entry && typeof entry === 'object' && typeof entry.name === 'string'
+          )
+        );
+      },
       keepUnusedDataFor: 3600
     })
   })

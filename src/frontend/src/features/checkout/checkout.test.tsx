@@ -78,7 +78,21 @@ let mock: MockAdapter;
 beforeEach(() => {
   mock = new MockAdapter(client);
   mock.onGet('/cart/count').reply(200, { count: 1 });
-  mock.onGet('/states-districts').reply(200, {});
+  /*
+   * The real envelope, copied from address.controller - the map is nested
+   * under `data` alongside a `success` flag.
+   *
+   * This used to be stubbed as `{}`, which exercised nothing: with the real
+   * response `Object.values()` also yielded the boolean, and reading `.name`
+   * off it threw while sorting the state list.
+   */
+  mock.onGet('/states-districts').reply(200, {
+    success: true,
+    data: {
+      kerala: { name: 'Kerala', districts: ['Ernakulam', 'Kozhikode'] },
+      'tamil-nadu': { name: 'Tamil Nadu', districts: ['Chennai'] }
+    }
+  });
   mock.onGet('/checkout/validate-checkout-stock').reply(200, { success: true, invalidItems: [] });
 });
 
@@ -110,6 +124,20 @@ describe('CheckoutPage', () => {
     renderPage();
 
     expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it('opens the address dialog with the states loaded', async () => {
+    // The crash that took checkout down: the state list is sorted with
+    // localeCompare, and the un-unwrapped response put a boolean in it.
+    mock.onGet('/checkout').reply(200, checkout());
+
+    renderPage();
+    await screen.findByText('₹2,000');
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Kerala' })).toBeInTheDocument();
   });
 
   it('shows the server totals rather than recomputing them', async () => {

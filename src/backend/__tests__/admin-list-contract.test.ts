@@ -121,6 +121,24 @@ describe('admin list response contract', () => {
     expect(res.body.data.coupons[0]).toMatchObject({ code: 'SAVE20' });
   });
 
+  it('nests the states/districts map under data too', async () => {
+    /*
+     * Public, so no cookie needed. Pinned here because the client sorts the
+     * state list with localeCompare: without unwrapping `data`, Object.values
+     * also returned the `success` boolean and reading `.name` off it threw,
+     * which took the whole checkout page down.
+     */
+    const res = await request(app).get('/api/states-districts');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('success', true);
+
+    const entries = Object.values(res.body.data as Record<string, { name: string }>);
+    expect(entries.length).toBeGreaterThan(0);
+    // Every value is a real entry - nothing in here is a stray flag.
+    for (const entry of entries) expect(typeof entry.name).toBe('string');
+  });
+
   it('nests a single coupon under data.coupon too', async () => {
     const list = await get('/api/admin/coupons/api');
     const id = list.body.data.coupons[0]._id;
