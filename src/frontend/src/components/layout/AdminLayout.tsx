@@ -5,6 +5,8 @@ import { useAppDispatch, useAppSelector } from '@/app/store';
 import { bootstrapSession, selectSession, signOut } from '@/features/auth/authSlice';
 import { cn } from '@/lib/cn';
 import { ADMIN_NAV, adminCrumbs } from './adminNav';
+import { CrumbDetailProvider } from './crumbLabel';
+import type { CrumbDetail } from './storefrontNav';
 import Logo from '@/components/Logo';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -120,6 +122,7 @@ const AdminLayout = () => {
   const location = useLocation();
   const { status } = useAppSelector(selectSession('admin'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [crumbDetail, setCrumbDetail] = useState<CrumbDetail>({});
 
   useEffect(() => {
     if (status === 'unknown') void dispatch(bootstrapSession('admin'));
@@ -127,7 +130,9 @@ const AdminLayout = () => {
 
   useEffect(() => setSidebarOpen(false), [location.pathname]);
 
-  const crumbs = adminCrumbs(location.pathname);
+  // The detail pages hand their name up, so the last crumb reads "Air Max 90"
+  // rather than "Details".
+  const crumbs = adminCrumbs(location.pathname, crumbDetail.label);
   const onLoginPage = location.pathname === '/admin/login';
 
   // The login page uses the same route branch but must not show the shell -
@@ -202,7 +207,9 @@ const AdminLayout = () => {
         </div>
 
         <main id="main" className="min-w-0 flex-1 p-4 sm:p-6">
-          <Outlet />
+          <CrumbDetailProvider value={setCrumbDetail}>
+            <Outlet />
+          </CrumbDetailProvider>
         </main>
       </div>
 

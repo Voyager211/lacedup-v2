@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { formatINR } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { ROW_HOVER, RowNumber, RowNumberHeader } from '@/components/table';
+import { usePageCrumb } from '@/components/layout/crumbLabel';
 
 /**
  * The admin product detail view - read-only.
@@ -42,6 +43,10 @@ const AdminProductDetailPage = () => {
   const [active, setActive] = useState(0);
 
   const product = data?.product;
+
+  // Names the last crumb, which would otherwise read "Details".
+  usePageCrumb(product?.productName);
+
   const images = data?.allImages ?? [];
   const offers = data?.activeOffers ?? [];
   const variants = product?.variants ?? [];

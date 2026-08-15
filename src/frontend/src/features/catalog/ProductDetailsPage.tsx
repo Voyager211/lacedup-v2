@@ -19,8 +19,8 @@ import { discountPercent } from '@/lib/pricing';
 import { cn } from '@/lib/cn';
 import { productFeatures } from '@/types/catalog';
 import type { Variant } from '@/types/catalog';
-import { Home, LayoutGrid, Package, Store } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import { LayoutGrid } from 'lucide-react';
+import { usePageCrumb } from '@/components/layout/crumbLabel';
 
 /**
  * The product page.
@@ -62,6 +62,21 @@ const ProductDetailsPage = () => {
   const [imageIndex, setImageIndex] = useState(0);
 
   const product = data?.product;
+
+  // The shell draws the trail; this page contributes the two things the route
+  // cannot supply - the product's title, and the category it sits under.
+  usePageCrumb(
+    product?.productName,
+    product?.category?.name
+      ? [
+          {
+            label: product.category.name,
+            to: `/shop?category=${product.category._id}`,
+            icon: LayoutGrid
+          }
+        ]
+      : undefined
+  );
 
   const images = useMemo(
     () => [product?.mainImage, ...(product?.subImages ?? [])].filter(Boolean) as string[],
@@ -153,24 +168,6 @@ const ProductDetailsPage = () => {
       >
         {product && (
           <>
-            <Breadcrumbs
-              className="mb-6"
-              items={[
-                { label: 'Home', to: '/', icon: Home },
-                { label: 'Shop', to: '/shop', icon: Store },
-                ...(product.category?.name
-                  ? [
-                      {
-                        label: product.category.name,
-                        to: `/shop?category=${product.category._id}`,
-                        icon: LayoutGrid
-                      }
-                    ]
-                  : []),
-                { label: product.productName, icon: Package }
-              ]}
-            />
-
             <div className="grid gap-10 lg:grid-cols-2">
               <div>
                 <div className="overflow-hidden rounded-lg border border-line bg-white">

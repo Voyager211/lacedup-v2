@@ -15,6 +15,7 @@ import { SelectField, TextAreaField } from '@/components/form/TextField';
 import { useToast } from '@/components/toast';
 import { formatDate, formatINR } from '@/lib/format';
 import { ORDER_STATUS, type OrderStatus, type PaymentStatus } from '@/types/domain';
+import { usePageCrumb } from '@/components/layout/crumbLabel';
 
 /**
  * Admin order details.
@@ -53,6 +54,9 @@ const AdminOrderDetailsPage = () => {
 
   const { data, isLoading, error, refetch } = useGetAdminOrderQuery(orderId, { skip: !orderId });
   const transitions = useGetOrderTransitionsQuery(orderId, { skip: !orderId });
+
+  // The id is in the URL, so the trail can name the order before it loads.
+  usePageCrumb(orderId || undefined);
 
   const [updateOrderStatus, { isLoading: isUpdatingOrder }] = useUpdateOrderStatusMutation();
   const [updateItemStatus] = useUpdateItemStatusMutation();

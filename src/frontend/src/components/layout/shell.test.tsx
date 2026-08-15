@@ -9,6 +9,7 @@ import { createStore } from '@/app/store';
 import StorefrontLayout from './StorefrontLayout';
 import AdminLayout from './AdminLayout';
 import Footer from './Footer';
+import { usePageCrumb } from './crumbLabel';
 
 const ALICE = { _id: 'u1', name: 'Alice', email: 'alice@example.com', role: 'user', isBlocked: false };
 const ADMIN = { _id: 'a1', name: 'Root Admin', email: 'admin@example.com', role: 'admin', isBlocked: false };
@@ -148,6 +149,56 @@ describe('StorefrontLayout', () => {
 
     expect(await screen.findByText('page body')).toBeInTheDocument();
   });
+
+  it('draws a breadcrumb trail, which the EJS storefront had nowhere', async () => {
+    mock.onGet('/auth/me').reply(401);
+
+    renderShell(<StorefrontLayout />, '/shop', '/shop');
+
+    const breadcrumb = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(breadcrumb).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(within(breadcrumb).getByText('Shop').closest('[aria-current="page"]')).not.toBeNull();
+  });
+
+  it('shows Home alone at the root, with nothing above it to link to', async () => {
+    mock.onGet('/auth/me').reply(401);
+
+    renderShell(<StorefrontLayout />, '/', '/');
+
+    const breadcrumb = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(breadcrumb).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(breadcrumb).getByText('Home')).toBeInTheDocument();
+  });
+
+  it('lets the page name itself in the trail once it knows its title', async () => {
+    // The route can say "a product"; only the page can say which one.
+    mock.onGet('/auth/me').reply(401);
+
+    const NamedPage = () => {
+      usePageCrumb('Air Max 90');
+      return <p>page body</p>;
+    };
+
+    const router = createMemoryRouter(
+      [
+        {
+          element: <StorefrontLayout />,
+          children: [{ path: '/product/:slug', element: <NamedPage /> }]
+        }
+      ],
+      { initialEntries: ['/product/air-max-90'] }
+    );
+
+    render(
+      <Provider store={createStore()}>
+        <RouterProvider router={router} />
+      </Provider>
+    );
+
+    const breadcrumb = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(await within(breadcrumb).findByText('Air Max 90')).toBeInTheDocument();
+    expect(within(breadcrumb).getByRole('link', { name: 'Shop' })).toBeInTheDocument();
+  });
 });
 
 describe('Footer', () => {
@@ -227,6 +278,35 @@ describe('AdminLayout', () => {
     // the attribute is on an ancestor rather than on the text node's own tag.
     expect(within(breadcrumb).getByText('Details').closest('[aria-current="page"]')).not.toBeNull();
     expect(within(breadcrumb).getByRole('link', { name: 'Orders' })).toBeInTheDocument();
+  });
+
+  it('lets a detail page replace "Details" with the real name', async () => {
+    mock.onGet('/admin/auth/me').reply(200, { success: true, user: ADMIN });
+
+    const NamedPage = () => {
+      usePageCrumb('Air Max 90');
+      return <p>page body</p>;
+    };
+
+    const router = createMemoryRouter(
+      [
+        {
+          element: <AdminLayout />,
+          children: [{ path: '/admin/products/:id', element: <NamedPage /> }]
+        }
+      ],
+      { initialEntries: ['/admin/products/abc123'] }
+    );
+
+    render(
+      <Provider store={createStore()}>
+        <RouterProvider router={router} />
+      </Provider>
+    );
+
+    const breadcrumb = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(await within(breadcrumb).findByText('Air Max 90')).toBeInTheDocument();
+    expect(within(breadcrumb).queryByText('Details')).not.toBeInTheDocument();
   });
 
   it('drops the notification bell that opened an empty dropdown', async () => {
