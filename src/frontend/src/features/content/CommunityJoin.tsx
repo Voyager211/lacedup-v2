@@ -49,16 +49,23 @@ const CommunityJoin = () => {
 
   return (
     <section className="bg-ink py-16 text-white sm:py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-          Join Our Sneaker Community
-        </h2>
-        <p className="mt-3 max-w-xl text-white/60">
-          Drops, restocks and the occasional discount code. No noise.
-        </p>
+      {/*
+        The copy sits in the left column rather than above both, so the two
+        centre against each other. Left outside, the heading pushed the image
+        down its own height and the form ended up floating at the top of a
+        column two-thirds empty.
+      */}
+      <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-14">
+        <div>
+          <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+            Join Our Sneaker Community
+          </h2>
+          <p className="mt-4 max-w-xl text-white/70">
+            Subscribe to receive exclusive offers, early access to new drops, and personalized
+            sneaker recommendations.
+          </p>
 
-        <div className="mt-8 grid items-start gap-8 lg:grid-cols-2 lg:gap-12">
-          <form onSubmit={onSubmit} noValidate>
+          <form onSubmit={onSubmit} noValidate className="mt-7">
             <div className="flex overflow-hidden rounded-lg bg-card">
               <label htmlFor="newsletter-email" className="sr-only">
                 Your email address
@@ -104,14 +111,14 @@ const CommunityJoin = () => {
               </p>
             )}
           </form>
-
-          <img
-            src={IMAGE}
-            alt="Sneakerheads together on a rooftop"
-            loading="lazy"
-            className="w-full rounded-lg object-cover"
-          />
         </div>
+
+        <img
+          src={IMAGE}
+          alt="Sneakerheads together on a rooftop"
+          loading="lazy"
+          className="w-full rounded-lg object-cover"
+        />
       </div>
     </section>
   );
