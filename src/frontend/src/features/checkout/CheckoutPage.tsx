@@ -23,6 +23,7 @@ import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonText } from '@/components/Skeleton';
 import { useToast } from '@/components/toast';
 import { formatINR } from '@/lib/format';
+import LinePrice, { variantOffer } from '@/features/catalog/LinePrice';
 import { cn } from '@/lib/cn';
 
 /**
@@ -382,6 +383,43 @@ const CheckoutPage = () => {
                   </Button>
                 </div>
               )}
+
+              {/*
+                What is being paid for, priced the same way the cart priced it.
+                The summary used to jump straight to a subtotal, so the only
+                place the shopper could check an individual line was the page
+                they had already left.
+              */}
+              <ul className="space-y-4 border-t border-line pt-4">
+                {data?.cartItems.map((item) => {
+                  const product = item.productId;
+                  const variant = product?.variants?.find(
+                    (candidate) => candidate._id === item.variantId || candidate.size === item.size
+                  );
+
+                  return (
+                    <li key={item._id} className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-ink">
+                          {product?.productName}
+                        </p>
+                        <p className="text-sm text-ink-muted">
+                          {item.size ? `Size ${item.size} · ` : ''}Qty {item.quantity}
+                        </p>
+                      </div>
+
+                      <LinePrice
+                        className="shrink-0"
+                        regularPrice={product?.regularPrice ?? item.price}
+                        finalPrice={item.price}
+                        basePrice={variant?.basePrice}
+                        offer={variantOffer(variant)}
+                        quantity={item.quantity}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
 
               <dl className="space-y-2 border-t border-line pt-4 text-sm">
                 <div className="flex justify-between">

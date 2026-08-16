@@ -16,6 +16,7 @@ import { SkeletonText } from '@/components/Skeleton';
 import { useConfirm } from '@/components/confirm/useConfirm';
 import { useToast } from '@/components/toast';
 import { formatINR } from '@/lib/format';
+import LinePrice, { variantOffer } from '@/features/catalog/LinePrice';
 import { cn } from '@/lib/cn';
 
 /**
@@ -50,6 +51,12 @@ const CartRow = ({
 }) => {
   const product = item.productId;
   const unbuyable = item.isOutOfStock || item.isUnavailable;
+
+  // Matched by id where the server sent one, by size otherwise - older cart
+  // rows predate variantId being stored.
+  const variant = product?.variants?.find(
+    (candidate) => candidate._id === item.variantId || candidate.size === item.size
+  );
 
   return (
     <li
@@ -87,7 +94,16 @@ const CartRow = ({
             )}
           </div>
 
-          <p className="shrink-0 font-semibold text-ink">{formatINR(item.totalPrice)}</p>
+          {/* The variant is known here, so the line can say exactly which
+              offer produced this price rather than just naming a total. */}
+          <LinePrice
+            className="shrink-0"
+            regularPrice={product?.regularPrice ?? item.price}
+            finalPrice={item.price}
+            basePrice={variant?.basePrice}
+            offer={variantOffer(variant)}
+            quantity={item.quantity}
+          />
         </div>
 
         <div className="mt-auto flex flex-wrap items-center gap-3 pt-3">

@@ -8,6 +8,9 @@
  * `averageFinalPrice` kept for the EJS templates.
  */
 
+/** Which of the four competing offers won. They do not stack; the largest applies. */
+export type OfferSource = 'category' | 'brand' | 'product' | 'variant' | 'none';
+
 export interface Variant {
   _id: string;
   size: string;
@@ -17,6 +20,24 @@ export interface Variant {
   sku?: string;
   /** Server-computed. Authoritative - do not recompute for anything but display. */
   finalPrice?: number;
+  /** The winning offer, as a percentage off the base price. */
+  offerPercent?: number;
+  offerSource?: OfferSource;
+  /**
+   * Whose offer it is: the category or brand's own name, or the literal
+   * 'Product' / 'Variant'. The badge reads from this - "20% off for all Gym
+   * Sneakers" comes from the category name, not from the word "category".
+   */
+  offerName?: string | null;
+  /**
+   * regularPrice - finalPrice, and the same as a percentage.
+   *
+   * Measured against the regular price, not the base price: the regular price
+   * is what is shown struck through, so the saving a shopper sees is the
+   * distance between that and what they will pay. Both are server-computed.
+   */
+  totalDiscount?: number;
+  totalDiscountPercent?: number;
 }
 
 export interface CategoryRef {

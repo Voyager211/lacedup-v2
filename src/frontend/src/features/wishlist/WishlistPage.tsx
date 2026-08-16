@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BsHeart, BsSearch, BsX } from 'react-icons/bs';
-import { useGetWishlistQuery, useRemoveFromWishlistMutation } from './wishlist.api';
+import { useGetWishlistQuery } from './wishlist.api';
 import ProductCard from '@/features/catalog/ProductCard';
 import EmptyState from '@/components/EmptyState';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonGrid } from '@/components/Skeleton';
-import { useToast } from '@/components/toast';
 
 /**
  * The wishlist.
@@ -19,7 +18,6 @@ import { useToast } from '@/components/toast';
  * shape for the same data.
  */
 const WishlistPage = () => {
-  const toast = useToast();
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
 
@@ -29,18 +27,9 @@ const WishlistPage = () => {
   }, [search]);
 
   const { data, isLoading, isFetching, error, refetch } = useGetWishlistQuery(debounced);
-  const [removeFromWishlist] = useRemoveFromWishlistMutation();
 
+  // Removing lives on the card now, alongside the add-to-cart it sits next to.
   const products = data?.products ?? [];
-
-  const remove = async (productId: string) => {
-    try {
-      await removeFromWishlist(productId).unwrap();
-      toast.success('Removed from your wishlist');
-    } catch (caught) {
-      toast.fromError(caught, 'Could not remove that.');
-    }
-  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -111,20 +100,9 @@ const WishlistPage = () => {
           }
         >
           {products.map((item) => (
-            <ProductCard
-              key={item._id}
-              product={item}
-              action={
-                <button
-                  type="button"
-                  onClick={() => remove(item._id)}
-                  aria-label={`Remove ${item.productName} from your wishlist`}
-                  className="rounded-full bg-white/90 p-2 text-danger shadow-sm transition-colors hover:bg-white"
-                >
-                  <BsX className="size-4" aria-hidden="true" />
-                </button>
-              }
-            />
+            /* onWishlist gives the card its size picker and turns its heart
+               into a remove - see ProductCard. */
+            <ProductCard key={item._id} product={item} onWishlist />
           ))}
         </div>
       </QueryBoundary>

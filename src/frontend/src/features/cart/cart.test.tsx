@@ -8,9 +8,18 @@ import { api as client } from '@/api/client';
 import { createStore } from '@/app/store';
 import { ConfirmProvider } from '@/components/confirm/ConfirmProvider';
 import { Toaster } from '@/components/toast';
+import { bootstrapSession } from '@/features/auth/authSlice';
 import CartPage from './CartPage';
 import WishlistPage from '@/features/wishlist/WishlistPage';
 import type { CartItem } from './cart.api';
+
+const SHOPPER = {
+  _id: 'u1',
+  name: 'Alice',
+  email: 'alice@example.com',
+  role: 'user' as const,
+  isBlocked: false
+};
 
 const cartItem = (overrides: Partial<CartItem> = {}): CartItem =>
   ({
@@ -46,13 +55,23 @@ const renderPage = (element: React.ReactNode, entry = '/cart', path = '/cart') =
       { path, element },
       { path: '/checkout', element: <p>checkout page</p> },
       { path: '/shop', element: <p>shop page</p> },
+      { path: '/login', element: <p>login page</p> },
       { path: '/product/:slug', element: <p>product page</p> }
     ],
     { initialEntries: [entry] }
   );
 
+  const store = createStore();
+
+  /*
+   * These pages sit behind RequireAuth, so in the app they only ever render
+   * with a session already established. The wishlist card checks for one
+   * before acting - without this it would send the test to /login instead.
+   */
+  store.dispatch(bootstrapSession.fulfilled(SHOPPER, 'test', 'user'));
+
   render(
-    <Provider store={createStore()}>
+    <Provider store={store}>
       <ConfirmProvider>
         <RouterProvider router={router} />
         {/* Mirrors main.tsx - without it, toasts have nowhere to render and

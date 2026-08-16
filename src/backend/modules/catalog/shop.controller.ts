@@ -6,6 +6,7 @@ import Brand from './brand.model';
 import Wishlist from '../wishlist/wishlist.model';
 import { getPagination } from '../../common/utils/pagination.util';
 import { getActiveBrands, getActiveCategories, getHomepageProducts } from './product-sections.util';
+import { withPricing } from './pricing.util';
 
 const getProducts = async (req: Request, res: Response) => {
   try {
@@ -242,25 +243,8 @@ const getProducts = async (req: Request, res: Response) => {
           ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
           : 0;
 
-        // Convert to plain object - finalPrice is now stored in database
-        const productObj: Record<string, any> = product.toObject();
-
-        // finalPrice is already stored in variants, just ensure backward compatibility
-        if (productObj.variants && productObj.variants.length > 0) {
-          // Ensure finalPrice exists for each variant (fallback for migration period)
-          productObj.variants = productObj.variants.map((variant: any) => ({
-            ...variant,
-            finalPrice: product.calculateVariantFinalPrice(variant)
-          }));
-
-          // Add average final price for easy access
-          productObj.averageFinalPrice = product.getAverageFinalPrice();
-          // Keep averageSalePrice for backward compatibility
-          productObj.averageSalePrice = productObj.averageFinalPrice;
-        } else {
-          productObj.averageFinalPrice = productObj.regularPrice;
-          productObj.averageSalePrice = productObj.regularPrice;
-        }
+        // Every variant priced, with the winning offer named - see pricing.util.
+        const productObj = withPricing(product);
 
         return { ...productObj, averageRating: avgRating, totalReviews };
       })
@@ -477,24 +461,7 @@ const buildProductDetails = async (
           ? relReviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
           : 0;
 
-        // Convert to plain object - finalPrice is now stored in database
-        const productObj: Record<string, any> = relatedProduct.toObject();
-
-        // finalPrice is already stored in variants, ensure backward compatibility
-        if (productObj.variants && productObj.variants.length > 0) {
-          productObj.variants = productObj.variants.map((variant: any) => ({
-            ...variant,
-            finalPrice: relatedProduct.calculateVariantFinalPrice(variant)
-          }));
-
-          // Add average final price for easy access
-          productObj.averageFinalPrice = relatedProduct.getAverageFinalPrice();
-          // Keep averageSalePrice for backward compatibility
-          productObj.averageSalePrice = productObj.averageFinalPrice;
-        } else {
-          productObj.averageFinalPrice = productObj.regularPrice;
-          productObj.averageSalePrice = productObj.regularPrice;
-        }
+        const productObj = withPricing(relatedProduct);
 
         return {
           ...productObj,
@@ -560,7 +527,13 @@ const buildProductDetails = async (
   return {
     ok: true,
     data: {
-      product,
+      /*
+       * Priced, not raw. The detail page needs every variant's final price, the
+       * offer that produced it and the saving against the regular price; the
+       * raw document carries only basePrice and the offer percentages, which
+       * left the client to redo the sums the server had already done.
+       */
+      product: withPricing(product),
       reviews,
       relatedProducts,
       averageRating,

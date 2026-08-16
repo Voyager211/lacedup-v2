@@ -131,3 +131,35 @@
     outline-offset: 2px;
   }
 }
+
+/**
+ * The shake, for a validation message that appears in place.
+ *
+ * Translation only, so it composites and cannot reflow the card it sits in -
+ * an error that resizes its own container shoves the rest of the grid around,
+ * which is the one thing an error must not do.
+ *
+ * Honours reduced motion: the message still appears, it just does not move.
+ */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@utility animate-shake {
+  animation: shake 0.4s ease-in-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

@@ -141,8 +141,15 @@ const normaliseList = (response: Record<string, unknown>): AdminListResponse => 
   };
 };
 
-/** A variant with the offer the backend picked for it already resolved. */
-export interface AdminVariant extends Variant {
+/**
+ * A variant with the offer the backend picked for it already resolved.
+ *
+ * `offerSource` is omitted from the base type and redeclared because the two
+ * endpoints spell it differently: the admin controller sends 'Brand', the
+ * storefront sends 'brand'. Worth reconciling; until then, saying so here beats
+ * a type that quietly claims they are the same.
+ */
+export interface AdminVariant extends Omit<Variant, 'offerSource'> {
   calculatedFinalPrice?: number;
   appliedOffer?: number;
   /** Which offer won: Brand, Category, Variant, Product, or None. */

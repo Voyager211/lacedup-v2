@@ -1,17 +1,22 @@
 import Product from './product.model';
 import Category from './category.model';
 import Brand from './brand.model';
-import type { IProduct } from './catalog.types';
+import { withPricing } from './pricing.util';
 
 export interface HomepageProducts {
-  newArrivals: IProduct[];
-  bestSellers: IProduct[];
+  newArrivals: Record<string, any>[];
+  bestSellers: Record<string, any>[];
 }
 
 /**
  * The `match` on the populate means products in a deactivated category come
  * back with `category === null`, which is why both lists are filtered
  * afterwards rather than relying on the query alone.
+ *
+ * The lists go out priced. They did not before - no per-variant final price and
+ * no averageFinalPrice - so the landing page's cards fell back to the regular
+ * price and quietly showed every product at full price while the shop page
+ * showed the same product discounted.
  */
 export async function getHomepageProducts(): Promise<HomepageProducts> {
   const newArrivals = await Product.find({
@@ -22,6 +27,14 @@ export async function getHomepageProducts(): Promise<HomepageProducts> {
     .populate({
       path: 'category',
       match: { isActive: true }
+    })
+    // The brand carries an offer too, and pricing needs its name for the badge.
+    // Without this the brand is a bare id, its offer reads as 0, and the same
+    // product is priced differently here and on the shop page.
+    .populate({
+      path: 'brand',
+      match: { isActive: true, isDeleted: false },
+      select: 'name brandOffer'
     })
     .sort({ createdAt: -1 })
     .limit(4);
@@ -35,12 +48,20 @@ export async function getHomepageProducts(): Promise<HomepageProducts> {
       path: 'category',
       match: { isActive: true }
     })
+    // The brand carries an offer too, and pricing needs its name for the badge.
+    // Without this the brand is a bare id, its offer reads as 0, and the same
+    // product is priced differently here and on the shop page.
+    .populate({
+      path: 'brand',
+      match: { isActive: true, isDeleted: false },
+      select: 'name brandOffer'
+    })
     .sort({ sold: -1 })
     .limit(4);
 
   return {
-    newArrivals: newArrivals.filter((p) => p.category),
-    bestSellers: bestSellers.filter((p) => p.category)
+    newArrivals: newArrivals.filter((p) => p.category && p.brand).map((p) => withPricing(p)),
+    bestSellers: bestSellers.filter((p) => p.category && p.brand).map((p) => withPricing(p))
   };
 }
 

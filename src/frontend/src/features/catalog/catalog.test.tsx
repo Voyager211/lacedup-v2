@@ -75,16 +75,27 @@ describe('ProductCard', () => {
     expect(screen.getByText('25% off')).toBeInTheDocument();
   });
 
-  it('shows no discount badge when there is no saving', () => {
-    renderAt(<ProductCard product={product({ averageFinalPrice: 2000 })} />);
+  it('shows no discount when there is no saving', () => {
+    // Priced from the variants, so the fixture has to say so there - the card
+    // averages the variants rather than trusting a top-level figure that can
+    // disagree with them.
+    renderAt(
+      <ProductCard
+        product={product({
+          averageFinalPrice: 2000,
+          variants: [{ _id: 'v1', size: 'UK 8', stock: 12, basePrice: 2000, finalPrice: 2000 }]
+        })}
+      />
+    );
+
     expect(screen.queryByText(/% off/)).not.toBeInTheDocument();
   });
 
-  it('marks a sold-out product and drops the discount badge', () => {
+  it('marks a sold-out product', () => {
     renderAt(<ProductCard product={product({ totalStock: 0 })} />);
 
     expect(screen.getByText('Sold out')).toBeInTheDocument();
-    expect(screen.queryByText(/% off/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add air max 90 to your cart/i })).toBeDisabled();
   });
 
   it('links to the product by slug', () => {
@@ -266,18 +277,32 @@ describe('ProductDetailsPage', () => {
     expect(screen.queryByText('Features')).not.toBeInTheDocument();
   });
 
-  it('opens on a size that can actually be bought', async () => {
-    // UK 9 is out of stock, so UK 8 must be the default - opening on a
-    // sold-out size shows "out of stock" for a product that is available.
+  it('opens with no size chosen, showing the average across sizes', async () => {
+    // It used to default to the first buyable variant, which showed one size's
+    // price as though it were the product's - and let the shopper add to the
+    // cart without ever choosing.
     mock.onGet('/product/air-max-90').reply(200, details);
 
     renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
 
     expect(await screen.findByRole('button', { name: 'UK 8' })).toHaveAttribute(
       'aria-pressed',
-      'true'
+      'false'
     );
+    expect(screen.getByRole('button', { name: 'Select a size' })).toBeDisabled();
+    expect(screen.getByText(/choose a size/i)).toBeInTheDocument();
+  });
+
+  it('switches from the average to that size once one is picked', async () => {
+    mock.onGet('/product/air-max-90').reply(200, details);
+
+    renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'UK 8' }));
+
+    expect(screen.getByRole('button', { name: 'UK 8' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('In stock')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to cart' })).toBeEnabled();
   });
 
   it('disables a size with no stock', async () => {
@@ -316,7 +341,9 @@ describe('ProductDetailsPage', () => {
 
     renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
 
-    expect(await screen.findByText(/only 2 left/i)).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'UK 8' }));
+
+    expect(screen.getByText(/only 2 left/i)).toBeInTheDocument();
   });
 
   it('cannot add to cart when the selected size is gone', async () => {
@@ -330,7 +357,10 @@ describe('ProductDetailsPage', () => {
 
     renderAt(<ProductDetailsPage />, '/product/air-max-90', '/product/:slug');
 
-    expect(await screen.findByRole('button', { name: 'Out of stock' })).toBeDisabled();
+    // The size button is disabled, so it cannot be chosen - and the cart button
+    // stays shut either way.
+    expect(await screen.findByRole('button', { name: 'UK 9' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Select a size' })).toBeDisabled();
   });
 
   it('explains why a withdrawn product is unavailable', async () => {

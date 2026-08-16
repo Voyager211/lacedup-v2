@@ -15,7 +15,8 @@ import {
 import { useAppSelector } from '@/app/store';
 import { selectSession } from '@/features/auth/authSlice';
 import { formatDate, formatINR } from '@/lib/format';
-import { discountPercent } from '@/lib/pricing';
+import { discountPercent, productPricing } from '@/lib/pricing';
+import OfferBadges from './OfferBadges';
 import { cn } from '@/lib/cn';
 import { productFeatures } from '@/types/catalog';
 import type { Variant } from '@/types/catalog';
@@ -85,20 +86,49 @@ const ProductDetailsPage = () => {
 
   const features = useMemo(() => productFeatures(product?.features), [product]);
 
-  // Default to the first variant that is actually buyable, so the page does
-  // not open on a size nobody can order.
-  const selectedVariant: Variant | undefined = useMemo(() => {
-    if (!product?.variants?.length) return undefined;
-    if (selectedVariantId) {
-      return product.variants.find((variant) => variant._id === selectedVariantId);
-    }
-    return product.variants.find((variant) => variant.stock > 0) ?? product.variants[0];
-  }, [product, selectedVariantId]);
-
-  const price = Math.round(
-    selectedVariant?.finalPrice ?? product?.averageFinalPrice ?? product?.regularPrice ?? 0
+  /*
+   * Nothing is selected until the shopper picks a size. The page used to
+   * default to the first buyable variant, which meant it opened showing one
+   * size's price as though it were the product's - and the shopper could add
+   * to the cart without ever choosing.
+   */
+  const selectedVariant: Variant | undefined = useMemo(
+    () =>
+      selectedVariantId
+        ? product?.variants?.find((variant) => variant._id === selectedVariantId)
+        : undefined,
+    [product, selectedVariantId]
   );
-  const discount = discountPercent(product?.regularPrice ?? 0, price);
+
+  // Three passes over the variants; not worth redoing on every render.
+  const pricing = useMemo(() => productPricing(product), [product]);
+
+  /*
+   * Before a size is chosen the page speaks in averages; after, it speaks about
+   * that size. `extra` is the part of the saving the offer does not explain -
+   * regular price down to the base price - so it is measured against whichever
+   * base price is in view.
+   */
+  const price = Math.round(selectedVariant?.finalPrice ?? pricing.averageFinalPrice);
+  const discount = selectedVariant
+    ? Math.round(selectedVariant.totalDiscountPercent ?? 0)
+    : pricing.averageDiscountPercent;
+
+  const offer = selectedVariant
+    ? selectedVariant.offerSource && selectedVariant.offerSource !== 'none'
+      ? {
+          percent: selectedVariant.offerPercent ?? 0,
+          source: selectedVariant.offerSource,
+          name: selectedVariant.offerName ?? ''
+        }
+      : null
+    : pricing.offer;
+
+  const extraPercent = discountPercent(
+    pricing.regularPrice,
+    selectedVariant?.basePrice ?? pricing.averageBasePrice
+  );
+
   const inStock = (selectedVariant?.stock ?? 0) > 0;
 
   /**
@@ -223,17 +253,27 @@ const ProductDetailsPage = () => {
                   </p>
                 )}
 
-                <div className="mt-5 flex items-baseline gap-3">
-                  <span className="text-3xl font-semibold text-ink">{formatINR(price)}</span>
-                  {discount > 0 && (
-                    <>
+                <div className="mt-5">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-semibold text-brand">{formatINR(price)}</span>
+                    {discount > 0 && (
                       <span className="text-lg text-ink-muted line-through">
                         {formatINR(product.regularPrice)}
                       </span>
-                      <span className="rounded bg-success/10 px-2 py-0.5 text-sm font-semibold text-success">
-                        {discount}% off
-                      </span>
-                    </>
+                    )}
+                  </div>
+
+                  <OfferBadges
+                    className="mt-2"
+                    offer={offer}
+                    extraPercent={extraPercent}
+                    totalPercent={discount}
+                  />
+
+                  {!selectedVariant && product.variants.length > 1 && (
+                    <p className="mt-2 text-sm text-ink-muted">
+                      Average across sizes — pick one for its exact price.
+                    </p>
                   )}
                 </div>
 
@@ -269,7 +309,9 @@ const ProductDetailsPage = () => {
                 )}
 
                 <p className="mt-4 text-sm" aria-live="polite">
-                  {inStock ? (
+                  {!selectedVariant ? (
+                    <span className="text-ink-muted">Choose a size to see its stock</span>
+                  ) : inStock ? (
                     (selectedVariant?.stock ?? 0) <= 5 ? (
                       <span className="font-medium text-warning">
                         Only {selectedVariant?.stock} left in this size
@@ -286,11 +328,15 @@ const ProductDetailsPage = () => {
                   <Button
                     size="lg"
                     fullWidth
-                    disabled={!inStock}
+                    disabled={!selectedVariant || !inStock}
                     loading={isAdding}
                     onClick={addToCart}
                   >
-                    {inStock ? 'Add to cart' : 'Out of stock'}
+                    {!selectedVariant
+                      ? 'Select a size'
+                      : inStock
+                        ? 'Add to cart'
+                        : 'Out of stock'}
                   </Button>
 
                   <Button
