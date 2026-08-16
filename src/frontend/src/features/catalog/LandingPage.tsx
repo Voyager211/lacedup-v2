@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useGetHomeSectionsQuery } from './catalog.api';
 import ProductCard from './ProductCard';
+import CategoryCarousel from './CategoryCarousel';
+import BrandStrip from './BrandStrip';
+import Testimonials from '@/features/content/Testimonials';
+import CommunityJoin from '@/features/content/CommunityJoin';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonGrid } from '@/components/Skeleton';
 import type { Product } from '@/types/catalog';
@@ -87,59 +91,17 @@ const LandingPage = () => {
           href="/shop?sort=popularity"
         />
 
-        {(data?.categories.length ?? 0) > 0 && (
-          <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-            <h2 className="mb-6 font-heading text-2xl font-semibold text-ink">Shop by category</h2>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {data?.categories.map((category) => (
-                <Link
-                  key={category._id}
-                  to={`/shop?category=${category._id}`}
-                  className="group relative aspect-[4/3] overflow-hidden rounded-lg bg-card"
-                >
-                  {category.image && (
-                    <img
-                      src={category.image}
-                      alt=""
-                      loading="lazy"
-                      className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  )}
-                  <span className="absolute inset-0 flex items-end bg-gradient-to-t from-black/70 to-transparent p-4 font-heading text-lg font-semibold text-white">
-                    {category.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {(data?.brands.length ?? 0) > 0 && (
-          <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-            <h2 className="mb-6 font-heading text-2xl font-semibold text-ink">Shop by brand</h2>
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6">
-              {data?.brands.map((brand) => (
-                <Link
-                  key={brand._id}
-                  to={`/shop?brand=${brand._id}`}
-                  className="flex aspect-video items-center justify-center rounded-lg border border-line bg-white p-4 transition-colors hover:border-brand"
-                >
-                  {brand.logo ? (
-                    <img
-                      src={brand.logo}
-                      alt={brand.name}
-                      loading="lazy"
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  ) : (
-                    <span className="text-sm font-medium text-ink">{brand.name}</span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        <CategoryCarousel categories={data?.categories ?? []} />
+        <BrandStrip brands={data?.brands ?? []} />
       </QueryBoundary>
+
+      {/*
+        Outside the boundary: these two are fixed copy and a signup form, so
+        they have nothing to wait for and no reason to disappear if the product
+        query fails.
+      */}
+      <Testimonials />
+      <CommunityJoin />
     </>
   );
 };

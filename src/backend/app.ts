@@ -44,6 +44,7 @@ import userOrderRoutes from './modules/orders/order.routes';
 import userWalletRoutes from './modules/wallet/wallet.routes';
 import userReferralRoutes from './modules/referrals/referral.routes';
 import helpRoutes from './modules/content/help.routes';
+import newsletterRoutes from './modules/content/newsletter.routes';
 
 import configurePassport from './modules/auth/auth.passport';
 
@@ -111,6 +112,7 @@ app.use(
 // ---------------------------------------------------------------------------
 const PREFIXED_ROUTES: Array<[string, Router]> = [
   ['/help', helpRoutes],
+  ['/newsletter', newsletterRoutes],
   ['/cart', userCartRoutes],
   ['/wishlist', userWishlistRoutes],
   ['/wallet', userWalletRoutes],

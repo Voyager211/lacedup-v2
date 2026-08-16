@@ -32,20 +32,30 @@ const StorefrontLayout = () => {
     if (status === 'unknown') void dispatch(bootstrapSession('user'));
   }, [dispatch, status]);
 
+  /*
+   * Home is the root of every trail, so its own trail is one crumb pointing at
+   * the page you are already on. It also sat between the navbar and a
+   * full-bleed hero, where a pale strip reads as a seam rather than as
+   * navigation.
+   */
+  const showCrumbs = location.pathname !== '/';
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
 
       {/* Matched to the width of the page below, so the trail lines up with
           the content rather than floating off to one side of it. */}
-      <div
-        className={cn(
-          'mx-auto w-full px-4 pb-4 pt-5 sm:px-6',
-          storefrontCrumbWidth(location.pathname)
-        )}
-      >
-        <Breadcrumbs items={storefrontCrumbs(location.pathname, crumbDetail)} />
-      </div>
+      {showCrumbs && (
+        <div
+          className={cn(
+            'mx-auto w-full px-4 pb-4 pt-5 sm:px-6',
+            storefrontCrumbWidth(location.pathname)
+          )}
+        >
+          <Breadcrumbs items={storefrontCrumbs(location.pathname, crumbDetail)} />
+        </div>
+      )}
 
       {/* Skip link target, and where focus should land on navigation. */}
       <main id="main" className="flex-1" key={location.pathname}>

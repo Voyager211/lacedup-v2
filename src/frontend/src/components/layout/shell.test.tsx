@@ -160,14 +160,15 @@ describe('StorefrontLayout', () => {
     expect(within(breadcrumb).getByText('Shop').closest('[aria-current="page"]')).not.toBeNull();
   });
 
-  it('shows Home alone at the root, with nothing above it to link to', async () => {
+  it('draws no trail on the home page, which is the root of every trail', async () => {
+    // A one-crumb trail pointing at the page you are already on says nothing,
+    // and it sat between the navbar and a full-bleed hero as a pale seam.
     mock.onGet('/auth/me').reply(401);
 
     renderShell(<StorefrontLayout />, '/', '/');
 
-    const breadcrumb = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(breadcrumb).queryByRole('link')).not.toBeInTheDocument();
-    expect(within(breadcrumb).getByText('Home')).toBeInTheDocument();
+    await screen.findByRole('link', { name: 'Sign in' });
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
   });
 
   it('lets the page name itself in the trail once it knows its title', async () => {
@@ -233,7 +234,29 @@ describe('Footer', () => {
     renderFooter();
 
     expect(screen.getByRole('link', { name: 'FAQs' })).toHaveAttribute('href', '/help');
-    expect(screen.getByRole('link', { name: 'Contact us' })).toHaveAttribute('href', '/help');
+    expect(screen.getByRole('link', { name: 'Contact' })).toHaveAttribute('href', '/help');
+  });
+
+  it('carries the policy links the design asks for, none of them dead', () => {
+    // They point at /help, which holds the returns, shipping and payment
+    // answers. They want pages of their own - see the note in Footer.
+    renderFooter();
+
+    for (const label of ['Privacy Policy', 'Terms of Service', 'Cookie Policy']) {
+      expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', '/help');
+    }
+  });
+
+  it('advertises only the payment methods checkout will actually offer', () => {
+    // The design shows PayPal and Apple Pay. The PayPal integration is inert -
+    // the controller hardcodes an empty client id - and there is no Apple Pay.
+    renderFooter();
+
+    const methods = screen.getByRole('list', { name: /payment methods/i });
+    expect(within(methods).getByText('Card')).toBeInTheDocument();
+    expect(within(methods).getByText('Wallet')).toBeInTheDocument();
+    expect(within(methods).getByText('Cash on delivery')).toBeInTheDocument();
+    expect(within(methods).queryByText(/paypal|apple/i)).not.toBeInTheDocument();
   });
 });
 

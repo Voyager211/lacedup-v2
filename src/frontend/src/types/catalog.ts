@@ -32,7 +32,16 @@ export interface BrandRef {
   _id: string;
   name: string;
   brandOffer?: number;
-  logo?: string;
+  slug?: string;
+  /**
+   * `image`, not `logo`.
+   *
+   * The Brand schema stores it as `image` and `getActiveBrands` selects it
+   * under that name. This said `logo`, so it was always undefined and the
+   * landing page fell back to rendering brand names as text - which is why the
+   * brand marks never appeared.
+   */
+  image?: string;
 }
 
 export interface Product {

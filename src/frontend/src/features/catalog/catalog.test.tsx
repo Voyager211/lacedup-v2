@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
@@ -377,10 +377,11 @@ describe('LandingPage', () => {
 
     await screen.findByRole('heading', { name: 'New arrivals' });
     expect(screen.queryByRole('heading', { name: 'Best sellers' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Shop by brand' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Shop by Brands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Shop by Category' })).not.toBeInTheDocument();
   });
 
-  it('links category tiles into the shop with that filter applied', async () => {
+  it('links category cards into the shop with that filter applied', async () => {
     mock.onGet('/home-sections').reply(200, {
       success: true,
       newArrivals: [],
@@ -391,12 +392,72 @@ describe('LandingPage', () => {
 
     renderAt(<LandingPage />, '/', '/');
 
-    const section = await screen.findByRole('heading', { name: 'Shop by category' });
-    const grid = section.parentElement as HTMLElement;
-    expect(within(grid).getByRole('link', { name: 'Running' })).toHaveAttribute(
+    await screen.findByRole('heading', { name: 'Shop by Category' });
+    expect(screen.getByRole('link', { name: 'Running' })).toHaveAttribute(
       'href',
       '/shop?category=c1'
     );
+  });
+
+  it('shows the brand mark, which never rendered while the client read `logo`', async () => {
+    // The schema stores it as `image`; BrandRef said `logo`, so every card fell
+    // through to its text fallback.
+    mock.onGet('/home-sections').reply(200, {
+      success: true,
+      newArrivals: [],
+      bestSellers: [],
+      categories: [],
+      brands: [{ _id: 'b1', name: 'Nike', image: '/uploads/brands/nike.webp' }]
+    });
+
+    renderAt(<LandingPage />, '/', '/');
+
+    await screen.findByRole('heading', { name: 'Shop by Brands' });
+    expect(screen.getByRole('img', { name: 'Nike' })).toHaveAttribute(
+      'src',
+      '/uploads/brands/nike.webp'
+    );
+  });
+
+  it('scrolls the category carousel rather than paging it', async () => {
+    mock.onGet('/home-sections').reply(200, {
+      success: true,
+      newArrivals: [],
+      bestSellers: [],
+      categories: [
+        { _id: 'c1', name: 'Running', image: '/a.jpg' },
+        { _id: 'c2', name: 'Gym', image: '/b.jpg' }
+      ],
+      brands: []
+    });
+
+    renderAt(<LandingPage />, '/', '/');
+
+    await screen.findByRole('heading', { name: 'Shop by Category' });
+
+    // Both are in the DOM at once - it is a scrolling track, not a slideshow
+    // that mounts one slide at a time.
+    expect(screen.getByRole('link', { name: 'Running' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Gym' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More categories' })).toBeInTheDocument();
+  });
+
+  it('says what the community section collects before it collects it', async () => {
+    mock.onGet('/home-sections').reply(200, {
+      success: true,
+      newArrivals: [],
+      bestSellers: [],
+      categories: [],
+      brands: []
+    });
+
+    renderAt(<LandingPage />, '/', '/');
+
+    expect(
+      screen.getByRole('heading', { name: 'Join Our Sneaker Community' })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Your email address')).toBeInTheDocument();
+    expect(screen.getByText(/i agree to receive marketing emails/i)).toBeInTheDocument();
   });
 
   it('still shows the hero when the sections fail to load', async () => {
