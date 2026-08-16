@@ -273,14 +273,15 @@ describe('WishlistPage', () => {
     expect(await screen.findByText(/your wishlist is empty/i)).toBeInTheDocument();
   });
 
-  it('distinguishes "no results" from "nothing saved"', async () => {
-    mock.onGet('/wishlist').reply(200, { success: true, products: [], search: 'zzz', userWishlistProductIds: [] });
+  it('does not offer a search - the list is short and all on one screen', async () => {
+    mock.onGet('/wishlist').reply(200, { success: true, products: [], search: '', userWishlistProductIds: [] });
 
     renderPage(<WishlistPage />, '/wishlist', '/wishlist');
 
-    await userEvent.type(screen.getByLabelText(/search your wishlist/i), 'zzz');
-
-    expect(await screen.findByText(/nothing in your wishlist matches/i)).toBeInTheDocument();
+    await screen.findByText(/your wishlist is empty/i);
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    // The endpoint still takes a `q`; the page just never sends one.
+    expect(mock.history.get.every((request) => !request.params?.q)).toBe(true);
   });
 
   it('removes an item and reports it', async () => {
