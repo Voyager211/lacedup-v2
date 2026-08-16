@@ -85,13 +85,17 @@ const LandingPage = () => {
         onRetry={refetch}
       >
         <Section title="New arrivals" products={data?.newArrivals ?? []} href="/shop?sort=newest" />
+
+        {/* Between the two product rows on purpose: it is the dark band that
+            separates them, and two white grids stacked read as one long list. */}
+        <CategoryCarousel categories={data?.categories ?? []} />
+
         <Section
           title="Best sellers"
           products={data?.bestSellers ?? []}
           href="/shop?sort=popularity"
         />
 
-        <CategoryCarousel categories={data?.categories ?? []} />
         <BrandStrip brands={data?.brands ?? []} />
       </QueryBoundary>
 
