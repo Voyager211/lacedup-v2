@@ -78,9 +78,16 @@ export interface RowActionProps {
   tone?: ActionTone;
 }
 
+/**
+ * Red on hover, like every other button in the app.
+ *
+ * The destructive one keeps its own red so it is not identical to the three
+ * beside it - the row of icons is small, and "delete" wanting to look the same
+ * as "view" at the moment of the click is not a feature.
+ */
 const TONE: Record<ActionTone, string> = {
-  default: 'text-ink-muted hover:bg-card hover:text-ink',
-  danger: 'text-ink-muted hover:bg-danger/10 hover:text-danger'
+  default: 'text-ink-muted hover:bg-brand hover:text-white',
+  danger: 'text-ink-muted hover:bg-danger hover:text-white'
 };
 
 /**

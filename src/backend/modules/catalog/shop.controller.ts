@@ -8,6 +8,22 @@ import { getPagination } from '../../common/utils/pagination.util';
 import { getActiveBrands, getActiveCategories, getHomepageProducts } from './product-sections.util';
 import { withPricing } from './pricing.util';
 
+/**
+ * A repeatable query parameter, however it was sent.
+ *
+ * `?sizes=a&sizes=b`, `?sizes=a,b` and `?sizes=a` all mean the same thing to a
+ * shopper, and the client that sends each of them changes over time. Empty
+ * entries are dropped so a trailing comma does not become a filter on ''.
+ */
+const listParam = (value: unknown): string[] => {
+  if (value == null) return [];
+
+  return (Array.isArray(value) ? value : [value])
+    .flatMap((entry) => String(entry).split(','))
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+};
+
 const getProducts = async (req: Request, res: Response) => {
   try {
     const page = parseInt(String(req.query.page)) || 1;
@@ -21,8 +37,16 @@ const getProducts = async (req: Request, res: Response) => {
     const sort = String(req.query.sort || 'newest');
     const minPrice = parseFloat(String(req.query.minPrice || req.query.min)) || 0;
     const maxPrice = parseFloat(String(req.query.maxPrice || req.query.max)) || 1e9;
-    const sizes = req.query.size ? (Array.isArray(req.query.size) ? req.query.size : [req.query.size]) : [];
-    const stockStatus = req.query.stockStatus ? (Array.isArray(req.query.stockStatus) ? req.query.stockStatus : [req.query.stockStatus]) : [];
+    /*
+     * Sizes arrive three ways and all three have to work.
+     *
+     * This read only `size`, repeated - which is what the EJS page sent. The
+     * React page sends `sizes` as one comma-separated value, so the filter was
+     * silently ignored: /api/shop?sizes=UK+10 returned the whole catalogue.
+     * Nothing failed, the sizes just did nothing.
+     */
+    const sizes = listParam(req.query.sizes ?? req.query.size);
+    const stockStatus = listParam(req.query.stockStatus);
 
     // Get active category IDs to filter products
     const activeCategories = await Category.find({

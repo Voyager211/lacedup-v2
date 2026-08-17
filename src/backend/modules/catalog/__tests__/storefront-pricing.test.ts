@@ -180,3 +180,112 @@ describe('storefront pricing contract', () => {
     expect(res.body.product.averageFinalPrice).toBe((BASE_8 + BASE_9) / 2);
   });
 });
+
+/**
+ * Search, filters and paging have to agree with each other, because the client
+ * sends them as one object and reads one count back.
+ *
+ * The size filter is here because it was dead: the controller read a repeated
+ * `size`, which is what the EJS page sent, while the React page sends `sizes`
+ * as one comma-separated value. /api/shop?sizes=UK+10 returned the entire
+ * catalogue and nothing failed.
+ */
+describe('shop filtering contract', () => {
+  beforeAll(async () => {
+    await db.connect();
+  });
+
+  afterAll(async () => {
+    await db.disconnect();
+  });
+
+  beforeEach(async () => {
+    await Promise.all([Product.deleteMany({}), Category.deleteMany({}), Brand.deleteMany({})]);
+
+    const brand = await Brand.create({ name: 'Testwear' });
+    const category = await Category.create({ name: 'Gym Sneakers' });
+
+    const make = (name: string, slug: string, sizes: string[], price: number) =>
+      Product.create({
+        productName: name,
+        slug,
+        description: 'For the filter contract test.',
+        features: 'Breathable',
+        brand: brand._id,
+        category: category._id,
+        regularPrice: price,
+        mainImage: '/uploads/main.jpg',
+        variants: sizes.map((size, index) => ({
+          size,
+          stock: 5,
+          // The schema requires the base price to be strictly below the
+          // regular price - the regular price is what gets struck through.
+          basePrice: price - 1000,
+          sku: `${slug}-${index}`
+        }))
+      });
+
+    await make('Alpha Runner', 'alpha-runner', ['UK 8'], 5000);
+    await make('Beta Trainer', 'beta-trainer', ['UK 9', 'UK 10'], 9000);
+    await make('Gamma Court', 'gamma-court', ['UK 10'], 12000);
+  });
+
+  const shop = (queryString = '') => request(app).get(`/api/shop${queryString}`);
+
+  it('filters by a comma-separated `sizes`, which was being ignored', async () => {
+    const res = await shop('?sizes=UK 10');
+
+    expect(res.status).toBe(200);
+    expect(res.body.pagination.totalProducts).toBe(2);
+    expect(res.body.products.map((p: { slug: string }) => p.slug).sort()).toEqual([
+      'beta-trainer',
+      'gamma-court'
+    ]);
+  });
+
+  it('still accepts the repeated `size` the old page sent', async () => {
+    const res = await shop('?size=UK 8&size=UK 9');
+
+    expect(res.body.pagination.totalProducts).toBe(2);
+  });
+
+  it('treats several comma-separated sizes as any-of', async () => {
+    const res = await shop('?sizes=UK 8,UK 9');
+
+    expect(res.body.pagination.totalProducts).toBe(2);
+  });
+
+  it('ignores a trailing comma rather than filtering on an empty size', async () => {
+    const res = await shop('?sizes=UK 10,');
+
+    expect(res.body.pagination.totalProducts).toBe(2);
+  });
+
+  it('narrows the count as well as the rows when searching', async () => {
+    // A count that ignores the search reads as a bug the moment a shopper
+    // types: 1 card on screen, 3 in the heading.
+    const res = await shop('?q=alpha');
+
+    expect(res.body.products).toHaveLength(1);
+    expect(res.body.pagination.totalProducts).toBe(1);
+  });
+
+  it('combines search, filter and price into one query rather than the last one wins', async () => {
+    const both = await shop('?q=trainer&sizes=UK 10&minPrice=8000');
+    expect(both.body.pagination.totalProducts).toBe(1);
+
+    // Each clause has to bite: the same search with a size it does not have
+    // must find nothing.
+    const neither = await shop('?q=trainer&sizes=UK 8');
+    expect(neither.body.pagination.totalProducts).toBe(0);
+  });
+
+  it('pages a filtered set, not the whole catalogue', async () => {
+    const res = await shop('?sizes=UK 10&page=2');
+
+    expect(res.body.pagination.currentPage).toBe(2);
+    expect(res.body.pagination.totalProducts).toBe(2);
+    // Two matches at 12 a page: page 2 is past the end and holds nothing.
+    expect(res.body.products).toHaveLength(0);
+  });
+});

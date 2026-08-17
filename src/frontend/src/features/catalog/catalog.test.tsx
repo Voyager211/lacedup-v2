@@ -210,9 +210,43 @@ describe('ShopPage', () => {
     }
   });
 
-  it('reports the total count', async () => {
+  it('reports the total count in the title bar', async () => {
     renderAt(<ShopPage />, '/shop', '/shop');
-    expect(await screen.findByText('30 products')).toBeInTheDocument();
+
+    // Waits for the count: the bar renders before the request answers.
+    await screen.findByText('Air Max 90');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Products (30)');
+  });
+
+  it('opens the filters on demand, not by default', async () => {
+    renderAt(<ShopPage />, '/shop', '/shop');
+
+    const toggle = await screen.findByRole('button', { name: /view filters/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    // Mounted but hidden - it has to stay in the tree to animate on the way out.
+    expect(screen.getByLabelText('Category')).not.toBeVisible();
+
+    await userEvent.click(toggle);
+
+    expect(screen.getByLabelText('Category')).toBeVisible();
+    expect(screen.getByRole('button', { name: /hide filters/i })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+  });
+
+  it('searches from the title bar, and pages back to one when it does', async () => {
+    // Search, filters and paging are all the same URL object - a new search
+    // landing the shopper on page 4 of the previous one is the bug this avoids.
+    const router = renderAt(<ShopPage />, '/shop?page=3', '/shop');
+
+    await screen.findByRole('heading', { level: 1 });
+    await userEvent.type(screen.getByLabelText('Search the shop'), 'air');
+
+    await vi.waitFor(() => {
+      expect(router.state.location.search).toContain('q=air');
+    });
+    expect(router.state.location.search).not.toContain('page=3');
   });
 
   it('offers a way out when nothing matches', async () => {

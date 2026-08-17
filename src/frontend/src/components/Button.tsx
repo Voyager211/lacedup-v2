@@ -10,11 +10,19 @@ import Spinner from './Spinner';
  * duplicate orders and double coupon applications happen. The label keeps its
  * width while loading so the button does not jump.
  */
+/**
+ * Every variant resolves to brand red with white text on hover.
+ *
+ * That is the app's signature: whatever a button looks like at rest, pointing
+ * at it turns it red. `danger` is the exception that proves it - it is already
+ * red, and darkening rather than switching keeps a destructive action visually
+ * distinct from a brand one at the moment of the click.
+ */
 const VARIANTS = {
   primary: 'bg-brand text-white hover:bg-brand-hover focus-visible:outline-brand',
-  secondary: 'bg-ink text-white hover:bg-ink/90 focus-visible:outline-ink',
-  outline: 'border border-line bg-transparent text-ink hover:bg-card',
-  ghost: 'bg-transparent text-ink hover:bg-card',
+  secondary: 'bg-ink text-white hover:bg-brand focus-visible:outline-ink',
+  outline: 'border border-line bg-transparent text-ink hover:border-brand hover:bg-brand hover:text-white',
+  ghost: 'bg-transparent text-ink hover:bg-brand hover:text-white',
   danger: 'bg-danger text-white hover:bg-danger-hover focus-visible:outline-danger'
 } as const;
 

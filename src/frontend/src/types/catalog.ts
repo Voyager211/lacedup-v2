@@ -169,6 +169,7 @@ export interface ShopQuery {
   brand?: string;
   minPrice?: string | number;
   maxPrice?: string | number;
+  /** Comma-separated. The server accepts this or a repeated `size`. */
   sizes?: string;
   stockStatus?: string;
   sort?: string;

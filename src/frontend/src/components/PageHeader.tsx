@@ -71,8 +71,10 @@ export default PageHeader;
  */
 const ACTION_TONES = {
   brand: 'bg-brand text-white hover:bg-brand-hover',
-  neutral: 'bg-white/10 text-white hover:bg-white/20',
-  success: 'bg-success text-white hover:bg-success-hover'
+  // Resolves to brand red on hover like every other button, rather than to a
+  // slightly lighter grey that reads as nothing happening.
+  neutral: 'bg-white/10 text-white hover:bg-brand',
+  success: 'bg-success text-white hover:bg-brand'
 } as const;
 
 const ACTION_BASE = cn(
