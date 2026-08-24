@@ -167,7 +167,7 @@ for (const router of ROOT_ROUTES) {
 // but unrouted paths; as the renders are deleted, more falls through to here
 // until the SPA owns every page.
 //
-// In development this is inert - `npm run dev` in src/frontend serves the app
+// In development this is inert - `npm run dev` in frontend/ serves the app
 // on :5173 and proxies the API back to this server, so there is no build to
 // find. The check is on every request rather than at startup so that starting
 // the server before the first build, then building, does not require a restart.

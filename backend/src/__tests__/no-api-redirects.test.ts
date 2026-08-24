@@ -5,7 +5,7 @@ import * as db from '../common/testing/db';
 import app from '../app';
 import User from '../modules/users/user.model';
 import Cart from '../modules/cart/cart.model';
-import { BACKEND_ROOT } from '../config/paths';
+import { BACKEND_SRC } from '../config/paths';
 
 /**
  * API handlers must answer, not redirect.
@@ -99,8 +99,8 @@ describe('no redirects left in the API', () => {
   it('has no res.redirect outside the flows that need one', () => {
     const offenders: string[] = [];
 
-    for (const file of walk(BACKEND_ROOT)) {
-      const relative = path.relative(BACKEND_ROOT, file);
+    for (const file of walk(BACKEND_SRC)) {
+      const relative = path.relative(BACKEND_SRC, file);
       if (ALLOWED.some((allowed) => relative.endsWith(allowed))) continue;
 
       const source = fs.readFileSync(file, 'utf8');

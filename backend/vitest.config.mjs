@@ -11,7 +11,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['src/backend/**/*.test.js', 'src/backend/**/*.test.ts'],
+    include: ['src/**/*.test.ts'],
 
     // Set before any module is imported, so the rate limiters register in skip
     // mode and the suite is not throttled by its own repeated requests. The
@@ -37,8 +37,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: 'coverage',
-      include: ['src/backend/**/*.js'],
-      exclude: ['src/backend/common/testing/**', 'src/backend/views/**']
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/common/testing/**']
     }
   }
 });

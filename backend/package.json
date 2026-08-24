@@ -1,10 +1,10 @@
 {
-  "name": "project-1---lacedup",
+  "name": "lacedup-backend",
   "version": "1.0.0",
-  "main": "src/backend/server.ts",
+  "main": "src/server.ts",
   "scripts": {
-    "dev": "tsx watch src/backend/server.ts",
-    "start": "node dist/backend/server.js",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -14,7 +14,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "LacedUp Co. API server",
   "dependencies": {
     "@geoapify/geocoder-autocomplete": "^2.1.0",
     "@paypal/checkout-server-sdk": "^1.0.3",

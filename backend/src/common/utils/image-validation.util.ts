@@ -2,7 +2,7 @@
  * Comprehensive Image Validation Utility
  *
  * Server-side only. The original file also attached itself to `window` for the
- * browser, but this copy lives under src/backend and is never served - the
+ * browser, but this copy lives under backend/src and is never served - the
  * client-side copy is public/utils/imageValidation.js. That dead branch is
  * dropped here rather than carried into TypeScript.
  */

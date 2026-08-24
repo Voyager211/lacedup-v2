@@ -2,7 +2,7 @@
  * Domain constants mirrored from the backend.
  *
  * These are the literal string values the API sends and accepts. They mirror
- * src/backend/common/constants/order.constants.ts - if that file changes, this
+ * backend/src/common/constants/order.constants.ts - if that file changes, this
  * one has to change with it, and the `satisfies` checks at the bottom of the
  * badge tone maps will fail loudly rather than silently drifting.
  */

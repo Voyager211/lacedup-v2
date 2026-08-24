@@ -53,7 +53,7 @@ Six controllers call `res.status(500).render('error', …)`:
 | [help.controller.ts](../../backend/modules/content/help.controller.ts) | 14 |
 | [profile.controller.ts](../../backend/modules/users/profile.controller.ts) | 176 |
 
-`src/backend/views/` contains only `admin/`, `errors/`, `layouts/`, `user/` and `utils/` —
+`backend/src/views/` contains only `admin/`, `errors/`, `layouts/`, `user/` and `utils/` —
 there is no top-level `error.ejs`. So when any of these pages fails, the error handler itself
 throws and the user gets an unhandled exception rather than an error page.
 

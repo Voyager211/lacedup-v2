@@ -10,11 +10,11 @@ React is the only UI. Express serves the built app and answers JSON at `/api`.
 
 ```bash
 # once
-cd src/frontend && npm install
+cd frontend && npm install
 
 # two terminals
 npm run dev            # from the repo root — backend on :3000
-cd src/frontend && npm run dev   # SPA on :5173
+cd frontend && npm run dev   # SPA on :5173
 ```
 
 Open **http://localhost:5173**. Vite proxies `/api`, `/uploads`, `/images` and `/google` to the backend
@@ -181,7 +181,7 @@ dashboard's own chunk, so a shopper browsing products never downloads it.
   cannot read httpOnly cookies, so without them it has no way to tell a signed-in visitor
   from a signed-out one except by firing a request and watching it fail. Both return 401
   rather than a null user, which keeps them on the same refresh-then-retry path as every
-  other call. Covered by `src/backend/modules/auth/__tests__/session-me.test.ts`.
+  other call. Covered by `backend/src/modules/auth/__tests__/session-me.test.ts`.
 - **The auth routes are now registered under `/api` as well as their bare paths.** This
   router is root-mounted and deliberately not dual-mounted, so `/login`, `/signup`, the four
   OTP endpoints, `/reset-password` and **`/auth/refresh`** existed only on their bare paths —
@@ -368,7 +368,7 @@ pre-existing backend defects — is in [docs/defects.md](docs/defects.md).
 - **`/coupons` has no page.** Its view has never existed in git history. The route is
   absent from the router until someone decides whether the page is wanted.
 - **The OTP email template is the last `.ejs` file.** It lives in
-  `src/backend/common/email-templates/` and is rendered to a string for the mailer, so it
+  `backend/src/common/email-templates/` and is rendered to a string for the mailer, so it
   has nothing to do with the view engine — which is why `ejs` is still a dependency.
 - **Two mongodb drivers were installed.** `connect-mongo` resolved the standalone one while
   mongoose bundled its own, which needed a cast to paper over the version skew. With
@@ -544,7 +544,7 @@ string, so a failure page opened with a Mongo id never found its order.
 
 `express-session`, `connect-mongo`, `connect-flash`, `express-ejs-layouts` and
 `method-override` are uninstalled. `ejs` stays for exactly one thing: the OTP **email**
-template, which now lives in `src/backend/common/email-templates/`.
+template, which now lives in `backend/src/common/email-templates/`.
 
 
 ### 4. Library replacements
@@ -594,7 +594,7 @@ auth suite undetected because those tests only asserted on failed logins.
 ## Planned layout
 
 ```
-src/frontend/
+frontend/
 ├── src/
 │   ├── app/          store, router, providers
 │   ├── features/     one folder per backend module (auth, cart, catalog, ...)

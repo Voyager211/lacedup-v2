@@ -81,7 +81,7 @@ describe.skipIf(!built)('SPA fallback', () => {
 });
 
 describe.skipIf(built)('SPA fallback (no build present)', () => {
-  it('is skipped because src/frontend/dist does not exist', () => {
+  it('is skipped because frontend/dist does not exist', () => {
     // Recorded rather than silently passing: if the whole suite above is
     // skipped in CI, this line is the reason.
     expect(built).toBe(false);

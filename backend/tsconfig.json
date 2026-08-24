@@ -9,8 +9,8 @@
     "moduleResolution": "node16",
     "lib": ["ES2022"],
 
-    "rootDir": "src/backend",
-    "outDir": "dist/backend",
+    "rootDir": "src",
+    "outDir": "dist",
 
     /* Strict from the first converted file rather than bolted on later. */
     "strict": true,
@@ -35,11 +35,6 @@
        lets the suites call describe/it/expect without importing them. */
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/backend/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/backend/views",
-    "src/frontend"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

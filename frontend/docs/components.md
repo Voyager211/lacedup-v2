@@ -97,7 +97,7 @@ All of it goes away with npm dependencies and a single Vite build.
 
 ## 2. Storefront partials
 
-[src/backend/views/user/partials/](../../backend/views/user/partials/) — 21 files, 4,399
+[backend/src/views/user/partials/](../../backend/src/views/user/partials/) — 21 files, 4,399
 lines, plus [views/utils/coupon-card.ejs](../../backend/views/utils/coupon-card.ejs).
 
 ### Live

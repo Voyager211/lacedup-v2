@@ -1,12 +1,12 @@
 import path from 'path';
 import swaggerJsdoc from 'swagger-jsdoc';
 import type { Options } from 'swagger-jsdoc';
-import { BACKEND_ROOT } from './paths';
+import { BACKEND_SRC } from './paths';
 
 /**
  * OpenAPI spec, assembled from @swagger JSDoc blocks in the route files.
  *
- * The globs resolve from BACKEND_ROOT rather than process.cwd(), for the same
+ * The globs resolve from BACKEND_SRC rather than process.cwd(), for the same
  * reason as everything else in config/paths.ts. Both .ts and .js are scanned
  * while the JavaScript-to-TypeScript conversion is still in progress.
  */
@@ -235,8 +235,8 @@ const options: Options = {
   // Forward slashes deliberately: path.join emits backslashes on Windows and
   // the glob matcher silently matches nothing, producing an empty spec.
   apis: [
-    `${BACKEND_ROOT.replace(/\\/g, '/')}/modules/**/*.routes.ts`,
-    `${BACKEND_ROOT.replace(/\\/g, '/')}/modules/**/*.routes.js`
+    `${BACKEND_SRC.replace(/\\/g, '/')}/modules/**/*.routes.ts`,
+    `${BACKEND_SRC.replace(/\\/g, '/')}/modules/**/*.routes.js`
   ]
 };
 

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { BACKEND_ROOT } from '../config/paths';
+import { BACKEND_SRC } from '../config/paths';
 
 /**
  * A module cannot use `export =` and a named export at the same time.
@@ -31,7 +31,7 @@ describe('module shape', () => {
   it('never mixes `export =` with a named export', () => {
     const offenders: string[] = [];
 
-    for (const file of walk(BACKEND_ROOT)) {
+    for (const file of walk(BACKEND_SRC)) {
       const source = fs.readFileSync(file, 'utf8');
 
       const hasExportAssignment = /^export = /m.test(source);
@@ -42,7 +42,7 @@ describe('module shape', () => {
         source
       );
 
-      if (hasNamedExport) offenders.push(path.relative(BACKEND_ROOT, file));
+      if (hasNamedExport) offenders.push(path.relative(BACKEND_SRC, file));
     }
 
     expect(offenders).toEqual([]);
