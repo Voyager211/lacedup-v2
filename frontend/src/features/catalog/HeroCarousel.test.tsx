@@ -14,7 +14,10 @@ import HeroCarousel from './HeroCarousel';
  * its own for someone who asked it not to.
  */
 
-/** A slide links to a product, so the carousel needs somewhere to link into. */
+/**
+ * Slides can link, so a router has to be in scope even when none currently
+ * does - otherwise adding one href turns every test in this file red.
+ */
 const renderCarousel = () =>
   render(
     <MemoryRouter>
@@ -63,26 +66,6 @@ describe('HeroCarousel', () => {
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 
-  /**
-   * A link wrapping an `alt=""` image has nothing to announce, so screen
-   * readers fall back to reading the URL. The name has to come from somewhere,
-   * and aria-label is the one place it does not become visible copy.
-   */
-  it('links the featured slide to its product, named for screen readers', async () => {
-    renderCarousel();
-
-    const link = screen.getByRole('link', { name: 'Nike Court Vision Low Next Nature' });
-
-    expect(link).toHaveAttribute('href', '/product/nike-court-vision-low-next-nature');
-    expect(link.textContent).toBe('');
-  });
-
-  it('leaves the slide with no destination unlinked', () => {
-    renderCarousel();
-
-    expect(screen.getAllByRole('link')).toHaveLength(1);
-  });
-
   it('renders every slide as decorative artwork', () => {
     const { container } = renderCarousel();
 
@@ -94,32 +77,13 @@ describe('HeroCarousel', () => {
     }
   });
 
-  /** A 2.3MB PNG shipped raw would be the whole of the first paint. */
+  /** Full-bleed artwork shipped at source resolution would dominate first paint. */
   it('requests the artwork through the transform pipeline', () => {
     const { container } = renderCarousel();
 
     for (const image of container.querySelectorAll('img')) {
       expect(image.getAttribute('src')).toContain('f_auto,q_auto');
       expect(image.getAttribute('srcset')).toContain('w_640');
-    }
-  });
-
-  /**
-   * The regression this replaced: the sources are 1.79 and 1.49, and cropping
-   * both to fill one box cut the bottom off the taller one - which is the shoe
-   * in the second slide. Padding to the box ratio instead means `object-cover`
-   * has nothing left to crop. `c_pad` on every candidate is what holds it.
-   */
-  it('pads the artwork to the box ratio rather than cropping to it', () => {
-    const { container } = renderCarousel();
-
-    for (const image of container.querySelectorAll('img')) {
-      expect(image.getAttribute('src')).toContain('c_pad,ar_16:9');
-      expect(image.getAttribute('src')).not.toContain('c_limit');
-
-      for (const candidate of image.getAttribute('srcset')!.split(', ')) {
-        expect(candidate).toContain('c_pad,ar_16:9');
-      }
     }
   });
 

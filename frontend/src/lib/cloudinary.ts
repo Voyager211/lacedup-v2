@@ -25,18 +25,6 @@ export interface CloudinaryOptions {
   width: number;
   /** Overrides the automatic quality - only worth setting to force a lower one. */
   quality?: string;
-  /**
-   * Pads the image out to this ratio (`'16:9'`) instead of limiting its width,
-   * so a set of differently-shaped sources can share one box without any of
-   * them being cropped to fit it.
-   *
-   * The padding is black, which is chosen for the artwork this currently
-   * carries: both hero sources are shot on near-black, measured at rgb(1,1,1)
-   * to rgb(8,8,8) at the edge, so the seam is a difference of under 8/255 and
-   * invisible. Cloudinary's own `b_auto` samples rgb(18,18,18) here and shows
-   * as a band. An image on any other ground would need a colour passed in.
-   */
-  aspectRatio?: string;
 }
 
 /**
@@ -46,20 +34,13 @@ export interface CloudinaryOptions {
  * Cloudinary looks for them, and before the version segment so that the public
  * id - and therefore the asset the URL resolves to - is unchanged.
  */
-export const cloudinaryUrl = (
-  url: string,
-  { width, quality = 'auto', aspectRatio }: CloudinaryOptions
-): string => {
+export const cloudinaryUrl = (url: string, { width, quality = 'auto' }: CloudinaryOptions): string => {
   const match = UPLOAD_URL.exec(url);
   if (!match) return url;
 
   const [, base, rest] = match;
 
-  // c_pad fits the whole image inside the ratio and fills the remainder;
-  // c_limit only caps the width and leaves the shape alone.
-  const fit = aspectRatio ? `c_pad,ar_${aspectRatio},b_black` : 'c_limit';
-
-  return `${base}/f_auto,q_${quality},${fit},w_${width}/${rest}`;
+  return `${base}/f_auto,q_${quality},c_limit,w_${width}/${rest}`;
 };
 
 /**

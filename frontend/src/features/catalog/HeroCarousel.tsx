@@ -20,11 +20,13 @@ import { cloudinarySrcSet, cloudinaryUrl } from '@/lib/cloudinary';
  * from assistive tech for the same reason: they move artwork around and lead
  * nowhere on their own.
  *
- * A slide may still link somewhere, and one does. That link is named by
- * `label` rather than by alt text, so it announces the product it opens while
- * the hero stays free of visible copy. Nothing is reachable *only* from here -
- * the same product is in the shop - so a keyboard user skipping the carousel
- * loses no route.
+ * A slide can link somewhere, though none currently does. The second slide did
+ * while it was a photograph of the Court Vision Low; the artwork that replaced
+ * it shows running shoes that are not in the catalogue at all, and pointing
+ * that at the court shoe would land a shopper on something they did not click.
+ * The mechanism stays because the destination is the only missing part: set
+ * `href` and `label` on a slide and it becomes a link, named for screen
+ * readers rather than by rendering words.
  */
 
 interface Slide {
@@ -43,27 +45,25 @@ interface Slide {
 }
 
 /**
- * One box shape for every slide, and every slide padded to match it.
+ * The slides, and why they are simply cropped to the box.
  *
- * The two sources are different shapes - 1.79 and 1.49 - so a single box has
- * to do something about the difference. Cropping to fill was the first attempt
- * and it cut the bottom off the taller one, which is the whole shoe in the
- * second slide. Padding to a common ratio instead means nothing is ever cut:
- * the image arrives already 16:9, so `object-cover` has nothing left to crop.
+ * Both sources are wider than 16:9 - 1.79 and 2.02 - so filling the box takes
+ * the difference off the left and right, where both of these have nothing but
+ * sky. Measured on the wider one: the 6% trimmed from each side averages half
+ * the brightness of the middle, which is the empty night behind the shoes.
  *
- * 16:9 because the first slide is 1.79 and therefore barely padded at all,
- * while 21:9 would have letterboxed both of them heavily.
+ * This was briefly padding rather than cropping, because a previous second
+ * slide was 1.49 - taller than the box - and cropping it cut the shoe off at
+ * the bottom. That image is gone, and padding the ones that replaced it would
+ * be worse than the problem: this one's top edge is navy, so the bars would
+ * read as a band rather than disappear.
  */
-const SLIDE_RATIO = '16:9';
-
 const SLIDES: readonly Slide[] = [
   {
     url: 'https://res.cloudinary.com/daqfxkc3u/image/upload/v1770014043/Gemini_Generated_Image_opandhopandhopan_bvewuv.jpg'
   },
   {
-    url: 'https://res.cloudinary.com/daqfxkc3u/image/upload/v1769780544/Classic_Court_Style._Modern_Comfort._1_xdk7tb.png',
-    href: '/product/nike-court-vision-low-next-nature',
-    label: 'Nike Court Vision Low Next Nature'
+    url: 'https://res.cloudinary.com/daqfxkc3u/image/upload/v1789224705/08c2a8cf3a4628c43c12989d63902086_hrowbn.jpg'
   }
 ];
 
@@ -143,8 +143,8 @@ const HeroCarousel = () => {
         {SLIDES.map((slide, position) => {
           const image = (
             <img
-              src={cloudinaryUrl(slide.url, { width: 1920, aspectRatio: SLIDE_RATIO })}
-              srcSet={cloudinarySrcSet(slide.url, { aspectRatio: SLIDE_RATIO })}
+              src={cloudinaryUrl(slide.url, { width: 1920 })}
+              srcSet={cloudinarySrcSet(slide.url)}
               sizes="100vw"
               alt=""
               // The first slide is the largest thing above the fold; the rest
@@ -157,7 +157,7 @@ const HeroCarousel = () => {
 
           return (
             <li key={slide.url} className="w-full shrink-0 snap-start">
-              {/* Matches what the images are padded to, so they fill it exactly. */}
+              {/* Cropped to fill; both sources are wider than this. */}
               <div className="aspect-[16/9] w-full">
                 {slide.href ? (
                   <Link to={slide.href} aria-label={slide.label} className="block size-full">
