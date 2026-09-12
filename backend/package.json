@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "src/server.ts",
   "scripts": {
+    "migrate:images": "node scripts/migrate-images-to-cloudinary.mjs",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc && node scripts/copy-assets.mjs",
@@ -22,6 +23,7 @@
     "@geoapify/geocoder-autocomplete": "^2.1.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.11.0",
     "colors": "^1.4.0",
     "cookie-parser": "^1.4.7",
     "date-fns": "^4.1.0",

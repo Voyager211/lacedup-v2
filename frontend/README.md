@@ -437,8 +437,10 @@ axios.create({ baseURL: '/api', withCredentials: true })
 - **Order status is derived, not set.** `calculateOrderStatus` recomputes it from item
   statuses on every item update. `Partially Delivered` and `Partially Returned` are roll-ups —
   no item ever holds those values.
-- **Uploads are served from `/uploads/...`** and their URLs are stored in the database.
-  `backend/public/` is data, not source - it stays beside the backend source tree, not in the bundle.
+- **Image URLs come from the database and may be either shape.** Uploads go to Cloudinary
+  when it is configured (absolute `res.cloudinary.com` URLs) and to the backend's disk
+  otherwise, served at `/uploads/...`. Render both with a plain `src` - do not assume a
+  prefix, and do not rebuild one from a filename.
 - **Rate limits** apply to auth (10/15min), OTP (5/15min), password reset (5/hour), coupon
   apply (10/15min), payments (30/15min) and a 500/15min `/api` backstop. Surface 429s
   meaningfully rather than as generic errors.

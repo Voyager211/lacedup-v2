@@ -2,9 +2,11 @@ import type { Request, Response } from 'express';
 import Category from './category.model';
 import { getPagination } from '../../common/utils/pagination.util';
 import { validateBase64Image } from '../../common/utils/image-validation.util';
-import sharp from 'sharp';
-import path from 'path';
-import { promises as fs } from 'fs';
+import { removeImage, storeImage } from '../../common/utils/image-storage.util';
+import type { ImageTransform } from '../../common/utils/image-storage.util';
+
+/** Category artwork is square and webp, as it was when it was written to disk. */
+const CATEGORY_IMAGE: ImageTransform = { width: 800, height: 800, format: 'webp', quality: 90 };
 
 
 // Fetch-based category listing
@@ -102,20 +104,8 @@ const apiCreateCategory = async (req: Request, res: Response) => {
 
       // Save and process image
       const buffer = Buffer.from(base64Image.split(',')[1], 'base64');
-      const filename = `category-${Date.now()}.webp`;
-      const uploadsDir = path.join('public', 'uploads', 'categories');
-      
-      // Ensure directory exists
-      await fs.mkdir(uploadsDir, { recursive: true });
-      
-      const outputPath = path.join(uploadsDir, filename);
-      
-      await sharp(buffer)
-        .resize(800, 800, { fit: 'cover', position: 'center' })
-        .webp({ quality: 90 })
-        .toFile(outputPath);
-      
-      imageUrl = `/uploads/categories/${filename}`;
+      const stored = await storeImage(buffer, 'categories', CATEGORY_IMAGE, 'category');
+      imageUrl = stored.url;
     }
 
     await Category.create({
@@ -185,31 +175,15 @@ const apiUpdateCategory = async (req: Request, res: Response) => {
         });
       }
 
-      // Delete old image if exists
+      // The image being replaced, wherever it was stored
       if (category.image) {
-        const oldImagePath = path.join('public', category.image);
-        try {
-          await fs.unlink(oldImagePath);
-        } catch (err: any) {
-          console.log('Old image not found or already deleted:', err.message);
-        }
+        await removeImage(category.image);
       }
 
       // Save new image
       const buffer = Buffer.from(base64Image.split(',')[1], 'base64');
-      const filename = `category-${Date.now()}.webp`;
-      const uploadsDir = path.join('public', 'uploads', 'categories');
-      
-      await fs.mkdir(uploadsDir, { recursive: true });
-      
-      const outputPath = path.join(uploadsDir, filename);
-      
-      await sharp(buffer)
-        .resize(800, 800, { fit: 'cover', position: 'center' })
-        .webp({ quality: 90 })
-        .toFile(outputPath);
-      
-      imageUrl = `/uploads/categories/${filename}`;
+      const stored = await storeImage(buffer, 'categories', CATEGORY_IMAGE, 'category');
+      imageUrl = stored.url;
     }
 
     await Category.findByIdAndUpdate(categoryId, {

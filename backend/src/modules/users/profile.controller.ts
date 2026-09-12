@@ -5,11 +5,11 @@ import sendOtp from '../../common/utils/send-otp.util';
 import bcrypt from 'bcryptjs';
 import Order from '../orders/order.model';
 import Address from '../addresses/address.model';
-import sharp from 'sharp';
-import path from 'path';
-import fs from 'fs';
-import { PROFILE_UPLOADS_DIR } from '../../config/paths';
+import { removeImage, storeImage } from '../../common/utils/image-storage.util';
+import type { ImageTransform } from '../../common/utils/image-storage.util';
+import { profilePhotoUrl } from './user.serializer';
 import { currentUserId, requireUserId } from '../../common/utils/current-user.util';
+
 import {
   checkOtp,
   discardEmailChange,
@@ -18,6 +18,9 @@ import {
   refreshOtp,
   startEmailChange
 } from './email-change.service';
+
+/** Avatars: a small square, and jpeg rather than webp as they were before. */
+const PROFILE_IMAGE: ImageTransform = { width: 200, height: 200, format: 'jpeg', quality: 90 };
 
 // Generate OTP function (since generateOtp utility might not exist)
 const generateOtp = () => {
@@ -705,46 +708,30 @@ const uploadProfilePhoto = async (req: Request, res: Response) => {
       });
     }
 
-    // Ensure uploads directory exists
-    const uploadsDir = PROFILE_UPLOADS_DIR;
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
+    const stored = await storeImage(req.file.buffer, 'profiles', PROFILE_IMAGE, `profile_${userId}`);
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const filename = `profile_${userId}_${timestamp}.jpg`;
-    const filepath = path.join(uploadsDir, filename);
-
-    // Process and save the image using Sharp
-    await sharp(req.file.buffer)
-      .resize(200, 200, {
-        fit: 'cover',
-        position: 'center'
-      })
-      .jpeg({ quality: 90 })
-      .toFile(filepath);
-
-    // Get current user to check for existing profile photo
     const currentUser = await User.findById(userId);
 
-    // Delete old profile photo if it exists
-    if (currentUser!.profilePhoto) {
-      const oldPhotoPath = path.join(uploadsDir, currentUser!.profilePhoto);
-      if (fs.existsSync(oldPhotoPath)) {
-        fs.unlinkSync(oldPhotoPath);
-      }
+    /**
+     * The previous photo, if any.
+     *
+     * Historically this field held a bare filename rather than a URL, so old
+     * rows need the directory putting back before they can be deleted. New
+     * rows hold a URL, which removeImage resolves on either backend.
+     */
+    if (currentUser?.profilePhoto) {
+      await removeImage(profilePhotoUrl(currentUser.profilePhoto));
     }
 
-    // Update user with new profile photo
     await User.findByIdAndUpdate(userId, {
-      profilePhoto: filename
+      profilePhoto: stored.url
     });
 
     res.json({
       success: true,
       message: 'Profile photo updated successfully',
-      filename: filename
+      filename: stored.filename,
+      profilePhoto: stored.url
     });
 
   } catch (error: any) {
@@ -784,11 +771,7 @@ const deleteProfilePhoto = async (req: Request, res: Response) => {
       });
     }
 
-    // Delete the physical file
-    const photoPath = path.join(PROFILE_UPLOADS_DIR, currentUser!.profilePhoto);
-    if (fs.existsSync(photoPath)) {
-      fs.unlinkSync(photoPath);
-    }
+    await removeImage(profilePhotoUrl(currentUser!.profilePhoto));
 
     // Update user to remove profile photo
     await User.findByIdAndUpdate(userId, {

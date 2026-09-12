@@ -5,10 +5,14 @@ import Brand from './brand.model';
 import { processImages } from '../../common/utils/image-processor.util';
 import { getPagination } from '../../common/utils/pagination.util';
 import { validateBase64Image, validateMultipleImageFiles } from '../../common/utils/image-validation.util';
-import { getImagesToDelete, deleteFiles } from '../../common/utils/file-cleanup.util';
+import { getImagesToDelete } from '../../common/utils/file-cleanup.util';
+import { removeImages, storeImage } from '../../common/utils/image-storage.util';
+import type { ImageTransform } from '../../common/utils/image-storage.util';
 import { wantsJson } from '../../common/utils/wants-json.util';
-import sharp from 'sharp';
 import mongoose from 'mongoose';
+
+/** Product photography is square and webp, both on disk and in Cloudinary. */
+const PRODUCT_IMAGE: ImageTransform = { width: 800, height: 800, format: 'webp' };
 
 
 // Render product detail page
@@ -210,10 +214,8 @@ const apiSubmitNewProduct = async (req: Request, res: Response) => {
 
     const saveBase64Image = async (base64: any, index: number) => {
       const buffer = Buffer.from(base64.split(',')[1], 'base64');
-      const filename = `${Date.now()}-${index}.webp`;
-      const outputPath = `public/uploads/products/${filename}`;
-      await sharp(buffer).resize(800, 800).webp().toFile(outputPath);
-      return `/uploads/products/${filename}`;
+      const { url } = await storeImage(buffer, 'products', PRODUCT_IMAGE, String(index));
+      return url;
     };
 
     const savedUrls = await Promise.all(base64Images.map(saveBase64Image));
@@ -496,10 +498,8 @@ const apiUpdateProduct = async (req: Request, res: Response) => {
 
     const saveBase64Image = async (base64: any, index: number) => {
       const buffer = Buffer.from(base64.split(',')[1], 'base64');
-      const filename = `${Date.now()}-${index}.webp`;
-      const outputPath = `public/uploads/products/${filename}`;
-      await sharp(buffer).resize(800, 800).webp().toFile(outputPath);
-      return `/uploads/products/${filename}`;
+      const { url } = await storeImage(buffer, 'products', PRODUCT_IMAGE, String(index));
+      return url;
     };
 
     const savedUrls = await Promise.all(base64Images.map(saveBase64Image));
@@ -558,7 +558,7 @@ const apiUpdateProduct = async (req: Request, res: Response) => {
     const imagesToDelete = getImagesToDelete(oldImages, newImages);
 
     if (imagesToDelete.length > 0) {
-      const cleanupResult = await deleteFiles(imagesToDelete);
+      await removeImages(imagesToDelete);
     }
 
     res.status(200).json({ success: true, message: 'Product Edited Successfully!' });

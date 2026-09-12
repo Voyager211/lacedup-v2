@@ -2,10 +2,25 @@ import type { Request, Response } from 'express';
 import Review from './review.model';
 import Product from '../catalog/product.model';
 import multer from 'multer';
-import sharp from 'sharp';
-import path from 'path';
-import fs from 'fs';
+import { storeImages } from '../../common/utils/image-storage.util';
+import type { ImageTransform } from '../../common/utils/image-storage.util';
 import { isAuthenticated } from '../../common/middlewares/auth.middleware';
+
+/**
+ * Customer review photos.
+ *
+ * Fitted inside the box rather than cropped to it: these are snapshots of a
+ * shoe as it arrived, and cropping one to a square is as likely to cut off the
+ * thing being reviewed as to frame it.
+ */
+const REVIEW_IMAGE: ImageTransform = {
+  width: 800,
+  height: 600,
+  fit: 'inside',
+  withoutEnlargement: true,
+  format: 'webp',
+  quality: 85
+};
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -104,33 +119,12 @@ const submitReview = async (req: Request, res: Response) => {
       });
     }
 
-    // Process and save images locally if any
+    // Stored wherever image-storage is pointed - disk locally, Cloudinary in production
     let imageUrls: any[] = [];
     if (images.length > 0) {
       try {
-        // Ensure reviews upload directory exists
-        const reviewsDir = path.join('public', 'uploads', 'reviews');
-        if (!fs.existsSync(reviewsDir)) {
-          fs.mkdirSync(reviewsDir, { recursive: true });
-        }
-
-        const processImagePromises = images.map(async (image: any, index: number) => {
-          const filename = `${Date.now()}-${index}-${Math.random().toString(36).substring(7)}.webp`;
-          const outputPath = path.join(reviewsDir, filename);
-
-          // Process image with Sharp
-          await sharp(image.buffer)
-            .resize(800, 600, {
-              fit: 'inside',
-              withoutEnlargement: true
-            })
-            .webp({ quality: 85 })
-            .toFile(outputPath);
-
-          return `/uploads/reviews/${filename}`;
-        });
-
-        imageUrls = await Promise.all(processImagePromises);
+        const stored = await storeImages(images, 'reviews', REVIEW_IMAGE);
+        imageUrls = stored.map((image) => image.url);
       } catch (uploadError: any) {
         console.error('Image processing error:', uploadError);
         return res.status(500).json({

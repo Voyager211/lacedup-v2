@@ -64,6 +64,15 @@ services:
       - key: SESSION_SECRET
         generateValue: true
 
+      # Image storage. Not optional here, whatever the local default is: this
+      # filesystem does not survive a restart, so without Cloudinary every
+      # image an admin uploads outlives only the instance that took it, and the
+      # database is left pointing at URLs that 404.
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: lacedup
+
       # Optional integrations. Each stays dormant while unset: Google sign-in
       # disappears, payments fall back to the other methods, and email drops to
       # printing the OTP into Render's log rather than sending it.

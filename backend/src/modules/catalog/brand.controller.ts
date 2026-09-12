@@ -2,9 +2,11 @@ import type { Request, Response } from 'express';
 import Brand from './brand.model';
 import { getPagination } from '../../common/utils/pagination.util';
 import { validateBase64Image } from '../../common/utils/image-validation.util';
-import sharp from 'sharp';
-import path from 'path';
-import { promises as fs } from 'fs';
+import { removeImage, storeImage } from '../../common/utils/image-storage.util';
+import type { ImageTransform } from '../../common/utils/image-storage.util';
+
+/** Brand artwork is square and webp, as it was when it was written to disk. */
+const BRAND_IMAGE: ImageTransform = { width: 800, height: 800, format: 'webp', quality: 90 };
 
 
 // Fetch-based brand listing
@@ -104,20 +106,8 @@ const apiCreateBrand = async (req: Request, res: Response) => {
 
       // Save and process image
       const buffer = Buffer.from(base64Image.split(',')[1], 'base64');
-      const filename = `brand-${Date.now()}.webp`;
-      const uploadsDir = path.join('public', 'uploads', 'brands');
-      
-      // Ensure directory exists
-      await fs.mkdir(uploadsDir, { recursive: true });
-      
-      const outputPath = path.join(uploadsDir, filename);
-      
-      await sharp(buffer)
-        .resize(800, 800, { fit: 'cover', position: 'center' })
-        .webp({ quality: 90 })
-        .toFile(outputPath);
-      
-      imageUrl = `/uploads/brands/${filename}`;
+      const stored = await storeImage(buffer, 'brands', BRAND_IMAGE, 'brand');
+      imageUrl = stored.url;
     }
 
     await Brand.create({
@@ -187,31 +177,15 @@ const apiUpdateBrand = async (req: Request, res: Response) => {
         });
       }
 
-      // Delete old image if exists
+      // The image being replaced, wherever it was stored
       if (brand.image) {
-        const oldImagePath = path.join('public', brand.image);
-        try {
-          await fs.unlink(oldImagePath);
-        } catch (err: any) {
-          console.log('Old image not found or already deleted:', err.message);
-        }
+        await removeImage(brand.image);
       }
 
       // Save new image
       const buffer = Buffer.from(base64Image.split(',')[1], 'base64');
-      const filename = `brand-${Date.now()}.webp`;
-      const uploadsDir = path.join('public', 'uploads', 'brands');
-      
-      await fs.mkdir(uploadsDir, { recursive: true });
-      
-      const outputPath = path.join(uploadsDir, filename);
-      
-      await sharp(buffer)
-        .resize(800, 800, { fit: 'cover', position: 'center' })
-        .webp({ quality: 90 })
-        .toFile(outputPath);
-      
-      imageUrl = `/uploads/brands/${filename}`;
+      const stored = await storeImage(buffer, 'brands', BRAND_IMAGE, 'brand');
+      imageUrl = stored.url;
     }
 
     await Brand.findByIdAndUpdate(brandId, {
