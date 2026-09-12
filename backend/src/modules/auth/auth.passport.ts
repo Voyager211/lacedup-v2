@@ -57,8 +57,15 @@ export = function configurePassport(passport: PassportStatic): void {
          * this to the public origin sends them back through Vercel instead, so
          * the cookie is set where it is needed. The value must also be listed
          * verbatim as an authorised redirect URI in the Google console.
+         *
+         * `||` rather than `??`, because the thing this guards against is not
+         * an unset variable but an empty one. A host that asks for every value
+         * up front - Render's blueprint form does - creates the key with an
+         * empty string when it is left blank, which `??` treats as a real
+         * value and hands to passport as `callbackURL: ''`. That is not the
+         * relative default; it is no redirect_uri at all.
          */
-        callbackURL: process.env.GOOGLE_CALLBACK_URL ?? '/google/callback'
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || '/google/callback'
       },
       async (_accessToken, _refreshToken, profile, done) => {
         try {
