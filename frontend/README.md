@@ -10,10 +10,11 @@ React is the only UI. Express serves the built app and answers JSON at `/api`.
 
 ```bash
 # once
+cd backend  && npm install
 cd frontend && npm install
 
 # two terminals
-npm run dev            # from the repo root — backend on :3000
+cd backend  && npm run dev   # API on :3000
 cd frontend && npm run dev   # SPA on :5173
 ```
 
@@ -437,7 +438,7 @@ axios.create({ baseURL: '/api', withCredentials: true })
   statuses on every item update. `Partially Delivered` and `Partially Returned` are roll-ups —
   no item ever holds those values.
 - **Uploads are served from `/uploads/...`** and their URLs are stored in the database.
-  `public/` stays at the repo root; do not move it into the bundle.
+  `backend/public/` is data, not source - it stays beside the backend source tree, not in the bundle.
 - **Rate limits** apply to auth (10/15min), OTP (5/15min), password reset (5/hour), coupon
   apply (10/15min), payments (30/15min) and a 500/15min `/api` backstop. Surface 429s
   meaningfully rather than as generic errors.
