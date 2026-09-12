@@ -16,11 +16,23 @@
  * duplicate. Files missing from disk are reported and left alone rather than
  * blanking a field that at least documents what used to be there.
  */
+/**
+ * First, and deliberately.
+ *
+ * ES imports are hoisted and evaluated in source order before any of the code
+ * below runs, and the Cloudinary SDK reads CLOUDINARY_URL as it initialises.
+ * Loaded any later than this, the SDK has already decided it has no
+ * credentials, and `cloudinary.config({ secure: true })` does not send it back
+ * to the environment to look again - every upload then fails with "Must supply
+ * api_key" despite the variable being set. The backend avoids this by importing
+ * config/env before anything else; the same rule applies here.
+ */
+import 'dotenv/config';
+
 import path from 'node:path';
 import fs from 'node:fs';
 import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
-import 'dotenv/config';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const ROOT_FOLDER = process.env.CLOUDINARY_FOLDER || 'lacedup';

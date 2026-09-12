@@ -16,7 +16,14 @@ export default defineConfig({
     // Set before any module is imported, so the rate limiters register in skip
     // mode and the suite is not throttled by its own repeated requests. The
     // auth suite previously deferred requiring the app to achieve this.
-    env: { NODE_ENV: 'test' },
+    //
+    // CLOUDINARY_URL is blanked for the same reason it is set at all: image
+    // storage picks its backend from it, and a developer with real credentials
+    // in .env would otherwise have the suite uploading to a live account. The
+    // value is already in process.env by the time dotenv runs, and dotenv does
+    // not overwrite what is there, so this wins. Nothing here relies on
+    // Cloudinary - the disk backend is what these tests assert.
+    env: { NODE_ENV: 'test', CLOUDINARY_URL: '' },
 
     // NOTE: this previously loaded tsx/cjs via a setup file, so that .js source
     // files could require() their already-converted .ts neighbours. The backend

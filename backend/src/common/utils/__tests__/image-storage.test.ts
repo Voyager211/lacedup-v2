@@ -11,6 +11,10 @@ import { publicIdFromUrl, removeImage, storeImage, storeImages } from '../image-
  * test that mocks the SDK end to end would mostly assert that the mock was
  * called. What is worth pinning is the contract both backends share, and the
  * URL round trip the Cloudinary path depends on.
+ *
+ * vitest.config.mjs blanks CLOUDINARY_URL for the whole suite, so these run
+ * against the disk backend even on a machine whose .env holds real
+ * credentials. Without that, this file would upload to a live account.
  */
 
 const CLOUDINARY_HOST = 'https://res.cloudinary.com/demo/image/upload';
