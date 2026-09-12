@@ -257,11 +257,16 @@ relative `/api` and stays that way.
 
 ### After the first deploy
 
-1. **Check the proxy depth.** `GET /healthz` through the Vercel domain echoes the IP the
-   server resolved. It must be yours. If it is a datacentre address, `TRUST_PROXY` is wrong
-   for the number of hops and every visitor is sharing one rate-limit bucket — the 500/15min
-   `/api` backstop will then throttle the whole site at once. It is 2 for Vercel in front of
-   Render; drop it to 1 if you ever point a browser straight at the API.
+1. **Leave `TRUST_PROXY` at 2, and know why it is not higher.** `GET /healthz` through the
+   Vercel domain returns `req.ip` and the raw forwarded chain, which arrives as
+   `<client>, <vercel edge>, <cloudflare>, <render lb>`. Only the three right-hand entries are
+   written by infrastructure: Vercel forwards a caller's own `X-Forwarded-For` and appends its
+   edge to the right of it, so the leftmost entry is whatever the caller typed. Counting left
+   far enough to reach the real visitor — 4 — reads a value the caller controls, and every
+   limiter becomes opt-out: one header per request buys unlimited OTP sends and unlimited
+   login attempts. At 2, `req.ip` is a Cloudflare address: coarse, since people behind one
+   edge share a bucket, but unforgeable. Accurate per-visitor limits need a header the edge
+   sets and the caller cannot, not a larger number here.
 2. **Finish Google sign-in.** Set `GOOGLE_CALLBACK_URL` on Render to
    `https://<your-vercel-domain>/google/callback` — the public origin, not the Render one, or
    consent returns the browser to the API host and sets the login cookie on a domain the app

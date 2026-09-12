@@ -67,14 +67,24 @@ const app = express();
  * req.secure - that check belongs to express-session, which this app dropped
  * with the EJS layer.
  *
- * The count is how many X-Forwarded-For entries to skip, counted from the right.
- * It is a property of the deployment, not of the code, and it is not guessable:
- * Render's own edge contributes hops nobody documents, so the first deploy at 2
- * still resolved every caller to a Cloudflare address. Read it off the chain
- * instead - GET /healthz returns both `ip` and the raw `forwardedFor`, and the
- * right value is the position of the real client address counted from the
- * right-hand end. It lives in an env var so that correcting it, or moving hosts,
- * is a restart rather than a commit.
+ * The count is how many X-Forwarded-For entries to skip, counted from the right,
+ * and it has a ceiling that matters more than accuracy. The chain arriving here
+ * through Vercel is
+ *
+ *     <client>, <vercel edge>, <cloudflare>, <render lb>
+ *
+ * and only the three right-hand entries are written by infrastructure. Vercel
+ * passes a caller's own X-Forwarded-For through and appends its edge to the
+ * right of it, so the leftmost entry is whatever the caller typed. Counting far
+ * enough left to reach the real visitor - 4, here - therefore reads an
+ * attacker-controlled value, and every limiter below becomes opt-out: a header
+ * per request would buy unlimited OTP sends and unlimited login attempts.
+ *
+ * So this stops at the last infrastructure hop rather than at the visitor.
+ * req.ip is a Cloudflare address, which is coarse - people behind one edge
+ * share a bucket - but cannot be forged, verified by replaying /healthz with
+ * spoofed chains of several lengths. Accurate per-visitor limits need a header
+ * the edge sets and the caller cannot, not a bigger number here.
  */
 const TRUST_PROXY_HOPS = Number(process.env.TRUST_PROXY) || 0;
 app.set('trust proxy', TRUST_PROXY_HOPS);
