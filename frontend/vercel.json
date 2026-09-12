@@ -12,6 +12,7 @@
     { "source": "/docs.json", "destination": "https://lacedup-api.onrender.com/docs.json" },
     { "source": "/docs/:path*", "destination": "https://lacedup-api.onrender.com/docs/:path*" },
     { "source": "/docs", "destination": "https://lacedup-api.onrender.com/docs" },
+    { "source": "/healthz", "destination": "https://lacedup-api.onrender.com/healthz" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
