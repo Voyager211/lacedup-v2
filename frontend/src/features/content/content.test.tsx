@@ -71,6 +71,54 @@ describe('AboutPage', () => {
 
     expect(router.state.location.pathname).toBe('/shop');
   });
+
+  /**
+   * The banner is artwork behind the page title, not content in its own right,
+   * so it is named by the heading rather than by an alt text that would make a
+   * screen reader announce the page twice.
+   */
+  it('shows the banner artwork without repeating the heading to a screen reader', () => {
+    renderPage(<AboutPage />);
+
+    const banner = document.querySelector('header img');
+
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveAttribute('alt', '');
+    // Delivered through Cloudinary's transform pipeline rather than as the
+    // 7.8MB original.
+    expect(banner).toHaveAttribute('src', expect.stringContaining('f_auto,q_auto'));
+    expect(banner).toHaveAttribute('srcset', expect.stringContaining('w_640'));
+  });
+
+  describe('its FAQ', () => {
+    it('answers a question when opened', async () => {
+      renderPage(<AboutPage />);
+
+      const question = screen.getByRole('button', { name: /how do you know the sneakers are authentic/i });
+      expect(question).toHaveAttribute('aria-expanded', 'false');
+
+      await userEvent.click(question);
+
+      expect(question).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText(/authorised retailers and suppliers/i)).toBeInTheDocument();
+    });
+
+    /**
+     * The operational questions live on /help. Answering them here as well
+     * would leave two copies to disagree the first time a policy changes, so
+     * this page points at that one instead.
+     */
+    it('defers to help for shipping and returns rather than repeating them', async () => {
+      const router = renderPage(<AboutPage />);
+
+      expect(screen.queryByRole('button', { name: /shipping policy/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /return and exchange/i })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('link', { name: /help & support/i }));
+
+      expect(router.state.location.pathname).toBe('/help');
+    });
+  });
 });
 
 describe('HelpPage', () => {

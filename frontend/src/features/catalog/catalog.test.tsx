@@ -529,7 +529,10 @@ describe('LandingPage', () => {
 
     renderAt(<LandingPage />, '/', '/');
 
-    expect(screen.getByRole('link', { name: /shop the collection/i })).toBeInTheDocument();
+    // The hero sits outside the query boundary, which is the point of the
+    // test. It is artwork now rather than a headline and a button, so what
+    // proves it rendered is the region and its slides.
+    expect(screen.getByRole('region', { name: /featured/i })).toBeInTheDocument();
     expect(await screen.findByText(/didn't load/i)).toBeInTheDocument();
   });
 });

@@ -1,14 +1,13 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BsChevronDown, BsEnvelope, BsGeoAlt, BsClock } from 'react-icons/bs';
+import { BsEnvelope, BsGeoAlt, BsClock } from 'react-icons/bs';
 import { z } from 'zod';
 import Button from '@/components/Button';
 import { TextField, TextAreaField } from '@/components/form/TextField';
 import { useSubmitContactMutation } from './content.api';
 import { useToast } from '@/components/toast';
 import { errorMessage } from '@/api/client';
-import { cn } from '@/lib/cn';
+import Faq from '@/components/Faq';
 
 /**
  * Help and contact.
@@ -72,31 +71,6 @@ const contactSchema = z.object({
 });
 
 type ContactValues = z.infer<typeof contactSchema>;
-
-const Faq = ({ question, answer }: { question: string; answer: string }) => {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="border-b border-line last:border-b-0">
-      <h3>
-        <button
-          type="button"
-          onClick={() => setOpen((was) => !was)}
-          aria-expanded={open}
-          className="flex w-full items-center justify-between gap-4 px-1 py-4 text-left font-medium text-ink transition-colors hover:text-brand"
-        >
-          {question}
-          <BsChevronDown
-            className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')}
-            aria-hidden="true"
-          />
-        </button>
-      </h3>
-
-      {open && <p className="px-1 pb-4 text-sm leading-relaxed text-ink-muted">{answer}</p>}
-    </div>
-  );
-};
 
 const HelpPage = () => {
   const [submitContact, { isLoading }] = useSubmitContactMutation();

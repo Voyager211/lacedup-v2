@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { BsPatchCheck, BsStars, BsLightning, BsPeople } from 'react-icons/bs';
 import Button from '@/components/Button';
+import { FaqList, type FaqItem } from '@/components/Faq';
+import { cloudinarySrcSet, cloudinaryUrl } from '@/lib/cloudinary';
 
 /**
  * About.
@@ -49,12 +51,77 @@ const PROMISE = [
   }
 ];
 
+/**
+ * Questions about the shop itself.
+ *
+ * Deliberately not the ones on /help. That page answers what a shopper asks
+ * mid-order - shipping, returns, payment, tracking - and duplicating any of it
+ * here would leave two copies to disagree the first time a policy changes.
+ * These are the ones asked before trusting the place with an order at all, and
+ * the section ends by pointing at /help for the rest.
+ */
+const FAQS: readonly FaqItem[] = [
+  {
+    q: 'What makes LacedUp different from any other sneaker store?',
+    a: 'Scale is not the goal here. The catalogue is small on purpose and every pair in it was chosen by someone who wears sneakers rather than picked by a supplier feed, which means we can answer questions about how something actually fits and what it sits well with, instead of reprinting a spec sheet.'
+  },
+  {
+    q: 'How do you know the sneakers are authentic?',
+    a: 'Everything is bought from authorised retailers and suppliers we have an established relationship with, and every pair is checked in person against the retail release before it is listed - box, labelling, stitching and hardware. Nothing is sourced from open marketplaces or consignment, which is where the overwhelming majority of fakes enter the resale chain.'
+  },
+  {
+    q: 'Are these deadstock, or could they have been worn?',
+    a: 'All of it is brand new and unworn, in its original box with the tags and any extra laces the model shipped with. We do not deal in used, refurbished or "worn once" pairs, so the condition you see is the only condition we sell.'
+  },
+  {
+    q: 'Who decides what gets stocked?',
+    a: 'One person, which is the point. Every model is added because it is worth owning rather than because it is trending, so the collection stays coherent instead of turning into a catalogue of whatever moved that quarter. It is also why it grows slowly.'
+  },
+  {
+    q: 'Do you get limited releases and collaborations?',
+    a: 'Sometimes, in genuinely small numbers, and they go quickly. There is no raffle or queue - stock appears in the shop when it lands and is sold in the order people check out. Following the new arrivals is the most reliable way to catch one.'
+  },
+  {
+    q: 'Is LacedUp a real shop or a portfolio project?',
+    a: 'It is built and run by one developer who is also its buyer, which is unusual but not a disclaimer: the storefront, the admin panel and the payment handling are all production code rather than a demo, and orders placed through it are real orders.'
+  }
+];
+
+const BANNER = 'https://res.cloudinary.com/daqfxkc3u/image/upload/v1770038257/Untitled_design_cf3awo.png';
+
 const AboutPage = () => (
   <div>
-    <header className="bg-ink px-4 py-16 text-center text-white">
-      <p className="font-heading text-sm tracking-[0.2em] text-white/70">WHERE STYLE MEETS PASSION</p>
-      <h1 className="mt-3 font-heading text-4xl font-semibold">About LacedUp</h1>
-      <p className="mt-3 text-white/80">Elevating sneaker culture, one step at a time</p>
+    {/*
+      The banner was flat `bg-ink`; it is now the artwork with the same copy
+      over it. The image is the background rather than the content, so it is
+      positioned absolutely behind text that keeps its own padding - the header
+      is then as tall as the words need, at any width, instead of being pinned
+      to the image's 16:9 and letterboxing on a phone.
+
+      `alt=""` because the heading underneath already says what this is; naming
+      it again would only make a screen reader read the page title twice.
+    */}
+    <header className="relative isolate overflow-hidden bg-ink px-4 py-16 text-center text-white">
+      {/*
+        `auto:eco` rather than plain `auto`, which is worth 80KB here and costs
+        nothing visible: the scrim below sits over this at 65%, so detail the
+        encoder would spend bits preserving is not reachable anyway.
+      */}
+      <img
+        src={cloudinaryUrl(BANNER, { width: 1920, quality: 'auto:eco' })}
+        srcSet={cloudinarySrcSet(BANNER, { quality: 'auto:eco' })}
+        sizes="100vw"
+        alt=""
+        fetchPriority="high"
+        className="absolute inset-0 -z-10 size-full object-cover"
+      />
+
+      {/* Enough scrim to hold white text over the light areas of the artwork. */}
+      <div className="absolute inset-0 -z-10 bg-ink/65" />
+
+      <p className="font-heading text-sm tracking-[0.2em] text-white/80">WHERE STYLE MEETS PASSION</p>
+      <h1 className="mt-3 font-heading text-4xl font-semibold drop-shadow">About LacedUp</h1>
+      <p className="mt-3 text-white/90">Elevating sneaker culture, one step at a time</p>
     </header>
 
     <div className="mx-auto max-w-4xl space-y-14 px-4 py-12">
@@ -157,6 +224,22 @@ const AboutPage = () => (
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="font-heading text-2xl font-semibold text-ink">Common questions</h2>
+        <p className="mt-2 text-ink-muted">
+          The things people ask before their first order. For shipping, returns, payment and
+          tracking, see{' '}
+          <Link to="/help" className="font-medium text-brand hover:underline">
+            help &amp; support
+          </Link>
+          .
+        </p>
+
+        <div className="mt-6">
+          <FaqList items={FAQS} />
         </div>
       </section>
 

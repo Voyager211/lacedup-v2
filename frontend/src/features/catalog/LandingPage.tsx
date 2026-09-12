@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useGetHomeSectionsQuery } from './catalog.api';
 import ProductCard from './ProductCard';
 import CategoryCarousel from './CategoryCarousel';
+import HeroCarousel from './HeroCarousel';
 import BrandStrip from './BrandStrip';
 import Testimonials from '@/features/content/Testimonials';
 import CommunityJoin from '@/features/content/CommunityJoin';
@@ -55,24 +56,13 @@ const LandingPage = () => {
 
   return (
     <>
-      <section className="bg-ink text-white">
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center sm:px-6 sm:py-28">
-          <h1 className="font-display text-5xl leading-none tracking-wide sm:text-7xl">
-            WHERE STYLE MEETS
-            <br />
-            STREET CULTURE
-          </h1>
-          <p className="mx-auto mt-5 max-w-lg text-white/70">
-            Sneakers picked for the way you actually wear them.
-          </p>
-          <Link
-            to="/shop"
-            className="mt-8 inline-block rounded-md bg-brand px-8 py-3 font-medium text-white transition-colors hover:bg-brand-hover"
-          >
-            Shop the collection
-          </Link>
-        </div>
-      </section>
+      {/*
+        Artwork only. The wordmark, the tagline and the "Shop the collection"
+        button that used to sit here are gone at the owner's request - the shop
+        is still one click away in the nav above, which is the only route this
+        section used to offer that nothing else did.
+      */}
+      <HeroCarousel />
 
       <QueryBoundary
         isLoading={isLoading}
