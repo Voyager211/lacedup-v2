@@ -35,6 +35,22 @@ describe('cloudinaryUrl', () => {
     expect(cloudinaryUrl(BANNER, { width: 2560 })).toContain('c_limit');
   });
 
+  /**
+   * c_pad fits the whole image inside the ratio and fills the remainder, which
+   * is what stops a source shaped differently from its box losing an edge.
+   * c_limit would leave the shape alone and let CSS crop it instead.
+   */
+  it('pads to an aspect ratio when one is asked for, rather than limiting', () => {
+    const padded = cloudinaryUrl(BANNER, { width: 1920, aspectRatio: '16:9' });
+
+    expect(padded).toContain('c_pad,ar_16:9,b_black');
+    expect(padded).not.toContain('c_limit');
+  });
+
+  it('limits without changing shape when no ratio is given', () => {
+    expect(cloudinaryUrl(BANNER, { width: 1920 })).toContain('c_limit');
+  });
+
   it('passes through anything that is not a Cloudinary upload URL', () => {
     for (const url of ['/uploads/products/local.webp', 'https://example.com/a.png', '']) {
       expect(cloudinaryUrl(url, { width: 800 })).toBe(url);

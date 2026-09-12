@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { cloudinarySrcSet, cloudinaryUrl } from '@/lib/cloudinary';
@@ -13,23 +14,56 @@ import { cloudinarySrcSet, cloudinaryUrl } from '@/lib/cloudinary';
  * position. It also degrades honestly: with JavaScript slow to arrive the
  * first slide is already painted and the rest are one swipe away.
  *
- * Because the slides carry no text, they are decorative. `alt=""` is correct
- * for that - inventing descriptions for artwork would add noise to a screen
- * reader and say nothing the shopper can act on - and the controls are hidden
- * from assistive tech for the same reason. Nothing here is reachable only via
- * the carousel; the nav above it goes everywhere this does.
+ * The slides carry no visible copy, so the artwork itself is decorative and
+ * takes `alt=""` - inventing descriptions for it would add noise to a screen
+ * reader and say nothing a shopper can act on. The arrows and dots are hidden
+ * from assistive tech for the same reason: they move artwork around and lead
+ * nowhere on their own.
+ *
+ * A slide may still link somewhere, and one does. That link is named by
+ * `label` rather than by alt text, so it announces the product it opens while
+ * the hero stays free of visible copy. Nothing is reachable *only* from here -
+ * the same product is in the shop - so a keyboard user skipping the carousel
+ * loses no route.
  */
 
 interface Slide {
   url: string;
+  /** Where the slide goes when clicked. Omit for artwork that leads nowhere. */
+  href?: string;
+  /**
+   * The link's accessible name.
+   *
+   * Required whenever `href` is set: the artwork is decorative and carries
+   * `alt=""`, so without this the link has nothing to announce and a screen
+   * reader reads out the URL. It is not rendered, which keeps the hero free of
+   * visible copy.
+   */
+  label?: string;
 }
+
+/**
+ * One box shape for every slide, and every slide padded to match it.
+ *
+ * The two sources are different shapes - 1.79 and 1.49 - so a single box has
+ * to do something about the difference. Cropping to fill was the first attempt
+ * and it cut the bottom off the taller one, which is the whole shoe in the
+ * second slide. Padding to a common ratio instead means nothing is ever cut:
+ * the image arrives already 16:9, so `object-cover` has nothing left to crop.
+ *
+ * 16:9 because the first slide is 1.79 and therefore barely padded at all,
+ * while 21:9 would have letterboxed both of them heavily.
+ */
+const SLIDE_RATIO = '16:9';
 
 const SLIDES: readonly Slide[] = [
   {
     url: 'https://res.cloudinary.com/daqfxkc3u/image/upload/v1770014043/Gemini_Generated_Image_opandhopandhopan_bvewuv.jpg'
   },
   {
-    url: 'https://res.cloudinary.com/daqfxkc3u/image/upload/v1769780544/Classic_Court_Style._Modern_Comfort._1_xdk7tb.png'
+    url: 'https://res.cloudinary.com/daqfxkc3u/image/upload/v1769780544/Classic_Court_Style._Modern_Comfort._1_xdk7tb.png',
+    href: '/product/nike-court-vision-low-next-nature',
+    label: 'Nike Court Vision Low Next Nature'
   }
 ];
 
@@ -106,29 +140,36 @@ const HeroCarousel = () => {
           '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
         )}
       >
-        {SLIDES.map((slide, position) => (
-          <li key={slide.url} className="w-full shrink-0 snap-start">
-            {/*
-              A fixed box the artwork is cropped into, because the two sources
-              are different shapes - 16:9 and 3:2 - and letting each set its own
-              height would make the page jump as they advance. Taller in
-              proportion on a phone so the subject is not reduced to a strip.
-            */}
-            <div className="aspect-[4/3] w-full sm:aspect-[21/9]">
-              <img
-                src={cloudinaryUrl(slide.url, { width: 1920 })}
-                srcSet={cloudinarySrcSet(slide.url)}
-                sizes="100vw"
-                alt=""
-                // The first slide is the largest thing above the fold; the rest
-                // can wait until they are scrolled to.
-                loading={position === 0 ? 'eager' : 'lazy'}
-                fetchPriority={position === 0 ? 'high' : 'auto'}
-                className="size-full object-cover"
-              />
-            </div>
-          </li>
-        ))}
+        {SLIDES.map((slide, position) => {
+          const image = (
+            <img
+              src={cloudinaryUrl(slide.url, { width: 1920, aspectRatio: SLIDE_RATIO })}
+              srcSet={cloudinarySrcSet(slide.url, { aspectRatio: SLIDE_RATIO })}
+              sizes="100vw"
+              alt=""
+              // The first slide is the largest thing above the fold; the rest
+              // can wait until they are scrolled to.
+              loading={position === 0 ? 'eager' : 'lazy'}
+              fetchPriority={position === 0 ? 'high' : 'auto'}
+              className="size-full object-cover"
+            />
+          );
+
+          return (
+            <li key={slide.url} className="w-full shrink-0 snap-start">
+              {/* Matches what the images are padded to, so they fill it exactly. */}
+              <div className="aspect-[16/9] w-full">
+                {slide.href ? (
+                  <Link to={slide.href} aria-label={slide.label} className="block size-full">
+                    {image}
+                  </Link>
+                ) : (
+                  image
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       {SLIDES.length > 1 && (
