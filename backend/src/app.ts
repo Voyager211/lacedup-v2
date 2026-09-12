@@ -55,20 +55,29 @@ const app = express();
 /**
  * Hops of reverse proxy in front of this server.
  *
- * Nothing in production talks to Express directly: Render terminates TLS at its
- * own load balancer, and the browser reaches that through Vercel's edge, which
- * rewrites /api to here. Without this, `req.ip` is the nearest proxy rather
- * than the visitor - which would put every visitor in one rate-limit bucket and
- * let the 500/15min backstop throttle the whole site at once - and `req.secure`
- * is false, so the `secure` cookies below would never be set.
+ * Nothing in production talks to Express directly: Render fronts the service
+ * with Cloudflare and its own load balancer, and the browser reaches that
+ * through Vercel's edge, which rewrites /api to here. Without this, `req.ip` is
+ * the nearest proxy rather than the visitor, which puts unrelated visitors in
+ * the same rate-limit bucket - two people signing up from behind one Cloudflare
+ * edge would share the 5-per-15-minutes OTP allowance.
  *
- * The count is the number of proxies whose X-Forwarded-For entries to skip, so
- * it depends on the deployment rather than the code: 0 locally, 1 for Render on
- * its own, 2 with Vercel in front. It is an env var so that changing hosts does
- * not mean changing this file. Verify it after any change - GET /healthz echoes
- * the IP this resolves to, and it should be the visitor's, not a datacentre's.
+ * Rate limiting is the whole of what this affects. It does not gate the auth
+ * cookies: res.cookie writes `Secure` from the option alone and never consults
+ * req.secure - that check belongs to express-session, which this app dropped
+ * with the EJS layer.
+ *
+ * The count is how many X-Forwarded-For entries to skip, counted from the right.
+ * It is a property of the deployment, not of the code, and it is not guessable:
+ * Render's own edge contributes hops nobody documents, so the first deploy at 2
+ * still resolved every caller to a Cloudflare address. Read it off the chain
+ * instead - GET /healthz returns both `ip` and the raw `forwardedFor`, and the
+ * right value is the position of the real client address counted from the
+ * right-hand end. It lives in an env var so that correcting it, or moving hosts,
+ * is a restart rather than a commit.
  */
-app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 0));
+const TRUST_PROXY_HOPS = Number(process.env.TRUST_PROXY) || 0;
+app.set('trust proxy', TRUST_PROXY_HOPS);
 
 configurePassport(passport);
 
@@ -125,10 +134,22 @@ if (!IS_PRODUCTION) {
  *
  * `ip` is echoed to make the TRUST_PROXY setting checkable from outside: if it
  * comes back as a datacentre address rather than yours, the hop count is wrong
- * and the rate limiters are bucketing every visitor together.
+ * and the rate limiters are bucketing unrelated visitors together.
+ *
+ * `forwardedFor` is the raw header next to it, because `ip` alone only says
+ * that the number is wrong, not what it should be. With the chain visible,
+ * the right value is the position of your own address counted from the right,
+ * which is one reading rather than a series of redeploys. Each hop is a public
+ * address of a proxy that already announces itself in the response headers.
  */
 app.get('/healthz', (req: Request, res: Response) => {
-  res.json({ ok: true, ip: req.ip, uptime: Math.round(process.uptime()) });
+  res.json({
+    ok: true,
+    ip: req.ip,
+    forwardedFor: req.headers['x-forwarded-for'] ?? null,
+    trustProxy: TRUST_PROXY_HOPS,
+    uptime: Math.round(process.uptime())
+  });
 });
 
 // ---------------------------------------------------------------------------
