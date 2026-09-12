@@ -42,7 +42,23 @@ export = function configurePassport(passport: PassportStatic): void {
       {
         clientID: process.env.GOOGLE_CLIENT_ID ?? '',
         clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-        callbackURL: '/google/callback'
+
+        /**
+         * Where Google sends the browser back to.
+         *
+         * Relative in development, which passport resolves against the host of
+         * the request - correct when that host is the one the visitor is on.
+         *
+         * In a split deployment it is not. The visitor is on the Vercel domain,
+         * which rewrites /google here, so the request arrives carrying Render's
+         * host; resolving against it would land the browser on the API domain
+         * after consent, where the login cookie would be set on a domain the
+         * app is not served from and the redirect to /home would 404. Setting
+         * this to the public origin sends them back through Vercel instead, so
+         * the cookie is set where it is needed. The value must also be listed
+         * verbatim as an authorised redirect URI in the Google console.
+         */
+        callbackURL: process.env.GOOGLE_CALLBACK_URL ?? '/google/callback'
       },
       async (_accessToken, _refreshToken, profile, done) => {
         try {

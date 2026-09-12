@@ -1,0 +1,95 @@
+# Render Blueprint for the API.
+#
+# Only the backend is here - the frontend is on Vercel, which rewrites /api,
+# /uploads, /images and /google to this service so the browser sees one origin
+# and the SameSite=Lax auth cookies keep working. See the Deployment section of
+# README.md before changing either side.
+#
+# Render reads this from the repo root, which is why it is the one file here
+# that belongs to neither package.
+
+services:
+  - type: web
+    name: lacedup-api
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+
+    # Everything below runs inside backend/, which is its own npm package.
+    rootDir: backend
+    #
+    # `--include=dev` is not optional. NODE_ENV is production here, which is
+    # npm's signal to skip devDependencies - and typescript is one, so the
+    # build would fail on `tsc: not found`. The alternative, promoting the
+    # toolchain to dependencies, would ship a compiler to production to avoid
+    # typing a flag.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+
+    # The root path is the React shell in a single-origin deployment, and that
+    # build does not exist here - it would 404 and read as a failed deploy.
+    healthCheckPath: /healthz
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: NODE_VERSION
+        value: 22
+
+      # Proxy hops in front of Express: Render's load balancer, and Vercel's
+      # edge in front of that. Wrong here means req.ip is a datacentre address,
+      # which puts every visitor in one rate-limit bucket. GET /healthz echoes
+      # the resolved IP - check it after the first deploy.
+      - key: TRUST_PROXY
+        value: 2
+
+      # mongodb-memory-server is a devDependency the test suite uses, and
+      # --include=dev pulls it in. Its postinstall downloads a mongod binary,
+      # which the build host has no use for and which fails on a slow or
+      # locked-down network - this skips it.
+      - key: MONGOMS_DISABLE_POSTINSTALL
+        value: 1
+
+      # Secrets. `sync: false` means Render prompts for these once rather than
+      # reading them from this file - none of them belong in git.
+      - key: MONGODB_URI
+        sync: false
+
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # Optional integrations. Each stays dormant while unset: Google sign-in
+      # disappears, payments fall back to the other methods, and email drops to
+      # printing the OTP into Render's log rather than sending it.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # Must be the public Vercel origin, not this service's URL, and must
+      # match an authorised redirect URI in the Google console exactly.
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+
+      - key: GEOAPIFY_API_KEY
+        sync: false

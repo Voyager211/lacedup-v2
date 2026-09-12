@@ -48,7 +48,27 @@ import newsletterRoutes from './modules/content/newsletter.routes';
 
 import configurePassport from './modules/auth/auth.passport';
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 const app = express();
+
+/**
+ * Hops of reverse proxy in front of this server.
+ *
+ * Nothing in production talks to Express directly: Render terminates TLS at its
+ * own load balancer, and the browser reaches that through Vercel's edge, which
+ * rewrites /api to here. Without this, `req.ip` is the nearest proxy rather
+ * than the visitor - which would put every visitor in one rate-limit bucket and
+ * let the 500/15min backstop throttle the whole site at once - and `req.secure`
+ * is false, so the `secure` cookies below would never be set.
+ *
+ * The count is the number of proxies whose X-Forwarded-For entries to skip, so
+ * it depends on the deployment rather than the code: 0 locally, 1 for Render on
+ * its own, 2 with Vercel in front. It is an env var so that changing hosts does
+ * not mean changing this file. Verify it after any change - GET /healthz echoes
+ * the IP this resolves to, and it should be the visitor's, not a datacentre's.
+ */
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 0));
 
 configurePassport(passport);
 
@@ -74,12 +94,41 @@ app.use(checkUserBlocked);
 app.locals.geoapifyApiKey = process.env.GEOAPIFY_API_KEY;
 
 // Morgan
-app.use(morgan('dev'));
-morganBody(app, {
-  logRequestBody: true,
-  logResponseBody: true,
-  maxBodyLength: 1000,
-  prettify: true
+app.use(morgan(IS_PRODUCTION ? 'combined' : 'dev'));
+
+/**
+ * Request and response bodies in the log - development only.
+ *
+ * These are the bodies as posted, which on /api/auth/login and the reset routes
+ * means the plaintext password, and on the payment routes the provider
+ * signatures. That is a useful thing to see in a terminal you own and a
+ * liability in a hosting provider's log store, which is retained, searchable,
+ * and readable by anyone with dashboard access.
+ */
+if (!IS_PRODUCTION) {
+  morganBody(app, {
+    logRequestBody: true,
+    logResponseBody: true,
+    maxBodyLength: 1000,
+    prettify: true
+  });
+}
+
+/**
+ * Liveness probe.
+ *
+ * Render pings a path to decide whether a deploy succeeded, and the root is not
+ * a candidate here: this server answers it with the React shell, which in this
+ * deployment is Vercel's job and so is absent, leaving a 404 that reads as a
+ * failed deploy. Declared before the routers so no mount or rate limiter can
+ * shadow it.
+ *
+ * `ip` is echoed to make the TRUST_PROXY setting checkable from outside: if it
+ * comes back as a datacentre address rather than yours, the hop count is wrong
+ * and the rate limiters are bucketing every visitor together.
+ */
+app.get('/healthz', (req: Request, res: Response) => {
+  res.json({ ok: true, ip: req.ip, uptime: Math.round(process.uptime()) });
 });
 
 // ---------------------------------------------------------------------------

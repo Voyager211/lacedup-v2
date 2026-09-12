@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://lacedup-api.onrender.com/api/:path*" },
+    { "source": "/uploads/:path*", "destination": "https://lacedup-api.onrender.com/uploads/:path*" },
+    { "source": "/images/:path*", "destination": "https://lacedup-api.onrender.com/images/:path*" },
+    { "source": "/google/:path*", "destination": "https://lacedup-api.onrender.com/google/:path*" },
+    { "source": "/google", "destination": "https://lacedup-api.onrender.com/google" },
+    { "source": "/docs.json", "destination": "https://lacedup-api.onrender.com/docs.json" },
+    { "source": "/docs/:path*", "destination": "https://lacedup-api.onrender.com/docs/:path*" },
+    { "source": "/docs", "destination": "https://lacedup-api.onrender.com/docs" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
