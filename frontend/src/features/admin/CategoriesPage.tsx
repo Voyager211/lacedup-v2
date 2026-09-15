@@ -1,34 +1,16 @@
 import { useState } from 'react';
 import ResourceListPage, { StatusCell } from './ResourceListPage';
-import ResourceFormDialog, { type FieldDefinition } from './ResourceFormDialog';
-import type { AdminRecord, ResourceKey } from './admin.api';
+import ResourceFormDialog from './ResourceFormDialog';
+import { CATALOG, CatalogImage, type CatalogConfig } from './catalogConfig';
+import type { AdminRecord } from './admin.api';
 
 /**
  * Categories and brands.
  *
  * Two 1,800-line EJS pages that were structurally identical - same table, same
  * modals, same cropper, same twelve SweetAlert calls. One component, two
- * configurations.
- *
- * The `%` offer applies to every product in the category or brand, and the
- * largest applicable offer wins at checkout - which is why it belongs on this
- * form rather than only on products.
+ * configurations, which live in catalogConfig so the detail pages share them.
  */
-
-const OFFER_FIELD: FieldDefinition = {
-  name: 'categoryOffer',
-  label: 'Offer (%)',
-  type: 'number',
-  hint: 'Applied to every product in this category. The largest applicable offer wins.',
-  min: 0,
-  max: 100
-};
-
-const catalogFields = (offerName: string): FieldDefinition[] => [
-  { name: 'name', label: 'Name', required: true },
-  { name: 'description', label: 'Description', type: 'textarea' },
-  { ...OFFER_FIELD, name: offerName }
-];
 
 const STATUS_FILTER = {
   name: 'status',
@@ -40,19 +22,9 @@ const STATUS_FILTER = {
   ]
 };
 
-const CatalogPage = ({
-  resource,
-  title,
-  singular,
-  subtitle,
-  offerField
-}: {
-  resource: Extract<ResourceKey, 'categories' | 'brands'>;
-  title: string;
-  singular: string;
-  subtitle: string;
-  offerField: string;
-}) => {
+const CatalogPage = ({ config }: { config: CatalogConfig }) => {
+  const { resource, title, singular, subtitle, offerField, path, fields } = config;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminRecord | null>(null);
 
@@ -71,8 +43,17 @@ const CatalogPage = ({
         filters={[STATUS_FILTER]}
         onCreate={() => open(null)}
         onEdit={open}
+        rowHref={(record) => `${path}/${record._id}`}
         columns={[
-          { header: 'Name', cell: (record) => <span className="font-medium">{String(record.name ?? '')}</span> },
+          {
+            header: 'Name',
+            cell: (record) => (
+              <div className="flex items-center gap-3">
+                <CatalogImage src={record.image} width={80} className="size-10 rounded" />
+                <span className="font-medium">{String(record.name ?? '')}</span>
+              </div>
+            )
+          },
           {
             header: 'Offer',
             cell: (record) => {
@@ -90,28 +71,12 @@ const CatalogPage = ({
         resource={resource}
         record={editing}
         title={editing ? `Edit ${singular.toLowerCase()}` : `Add ${singular.toLowerCase()}`}
-        fields={catalogFields(offerField)}
+        fields={fields}
       />
     </>
   );
 };
 
-export const CategoriesPage = () => (
-  <CatalogPage
-    resource="categories"
-    title="Categories"
-    singular="Category"
-    subtitle="Organize and manage product categories"
-    offerField="categoryOffer"
-  />
-);
+export const CategoriesPage = () => <CatalogPage config={CATALOG.categories} />;
 
-export const BrandsPage = () => (
-  <CatalogPage
-    resource="brands"
-    title="Brands"
-    singular="Brand"
-    subtitle="Organize and manage product brands"
-    offerField="brandOffer"
-  />
-);
+export const BrandsPage = () => <CatalogPage config={CATALOG.brands} />;

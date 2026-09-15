@@ -16,7 +16,7 @@ import { useConfirm } from '@/components/confirm/useConfirm';
 import { useToast } from '@/components/toast';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { ACTION_ICONS, ROW_HOVER, RowAction, RowActions, RowNumber, RowNumberHeader } from '@/components/table';
+import { ACTION_ICONS, ROW_HOVER_STATIC, RowAction, RowActions, RowNumber, RowNumberHeader } from '@/components/table';
 
 /**
  * Users.
@@ -132,7 +132,7 @@ const AdminUsersPage = () => {
 
             <tbody className="divide-y divide-line">
               {users.map((user, index) => (
-                <tr key={user._id} className={ROW_HOVER}>
+                <tr key={user._id} className={ROW_HOVER_STATIC}>
                   <RowNumber index={index} page={data?.currentPage ?? 1} />
                   <td className="px-4 py-3 font-medium text-ink">{user.name}</td>
                   <td className="px-4 py-3 text-ink-muted">{user.email}</td>

@@ -20,11 +20,11 @@ import { useConfirm } from '@/components/confirm/useConfirm';
 import { useToast } from '@/components/toast';
 import {
   ACTION_ICONS,
-  ROW_HOVER,
   RowAction,
   RowActions,
   RowNumber,
-  RowNumberHeader
+  RowNumberHeader,
+  useRowLink
 } from '@/components/table';
 import { cn } from '@/lib/cn';
 
@@ -60,8 +60,11 @@ export interface ResourceListPageProps {
   onCreate: () => void;
   /** Omitted where editing happens on its own page. */
   onEdit?: (record: AdminRecord) => void;
-  /** Extra per-row actions, e.g. "View" on products. */
-  rowActions?: (record: AdminRecord) => ReactNode;
+  /**
+   * The detail page a row opens. Omitted where there is none - coupons, for
+   * now - and those rows drop the pointer rather than promise a click.
+   */
+  rowHref?: (record: AdminRecord) => string;
 }
 
 /** Categories and brands use isActive; products use isListed. */
@@ -78,11 +81,12 @@ const ResourceListPage = ({
   searchPlaceholder,
   onCreate,
   onEdit,
-  rowActions
+  rowHref
 }: ResourceListPageProps) => {
   const [params, setParams] = useSearchParams();
   const toast = useToast();
   const confirm = useConfirm();
+  const rowLink = useRowLink();
 
   const page = Number(params.get('page')) || 1;
   const q = params.get('q') ?? '';
@@ -206,7 +210,7 @@ const ResourceListPage = ({
                 const enabled = isEnabled(record);
 
                 return (
-                  <tr key={record._id} className={ROW_HOVER}>
+                  <tr key={record._id} {...rowLink(rowHref?.(record))}>
                     <RowNumber index={index} page={data?.currentPage ?? page} />
 
                     {columns.map((column) => (
@@ -217,8 +221,6 @@ const ResourceListPage = ({
 
                     <td className="px-4 py-3">
                       <RowActions>
-                        {rowActions?.(record)}
-
                         {onEdit && (
                           <RowAction
                             icon={ACTION_ICONS.edit}

@@ -75,6 +75,22 @@ const lazyDashboard = async () => ({
 const lazyAdminLayout = async () => ({
   Component: (await import('@/components/layout/AdminLayout')).default
 });
+
+/*
+ * The detail pages below are lazy, as the note above says admin pages should
+ * be. The admin pages imported at the top of this file predate following it.
+ */
+const lazyCategoryDetail = async () => ({
+  Component: (await import('@/features/admin/CatalogDetailPage')).CategoryDetailPage
+});
+
+const lazyBrandDetail = async () => ({
+  Component: (await import('@/features/admin/CatalogDetailPage')).BrandDetailPage
+});
+
+const lazyReturnDetails = async () => ({
+  Component: (await import('@/features/admin/AdminReturnDetailsPage')).default
+});
 export const router = createBrowserRouter([
   {
     errorElement: <RootError />,
@@ -153,11 +169,14 @@ export const router = createBrowserRouter([
               { path: 'products/:id', element: <AdminProductDetailPage /> },
               { path: 'products/:id/edit', element: <ProductFormPage /> },
               { path: 'categories', element: <CategoriesPage /> },
+              { path: 'categories/:id', lazy: lazyCategoryDetail },
               { path: 'brands', element: <BrandsPage /> },
+              { path: 'brands/:id', lazy: lazyBrandDetail },
               { path: 'coupons', element: <CouponsPage /> },
               { path: 'orders', element: <AdminOrdersPage /> },
               { path: 'orders/:orderId', element: <AdminOrderDetailsPage /> },
               { path: 'returns', element: <AdminReturnsPage /> },
+              { path: 'returns/:returnId', lazy: lazyReturnDetails },
               { path: 'users', element: <AdminUsersPage /> },
               { path: 'sales-report', element: <SalesReportPage /> }
             ]

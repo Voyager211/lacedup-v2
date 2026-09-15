@@ -21,6 +21,9 @@ import type { Product, Variant } from '@/types/catalog';
 
 export type ResourceKey = 'categories' | 'brands' | 'coupons' | 'products';
 
+/** The two with a detail page listing the products under them. */
+export type CatalogResource = Extract<ResourceKey, 'categories' | 'brands'>;
+
 interface ResourcePaths {
   list: string;
   one: (id: string) => string;
@@ -171,6 +174,26 @@ export interface AdminProductDetail {
   activeOffers: ActiveOffer[];
 }
 
+/** One product on a category or brand detail page. */
+export interface CatalogProductRow {
+  _id: string;
+  productName: string;
+  mainImage: string;
+  regularPrice: number;
+  /** The cheapest and dearest variant after offers - equal when all cost the same. */
+  minPrice: number;
+  maxPrice: number;
+  totalStock: number;
+  isListed: boolean;
+}
+
+export interface CatalogProductsPage {
+  products: CatalogProductRow[];
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+}
+
 const TAG: Record<ResourceKey, 'Category' | 'Brand' | 'Coupon' | 'Product'> = {
   categories: 'Category',
   brands: 'Brand',
@@ -209,7 +232,9 @@ export const adminApi = api.injectEndpoints({
           response.product ??
           response.data ??
           response) as AdminRecord;
-      }
+      },
+      // Editing or toggling invalidates this, so an open detail page follows.
+      providesTags: (_result, _error, { resource }) => [TAG[resource]]
     }),
 
     createAdminRecord: build.mutation<
@@ -274,6 +299,27 @@ export const adminApi = api.injectEndpoints({
       // writing it here produced /api/api/admin/products/:id and a 404.
       query: (id) => ({ url: `/admin/products/${id}` }),
       providesTags: ['Product']
+    }),
+
+    /**
+     * The products under a category or brand, ten a page, for its detail page.
+     *
+     * Priced by the server - `minPrice` and `maxPrice` are the cheapest and
+     * dearest variant after offers - for the same reason as the product
+     * detail: the offer on the page is one of four competing to set that price,
+     * and recalculating it here is how the two would come to disagree.
+     */
+    getCatalogProducts: build.query<
+      CatalogProductsPage,
+      { resource: CatalogResource; id: string; page: number }
+    >({
+      query: ({ resource, id, page }) => ({
+        url: `${RESOURCE_PATHS[resource].one(id)}/products`,
+        params: { page }
+      }),
+      // A product edit changes its row; an offer change on the category or
+      // brand changes every price on the page.
+      providesTags: (_result, _error, { resource }) => ['Product', TAG[resource]]
     })
   })
 });
@@ -282,6 +328,7 @@ export const {
   useGetAdminListQuery,
   useGetAdminRecordQuery,
   useGetAdminProductDetailQuery,
+  useGetCatalogProductsQuery,
   useCreateAdminRecordMutation,
   useUpdateAdminRecordMutation,
   useToggleAdminRecordMutation,

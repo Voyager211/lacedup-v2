@@ -8,6 +8,7 @@ import {
 import Modal from '@/components/Modal';
 import Button from '@/components/Button';
 import { SelectField, TextAreaField, TextField } from '@/components/form/TextField';
+import SingleImageField from '@/components/form/SingleImageField';
 import { useToast } from '@/components/toast';
 
 /**
@@ -25,7 +26,7 @@ import { useToast } from '@/components/toast';
 export interface FieldDefinition {
   name: string;
   label: string;
-  type?: 'text' | 'number' | 'textarea' | 'select' | 'date' | 'datetime-local' | 'checkbox';
+  type?: 'text' | 'number' | 'textarea' | 'select' | 'date' | 'datetime-local' | 'checkbox' | 'image';
   required?: boolean;
   hint?: string;
   options?: Array<{ value: string; label: string }>;
@@ -33,6 +34,12 @@ export interface FieldDefinition {
   max?: number;
   /** Half-width on wider screens. */
   half?: boolean;
+  /**
+   * For an image field, the body key a newly chosen image is sent under, as a
+   * data URL. The URL already stored is never sent back - the endpoints keep
+   * the current image unless a new one arrives.
+   */
+  uploadAs?: string;
 }
 
 export interface ResourceFormDialogProps {
@@ -104,12 +111,26 @@ const ResourceFormDialog = ({
       return;
     }
 
+    // An image field holds either the stored URL or a data URL for a new pick;
+    // only the second is anything the server needs to hear about.
+    const body = Object.fromEntries(
+      fields.flatMap((field): Array<[string, string | boolean]> => {
+        const value = values[field.name] ?? '';
+
+        if (field.type !== 'image') return [[field.name, value]];
+
+        return typeof value === 'string' && value.startsWith('data:')
+          ? [[field.uploadAs ?? field.name, value]]
+          : [];
+      })
+    );
+
     try {
       if (record?._id) {
-        await updateRecord({ resource, id: record._id, body: values }).unwrap();
+        await updateRecord({ resource, id: record._id, body }).unwrap();
         toast.success('Saved');
       } else {
-        await createRecord({ resource, body: values }).unwrap();
+        await createRecord({ resource, body }).unwrap();
         toast.success('Created');
       }
 
@@ -157,6 +178,20 @@ const ResourceFormDialog = ({
 
           const onChange = (next: string | boolean) =>
             setValues((current) => ({ ...current, [field.name]: next }));
+
+          if (field.type === 'image') {
+            return (
+              <SingleImageField
+                key={field.name}
+                label={field.label}
+                required={field.required}
+                hint={field.hint}
+                containerClassName={containerClassName}
+                value={String(value ?? '')}
+                onChange={onChange}
+              />
+            );
+          }
 
           if (field.type === 'checkbox') {
             return (

@@ -10,7 +10,7 @@ import { SkeletonTable } from '@/components/Skeleton';
 import { formatDate, formatINR } from '@/lib/format';
 import { ORDER_STATUS, PAYMENT_STATUS, type OrderStatus, type PaymentStatus } from '@/types/domain';
 import { cn } from '@/lib/cn';
-import { ROW_HOVER, RowNumber, RowNumberHeader } from '@/components/table';
+import { RowNumber, RowNumberHeader, useRowLink } from '@/components/table';
 
 /**
  * Admin orders.
@@ -23,6 +23,7 @@ import { ROW_HOVER, RowNumber, RowNumberHeader } from '@/components/table';
  */
 const AdminOrdersPage = () => {
   const [params, setParams] = useSearchParams();
+  const rowLink = useRowLink();
 
   const page = Number(params.get('page')) || 1;
   const search = params.get('search') ?? '';
@@ -115,7 +116,7 @@ const AdminOrdersPage = () => {
 
             <tbody className="divide-y divide-line">
               {rows.map((row, index) => (
-                <tr key={`${row._id}-${index}`} className={ROW_HOVER}>
+                <tr key={`${row._id}-${index}`} {...rowLink(`/admin/orders/${row.orderId}`)}>
                   <RowNumber index={index} page={data?.currentPage ?? 1} />
 
                   <td className="px-4 py-3">

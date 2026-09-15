@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
-import { Eye, Pencil, Trash2, ToggleLeft, ToggleRight, type LucideIcon } from 'lucide-react';
+import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Pencil, Trash2, ToggleLeft, ToggleRight, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 /**
@@ -30,13 +31,60 @@ const ROW_LIFT = cn(
 export const ROW_HOVER = cn(ROW_LIFT, 'cursor-pointer');
 
 /**
- * The same lift without the pointer, for a table that is purely a readout.
+ * The same lift without the pointer, for a row with nothing behind it to open.
  *
- * The sales report is the one of these that reports rather than navigates -
- * its rows are figures for an accountant, with nothing behind them to open. A
- * pointer there would promise a click that does nothing.
+ * The sales report is a readout - figures for an accountant - and users,
+ * coupons and a product's variants have no page of their own. A pointer on any
+ * of those would promise a click that does nothing.
  */
 export const ROW_HOVER_STATIC = ROW_LIFT;
+
+/** A click that lands on a control inside the row belongs to that control. */
+const INTERACTIVE = 'a, button, input, select, textarea, label';
+
+/**
+ * Makes a table row open its detail page.
+ *
+ * Returns a function from a destination to the props for a `<tr>`, so a list
+ * calls the hook once and spreads the result per row. Pass `undefined` for a
+ * row with nowhere to go and it gets the static hover, not a pointer that lies.
+ *
+ * Three clicks are left alone: one on a button or link inside the row, which
+ * has its own job; one that ends a text selection, since dragging across an
+ * order id to copy it is not a request to leave; and a Ctrl/Cmd-click, which
+ * opens a tab the way it would on a real link. The row also takes focus and
+ * opens on Enter, so the table is not mouse-only.
+ */
+export const useRowLink = () => {
+  const navigate = useNavigate();
+
+  return (to: string | undefined) => {
+    if (!to) return { className: ROW_HOVER_STATIC };
+
+    return {
+      className: cn(
+        ROW_HOVER,
+        'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand'
+      ),
+      tabIndex: 0,
+      onClick: (event: MouseEvent<HTMLTableRowElement>) => {
+        if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
+        if (window.getSelection()?.toString()) return;
+
+        if (event.metaKey || event.ctrlKey) {
+          window.open(to, '_blank', 'noopener');
+          return;
+        }
+
+        navigate(to);
+      },
+      onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {
+        // Only the row's own Enter - not one bubbling up from a button inside it.
+        if (event.key === 'Enter' && event.target === event.currentTarget) navigate(to);
+      }
+    };
+  };
+};
 
 /** Header cell for the row-number column. */
 export const RowNumberHeader = () => (
@@ -124,9 +172,13 @@ export const RowActions = ({ children }: { children: ReactNode }) => (
   <div className="flex items-center justify-end gap-0.5">{children}</div>
 );
 
-/** The four icons the actions column uses, so they stay consistent. */
+/**
+ * The icons the actions column uses, so they stay consistent.
+ *
+ * There is no "view": a row opens its detail page when clicked, so a button
+ * that did the same thing was only taking up room.
+ */
 export const ACTION_ICONS = {
-  view: Eye,
   edit: Pencil,
   delete: Trash2,
   enable: ToggleLeft,

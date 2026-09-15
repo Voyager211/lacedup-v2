@@ -18,7 +18,8 @@ const renderAt = (element: React.ReactNode, entry: string, path: string) => {
     [
       { path, element },
       { path: '/admin/orders', element: <p>admin orders list</p> },
-      { path: '/admin/orders/:orderId', element: <p>admin order details</p> }
+      { path: '/admin/orders/:orderId', element: <p>admin order details</p> },
+      { path: '/admin/returns/:returnId', element: <p>admin return details</p> }
     ],
     { initialEntries: [entry] }
   );
@@ -92,6 +93,18 @@ describe('AdminOrdersPage', () => {
       status: 'Delivered',
       paymentStatus: 'Completed',
       page: 2
+    });
+  });
+
+  it('opens the order when its row is clicked', async () => {
+    mock.onGet('/admin/orders/api/filtered').reply(200, orders);
+
+    const router = renderAt(<AdminOrdersPage />, '/admin/orders-x', '/admin/orders-x');
+
+    await userEvent.click(await screen.findByText('Alice Example'));
+
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/orders/ORD000123');
     });
   });
 });
@@ -244,6 +257,65 @@ describe('AdminReturnsPage', () => {
     expect(await screen.findByText('Decided')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /approve return/i })).not.toBeInTheDocument();
   });
+
+  it('opens the return by its readable id when its row is clicked', async () => {
+    mock.onGet('/admin/returns/api/filtered').reply(200, {
+      success: true,
+      data: {
+        returns: [
+          {
+            _id: 'r1',
+            returnId: 'RET000042',
+            orderId: 'ORD000123',
+            status: 'Pending',
+            reason: 'Size too small',
+            refundAmount: 1500,
+            requestDate: '2026-03-09T10:30:00Z'
+          }
+        ],
+        currentPage: 1,
+        totalPages: 1
+      }
+    });
+
+    const router = renderAt(<AdminReturnsPage />, '/admin/returns-x', '/admin/returns-x');
+
+    await userEvent.click(await screen.findByText('Size too small'));
+
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/returns/RET000042');
+    });
+  });
+
+  it('approving from a row does not also open the return', async () => {
+    mock.onGet('/admin/returns/api/filtered').reply(200, returns());
+
+    const router = renderAt(<AdminReturnsPage />, '/admin/returns-x', '/admin/returns-x');
+
+    await userEvent.click(await screen.findByRole('button', { name: /approve return/i }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/admin/returns-x');
+  });
+
+  it('sends the rejection reason as rejectionReason, which the server requires', async () => {
+    mock.onGet('/admin/returns/api/filtered').reply(200, returns());
+    mock.onPatch('/admin/returns/r1/reject').reply(200, { success: true });
+
+    renderAt(<AdminReturnsPage />, '/admin/returns-x', '/admin/returns-x');
+
+    await userEvent.click(await screen.findByRole('button', { name: /reject return/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.selectOptions(within(dialog).getByRole('combobox'), 'Item shows signs of wear');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
+
+    await vi.waitFor(() => expect(mock.history.patch).toHaveLength(1));
+
+    expect(JSON.parse(mock.history.patch[0]!.data)).toEqual({
+      rejectionReason: 'Item shows signs of wear'
+    });
+  });
 });
 
 describe('AdminUsersPage', () => {
@@ -284,5 +356,17 @@ describe('AdminUsersPage', () => {
     await vi.waitFor(() => {
       expect(mock.history.patch.some((r) => r.url === '/admin/users/u1/unblock')).toBe(true);
     });
+  });
+
+  it('leaves user rows where they are, since there is no user page to open', async () => {
+    mock.onGet('/admin/users/api').reply(200, users());
+
+    const router = renderAt(<AdminUsersPage />, '/admin/users-x', '/admin/users-x');
+
+    const name = await screen.findByText('Alice Example');
+    await userEvent.click(name);
+
+    expect(router.state.location.pathname).toBe('/admin/users-x');
+    expect(name.closest('tr')).not.toHaveClass('cursor-pointer');
   });
 });

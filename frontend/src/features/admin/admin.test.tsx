@@ -22,7 +22,8 @@ const renderAt = (element: React.ReactNode, entry = '/admin/x', path = '/admin/x
       { path: '/admin/dashboard', element: <p>admin dashboard</p> },
       { path: '/admin/products/add', element: <p>add product page</p> },
       { path: '/admin/products/:id', element: <p>product detail page</p> },
-      { path: '/admin/products/:id/edit', element: <p>edit product page</p> }
+      { path: '/admin/products/:id/edit', element: <p>edit product page</p> },
+      { path: '/admin/categories/:id', element: <p>category detail page</p> }
     ],
     { initialEntries: [entry] }
   );
@@ -255,6 +256,104 @@ describe('ResourceListPage (via CategoriesPage)', () => {
 
     expect(await screen.findByText(/already exists/i)).toBeInTheDocument();
   });
+
+  it('opens a category from its row', async () => {
+    mock.onGet('/admin/categories/api').reply(200, list());
+
+    const router = renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
+
+    await userEvent.click(await screen.findByText('Running'));
+
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/categories/c1');
+    });
+  });
+
+  it('shows each category image in the list', async () => {
+    mock.onGet('/admin/categories/api').reply(
+      200,
+      list({
+        categories: [
+          { _id: 'c1', name: 'Running', image: '/uploads/categories/running.webp', isActive: true }
+        ]
+      })
+    );
+
+    renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
+
+    await screen.findByText('Running');
+
+    expect(screen.getByRole('table').querySelector('img')).toHaveAttribute(
+      'src',
+      '/uploads/categories/running.webp'
+    );
+  });
+
+  it('sends a newly chosen image as base64Image, and never the stored URL', async () => {
+    mock.onGet('/admin/categories/api').reply(
+      200,
+      list({
+        categories: [
+          {
+            _id: 'c1',
+            name: 'Running',
+            image: '/uploads/categories/running.webp',
+            categoryOffer: 10,
+            isActive: true
+          }
+        ]
+      })
+    );
+    mock.onPut('/admin/categories/api/c1').reply(200, { success: true });
+
+    renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
+
+    await userEvent.click(await screen.findByRole('button', { name: /edit category/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    const file = new File(['not really a png'], 'running.png', { type: 'image/png' });
+
+    await userEvent.upload(within(dialog).getByLabelText('Image'), file);
+
+    // The preview swaps to the picked file before anything is saved.
+    await vi.waitFor(() => {
+      expect(dialog.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/png;base64,/);
+    });
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    await vi.waitFor(() => expect(mock.history.put).toHaveLength(1));
+
+    const body = JSON.parse(mock.history.put[0]!.data);
+    expect(body.base64Image).toMatch(/^data:image\/png;base64,/);
+    expect(body).not.toHaveProperty('image');
+    expect(body).toMatchObject({ name: 'Running', categoryOffer: '10' });
+  });
+
+  it('keeps the stored image when no new one is chosen', async () => {
+    mock.onGet('/admin/categories/api').reply(
+      200,
+      list({
+        categories: [
+          { _id: 'c1', name: 'Running', image: '/uploads/categories/running.webp', isActive: true }
+        ]
+      })
+    );
+    mock.onPut('/admin/categories/api/c1').reply(200, { success: true });
+
+    renderAt(<CategoriesPage />, '/admin/categories', '/admin/categories');
+
+    await userEvent.click(await screen.findByRole('button', { name: /edit category/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    await vi.waitFor(() => expect(mock.history.put).toHaveLength(1));
+
+    const body = JSON.parse(mock.history.put[0]!.data);
+    expect(body).not.toHaveProperty('base64Image');
+    expect(body).not.toHaveProperty('image');
+  });
 });
 
 describe('CouponsPage', () => {
@@ -376,6 +475,61 @@ describe('ProductsPage', () => {
     await vi.waitFor(() => {
       expect(router.state.location.pathname).toBe('/admin/products/add');
     });
+  });
+
+  it('opens a product from its row, with no separate View button', async () => {
+    mock.onGet('/admin/products/api').reply(200, products);
+
+    const router = renderAt(<ProductsPage />, '/admin/products', '/admin/products');
+
+    await userEvent.click(await screen.findByText('Air Max 90'));
+
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/products/p1');
+    });
+    expect(screen.queryByRole('button', { name: /view product/i })).not.toBeInTheDocument();
+  });
+
+  it('leaves a row action to do its own job rather than opening the product', async () => {
+    mock.onGet('/admin/products/api').reply(200, products);
+
+    const router = renderAt(<ProductsPage />, '/admin/products', '/admin/products');
+
+    await userEvent.click(await screen.findByRole('button', { name: /edit product/i }));
+
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/products/p1/edit');
+    });
+  });
+});
+
+describe('Rows with no detail page', () => {
+  it('leaves coupon rows where they are, without a pointer', async () => {
+    mock.onGet('/admin/coupons/api').reply(200, {
+      success: true,
+      data: {
+        coupons: [
+          {
+            _id: 'k1',
+            code: 'SAVE10',
+            name: 'Save ten',
+            discountType: 'percentage',
+            discountValue: 10,
+            validTo: '2026-12-31T00:00:00Z',
+            isActive: true
+          }
+        ],
+        pagination: { currentPage: 1, totalPages: 1 }
+      }
+    });
+
+    const router = renderAt(<CouponsPage />, '/admin/coupons', '/admin/coupons');
+
+    const code = await screen.findByText('SAVE10');
+    await userEvent.click(code);
+
+    expect(router.state.location.pathname).toBe('/admin/coupons');
+    expect(code.closest('tr')).not.toHaveClass('cursor-pointer');
   });
 });
 

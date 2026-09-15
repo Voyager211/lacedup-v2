@@ -1,10 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
-import {
-  useApproveReturnMutation,
-  useGetAdminReturnsQuery,
-  useRejectReturnMutation,
-  type AdminReturnRow
-} from './adminOps.api';
+import { useGetAdminReturnsQuery } from './adminOps.api';
+import { useReturnDecision } from './useReturnDecision';
 import Badge, { RETURN_STATUS_TONE } from '@/components/Badge';
 import EmptyState from '@/components/EmptyState';
 import FilterBar from '@/components/FilterBar';
@@ -12,13 +8,11 @@ import PageHeader from '@/components/PageHeader';
 import Pagination from '@/components/Pagination';
 import QueryBoundary from '@/components/QueryBoundary';
 import { SkeletonTable } from '@/components/Skeleton';
-import { useConfirm, usePrompt } from '@/components/confirm/useConfirm';
-import { useToast } from '@/components/toast';
 import { formatDate, formatINR } from '@/lib/format';
 import { RETURN_STATUS, type ReturnStatus } from '@/types/domain';
 import { cn } from '@/lib/cn';
 import { Check, X as XIcon } from 'lucide-react';
-import { ROW_HOVER, RowAction, RowActions, RowNumber, RowNumberHeader } from '@/components/table';
+import { RowAction, RowActions, RowNumber, RowNumberHeader, useRowLink } from '@/components/table';
 
 /**
  * Return requests.
@@ -26,23 +20,13 @@ import { ROW_HOVER, RowAction, RowActions, RowNumber, RowNumberHeader } from '@/
  * This was the one EJS page that used `filters-bar`, so it is the component's
  * second consumer here and the reason its contract was worth porting.
  *
- * Approving is consequential - it refunds to the shopper's wallet and returns
- * the stock - so it is confirmed, and rejecting asks for a reason the shopper
- * will see.
+ * A row opens the return's own page. The decision can be made from either,
+ * and `useReturnDecision` asks the same questions in both places.
  */
-const REJECTION_REASONS = [
-  'Item shows signs of wear',
-  'Returned outside the return window',
-  'Item does not match what was ordered',
-  'Packaging or tags missing',
-  'Other'
-];
-
 const AdminReturnsPage = () => {
   const [params, setParams] = useSearchParams();
-  const toast = useToast();
-  const confirm = useConfirm();
-  const prompt = usePrompt();
+  const rowLink = useRowLink();
+  const { approve, reject } = useReturnDecision();
 
   const page = Number(params.get('page')) || 1;
   const search = params.get('search') ?? '';
@@ -54,54 +38,12 @@ const AdminReturnsPage = () => {
     status
   });
 
-  const [approveReturn] = useApproveReturnMutation();
-  const [rejectReturn] = useRejectReturnMutation();
-
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
     if (key !== 'page') next.delete('page');
     setParams(next);
-  };
-
-  const onApprove = async (row: AdminReturnRow) => {
-    const amount = Number(row.refundAmount ?? row.totalPrice ?? 0);
-
-    const ok = await confirm({
-      title: 'Approve this return?',
-      message: `${formatINR(amount)} goes back to the shopper's wallet and the stock is returned.`,
-      confirmLabel: 'Approve'
-    });
-
-    if (!ok) return;
-
-    try {
-      await approveReturn({ returnId: row._id }).unwrap();
-      toast.success('Return approved');
-    } catch (caught) {
-      toast.fromError(caught, 'Could not approve that return.');
-    }
-  };
-
-  const onReject = async (row: AdminReturnRow) => {
-    const reason = await prompt({
-      title: 'Reject this return?',
-      message: 'The shopper is told why, so choose the closest reason.',
-      options: REJECTION_REASONS,
-      confirmLabel: 'Reject',
-      tone: 'danger',
-      requiredMessage: 'Choose a reason — the shopper sees it.'
-    });
-
-    if (!reason) return;
-
-    try {
-      await rejectReturn({ returnId: row._id, reason }).unwrap();
-      toast.success('Return rejected');
-    } catch (caught) {
-      toast.fromError(caught, 'Could not reject that return.');
-    }
   };
 
   const returns = data?.returns ?? [];
@@ -158,7 +100,7 @@ const AdminReturnsPage = () => {
                 const pending = row.status === RETURN_STATUS.PENDING;
 
                 return (
-                  <tr key={row._id} className={ROW_HOVER}>
+                  <tr key={row._id} {...rowLink(`/admin/returns/${row.returnId ?? row._id}`)}>
                     <RowNumber index={index} page={data?.currentPage ?? 1} />
                     <td className="px-4 py-3 font-mono text-ink">
                       {String(row.orderId ?? row.returnId ?? '—')}
@@ -186,12 +128,12 @@ const AdminReturnsPage = () => {
                           <RowAction
                             icon={Check}
                             label="Approve return"
-                            onClick={() => onApprove(row)}
+                            onClick={() => approve(row)}
                           />
                           <RowAction
                             icon={XIcon}
                             label="Reject return"
-                            onClick={() => onReject(row)}
+                            onClick={() => reject(row)}
                             tone="danger"
                           />
                         </RowActions>

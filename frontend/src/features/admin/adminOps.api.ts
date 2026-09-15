@@ -64,6 +64,37 @@ export interface AdminReturnRow {
   [key: string]: unknown;
 }
 
+/** One return request, as the detail page reads it. */
+export interface AdminReturnDetails {
+  return: AdminReturnRow & {
+    returnId: string;
+    productName: string;
+    productImage?: string;
+    sku?: string;
+    size?: string;
+    quantity?: number;
+    price?: number;
+    refundMethod?: string;
+    refundStatus?: string;
+    rejectionReason?: string;
+    adminNotes?: string;
+    approvedAt?: string;
+    rejectedAt?: string;
+    /** Populated. Null when the account has since gone. */
+    userId?: { _id: string; name?: string; email?: string; phone?: string } | null;
+    productId?: { _id: string; productName?: string; mainImage?: string } | null;
+    statusHistory?: Array<{ _id?: string; status: string; updatedAt?: string; notes?: string }>;
+  };
+  /** A summary of the order, or null when the order no longer exists. */
+  order: {
+    orderId: string;
+    status: string;
+    paymentMethod?: string;
+    paymentStatus?: string;
+    createdAt?: string;
+  } | null;
+}
+
 export interface AdminUserRow {
   _id: string;
   name: string;
@@ -173,6 +204,16 @@ export const adminOpsApi = api.injectEndpoints({
       providesTags: ['Return']
     }),
 
+    /**
+     * One return request. Takes the readable RET id the list links with; the
+     * server also accepts the _id, which is what approve and reject want.
+     */
+    getAdminReturn: build.query<AdminReturnDetails, string>({
+      query: (returnId) => ({ url: `/admin/returns/api/${returnId}` }),
+      transformResponse: (response: { data: AdminReturnDetails }) => response.data,
+      providesTags: ['Return']
+    }),
+
     approveReturn: build.mutation<MutationResult, { returnId: string; notes?: string }>({
       query: ({ returnId, ...body }) => ({
         url: `/admin/returns/${returnId}/approve`,
@@ -183,7 +224,12 @@ export const adminOpsApi = api.injectEndpoints({
       invalidatesTags: ['Return', 'Order', 'Wallet', 'Product']
     }),
 
-    rejectReturn: build.mutation<MutationResult, { returnId: string; reason?: string }>({
+    /**
+     * `rejectionReason`, not `reason`: that is the key the controller reads,
+     * and it refuses the request without one. This used to send `reason`, so
+     * every rejection from the panel came back a 400.
+     */
+    rejectReturn: build.mutation<MutationResult, { returnId: string; rejectionReason: string }>({
       query: ({ returnId, ...body }) => ({
         url: `/admin/returns/${returnId}/reject`,
         method: 'PATCH',
@@ -230,6 +276,7 @@ export const {
   useUpdateOrderStatusMutation,
   useUpdateItemStatusMutation,
   useGetAdminReturnsQuery,
+  useGetAdminReturnQuery,
   useApproveReturnMutation,
   useRejectReturnMutation,
   useGetAdminUsersQuery,
