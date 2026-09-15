@@ -1,4 +1,8 @@
+import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import { assertSafeSeedTarget } from '../seed/guard';
+import { runSeed } from '../seed/runner';
+import { seeders } from '../seed/seeders';
 
 /**
  * API server for the Playwright suite.
@@ -24,6 +28,11 @@ const start = async (): Promise<void> => {
   process.env.CLOUDINARY_URL = '';
   process.env.MOCK_EMAIL = 'true';
   process.env.JWT_SECRET ||= 'e2e-jwt-secret';
+
+  // Seeded before the server listens, so the first spec already sees real data.
+  assertSafeSeedTarget(process.env.MONGODB_URI);
+  await mongoose.connect(process.env.MONGODB_URI);
+  await runSeed(seeders, { log: () => {} });
 
   const stop = async (): Promise<void> => {
     await mongod.stop();
