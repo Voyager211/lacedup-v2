@@ -73,6 +73,10 @@ cd frontend && npm run dev        # SPA on :5173, proxies the API
 npm test                          # in either package
 npm run typecheck                 # in either package
 npm run test:coverage             # in either package
+cd frontend && npm run e2e           # Playwright; boots its own API + in-memory DB
+cd backend  && npm run db:local      # local MongoDB on :27017, data in backend/.data
+cd backend  && npm run seed          # insert missing seed data (local DBs only)
+cd backend  && npm run seed:reset    # wipe seeded collections, then seed
 ```
 
 ---
@@ -86,7 +90,7 @@ Check off tasks as they're done, in the same commit. Add new tasks and newly fou
 - [x] Install Playwright, add `playwright.config.ts` and an `e2e/` folder, and wire up the `e2e` script
 - [x] Playwright setup that starts the backend and frontend against a dedicated test database
 - [ ] First e2e smoke test: landing → shop → product page loads with real data
-- [ ] Add `@faker-js/faker` and a seed runner (`npm run seed`, `npm run seed:reset`) with a guard against the production database
+- [x] Add `@faker-js/faker` and a seed runner (`npm run seed`, `npm run seed:reset`) with a guard against the production database
 - [ ] Seed the existing modules: users + admin, categories, brands, products + variants, addresses, carts, wishlists, coupons, orders, returns, reviews, wallets + transactions, referrals
 - [ ] Update the Swagger security scheme from the old `user.sid` session cookie to the JWT cookies
 - [ ] Audit Swagger coverage: list undocumented endpoints and document them

@@ -6,6 +6,9 @@
     "migrate:images": "node scripts/migrate-images-to-cloudinary.mjs",
     "dev": "tsx watch src/server.ts",
     "e2e:server": "tsx src/dev/e2e-server.ts",
+    "db:local": "tsx src/dev/local-db.ts",
+    "seed": "tsx src/seed/index.ts",
+    "seed:reset": "tsx src/seed/index.ts --reset",
     "start": "node dist/server.js",
     "build": "tsc && node scripts/copy-assets.mjs",
     "typecheck": "tsc --noEmit",
@@ -55,6 +58,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.9.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/ejs": "^3.1.5",
