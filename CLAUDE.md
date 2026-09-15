@@ -84,7 +84,7 @@ Check off tasks as they're done, in the same commit. Add new tasks and newly fou
 ### Phase 0 — Tooling the ground rules need
 
 - [x] Install Playwright, add `playwright.config.ts` and an `e2e/` folder, and wire up the `e2e` script
-- [ ] Playwright setup that starts the backend and frontend against a dedicated test database
+- [x] Playwright setup that starts the backend and frontend against a dedicated test database
 - [ ] First e2e smoke test: landing → shop → product page loads with real data
 - [ ] Add `@faker-js/faker` and a seed runner (`npm run seed`, `npm run seed:reset`) with a guard against the production database
 - [ ] Seed the existing modules: users + admin, categories, brands, products + variants, addresses, carts, wishlists, coupons, orders, returns, reviews, wallets + transactions, referrals

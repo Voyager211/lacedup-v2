@@ -13,8 +13,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  * uploads live behind is proxied there so the browser sees one origin - which
  * matters because auth is carried in httpOnly cookies, and a cross-origin
  * setup would need CORS plus SameSite=None on every one of them.
+ *
+ * API_PROXY_TARGET overrides it; the Playwright stack points it at the e2e API.
  */
-const BACKEND = 'http://localhost:3000';
+const BACKEND = process.env.API_PROXY_TARGET || 'http://localhost:3000';
 
 /**
  * `/google` is here because OAuth is a full browser navigation, not a fetch -

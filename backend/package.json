@@ -5,6 +5,7 @@
   "scripts": {
     "migrate:images": "node scripts/migrate-images-to-cloudinary.mjs",
     "dev": "tsx watch src/server.ts",
+    "e2e:server": "tsx src/dev/e2e-server.ts",
     "start": "node dist/server.js",
     "build": "tsc && node scripts/copy-assets.mjs",
     "typecheck": "tsc --noEmit",
