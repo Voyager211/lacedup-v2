@@ -191,4 +191,4 @@ Add new entries here as `- [ ] area: description`. Move one into a phase if it b
 ## Open decisions
 
 - [ ] `/coupons` page for users: build it or drop the route?
-- [ ] Legal pages (privacy, terms, cookies) and real social links for the footer
+- [x] Legal pages (privacy, terms, cookies) and footer social links: keep as they are, placeholders only, out of scope
