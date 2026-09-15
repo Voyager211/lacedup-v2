@@ -109,6 +109,16 @@ Business rules the API must enforce, so a future mobile app gets them without ex
 - [ ] Update the Swagger docs for any checkout endpoints that changed
 - [ ] Merge `develop` into `main` once the user approves
 
+### Phase 1b — Available coupons at checkout
+
+No standalone `/coupons` page. Checkout lists the coupons that apply to the cart, using the existing `GET /coupons/available`.
+
+- [ ] coupons: guard `/coupons/available` with the JWT auth middleware, replacing the unused `requireAuth` that relies on the old session check + integration tests
+- [ ] checkout: list available coupons in the summary with one-tap apply + component tests
+- [ ] checkout: Playwright e2e for applying a coupon from the list
+- [ ] Seed coupons that exercise the list (public, min order value, per-user limit, expired)
+- [ ] frontend: remove the stale `/coupons` comment in [router.tsx](frontend/src/app/router.tsx#L52)
+
 ### Phase 2 — MongoDB → Postgres + Prisma
 
 The API's requests and responses must not change. The existing test suite is the safety net.
@@ -190,5 +200,5 @@ Add new entries here as `- [ ] area: description`. Move one into a phase if it b
 
 ## Open decisions
 
-- [ ] `/coupons` page for users: build it or drop the route?
+- [x] `/coupons` page for users: dropped; available coupons are listed at checkout instead (Phase 1b)
 - [x] Legal pages (privacy, terms, cookies) and footer social links: keep as they are, placeholders only, out of scope
