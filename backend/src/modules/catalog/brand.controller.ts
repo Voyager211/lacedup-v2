@@ -4,6 +4,8 @@ import { getPagination } from '../../common/utils/pagination.util';
 import { validateBase64Image } from '../../common/utils/image-validation.util';
 import { removeImage, storeImage } from '../../common/utils/image-storage.util';
 import type { ImageTransform } from '../../common/utils/image-storage.util';
+import { isObjectId } from '../../common/utils/object-id.util';
+import { listCatalogProducts } from './catalog-products.service';
 
 /** Brand artwork is square and webp, as it was when it was written to disk. */
 const BRAND_IMAGE: ImageTransform = { width: 800, height: 800, format: 'webp', quality: 90 };
@@ -55,6 +57,10 @@ const apiBrands = async (req: Request, res: Response) => {
 // Get single brand
 const apiGetBrand = async (req: Request, res: Response) => {
   try {
+    if (!isObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Brand not found' });
+    }
+
     const brand = await Brand.findById(req.params.id);
     if (!brand || brand.isDeleted) {
       return res.status(404).json({ success: false, message: 'Brand not found' });
@@ -63,6 +69,29 @@ const apiGetBrand = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Error fetching brand:', err);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
+// Products under one brand, priced, for the brand detail page
+const apiBrandProducts = async (req: Request, res: Response) => {
+  try {
+    const brandId = req.params.id;
+
+    if (!isObjectId(brandId)) {
+      return res.status(404).json({ success: false, message: 'Brand not found' });
+    }
+
+    const brand = await Brand.findById(brandId);
+    if (!brand || brand.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Brand not found' });
+    }
+
+    const page = Math.max(1, parseInt(String(req.query.page)) || 1);
+
+    res.json({ success: true, ...(await listCatalogProducts('brand', brandId, page)) });
+  } catch (err: any) {
+    console.error('Error fetching brand products:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch brand products' });
   }
 };
 
@@ -251,6 +280,7 @@ const apiSoftDeleteBrand = async (req: Request, res: Response) => {
 export {
   apiBrands,
   apiGetBrand,
+  apiBrandProducts,
   apiCreateBrand,
   apiUpdateBrand,
   apiToggleStatus,

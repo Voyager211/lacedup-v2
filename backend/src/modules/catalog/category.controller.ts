@@ -4,6 +4,8 @@ import { getPagination } from '../../common/utils/pagination.util';
 import { validateBase64Image } from '../../common/utils/image-validation.util';
 import { removeImage, storeImage } from '../../common/utils/image-storage.util';
 import type { ImageTransform } from '../../common/utils/image-storage.util';
+import { isObjectId } from '../../common/utils/object-id.util';
+import { listCatalogProducts } from './catalog-products.service';
 
 /** Category artwork is square and webp, as it was when it was written to disk. */
 const CATEGORY_IMAGE: ImageTransform = { width: 800, height: 800, format: 'webp', quality: 90 };
@@ -53,6 +55,10 @@ const apiCategories = async (req: Request, res: Response) => {
 // Get single category
 const apiGetCategory = async (req: Request, res: Response) => {
   try {
+    if (!isObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
     const category = await Category.findById(req.params.id);
     if (!category || category.isDeleted) {
       return res.status(404).json({ success: false, message: 'Category not found' });
@@ -63,6 +69,29 @@ const apiGetCategory = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 }; 
+
+// Products in one category, priced, for the category detail page
+const apiCategoryProducts = async (req: Request, res: Response) => {
+  try {
+    const categoryId = req.params.id;
+
+    if (!isObjectId(categoryId)) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
+    const category = await Category.findById(categoryId);
+    if (!category || category.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
+    const page = Math.max(1, parseInt(String(req.query.page)) || 1);
+
+    res.json({ success: true, ...(await listCatalogProducts('category', categoryId, page)) });
+  } catch (err: any) {
+    console.error('Error fetching category products:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch category products' });
+  }
+};
 
 // Add category via fetch with image upload
 const apiCreateCategory = async (req: Request, res: Response) => {
@@ -249,6 +278,7 @@ const apiSoftDeleteCategory = async (req: Request, res: Response) => {
 export {
   apiCategories,
   apiGetCategory,
+  apiCategoryProducts,
   apiCreateCategory,
   apiUpdateCategory,
   apiToggleStatus,

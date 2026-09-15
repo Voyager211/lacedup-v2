@@ -87,6 +87,31 @@ router.get('/api/:id', categoryController.apiGetCategory);
 
 /**
  * @swagger
+ * /admin/categories/api/{id}/products:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List a category's products, priced
+ *     description: >
+ *       Ten per page, deleted products left out. Each product carries its lowest
+ *       and highest variant price after offers, since the category offer is one
+ *       of the four that compete to set it.
+ *     security: [{ sessionCookie: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *     responses:
+ *       200: { description: A page of the category's products }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ */
+router.get('/api/:id/products', categoryController.apiCategoryProducts);
+
+/**
+ * @swagger
  * /admin/categories/api/create:
  *   post:
  *     tags: [Admin]

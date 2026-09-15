@@ -5,6 +5,7 @@ import User from '../users/user.model';
 import Product from '../catalog/product.model';
 import Wallet from '../wallet/wallet.model';
 import * as orderService from '../orders/order.service';
+import { isObjectId } from '../../common/utils/object-id.util';
 import {
   ORDER_STATUS,
   RETURN_STATUS,
@@ -145,6 +146,38 @@ const getReturnsAPI = async (req: Request, res: Response) => {
   }
 };
 
+
+// One return request, for the admin return detail page
+const getReturnDetailsAPI = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.returnId);
+
+    // The page links with the readable RET id, while approve and reject take
+    // the _id. Answering to both saves either caller a translation.
+    const returnRequest = await Return.findOne(isObjectId(id) ? { _id: id } : { returnId: id })
+      .populate({ path: 'userId', select: 'name email phone' })
+      .populate({ path: 'productId', select: 'productName mainImage' })
+      .lean();
+
+    if (!returnRequest) {
+      return res.status(404).json({ success: false, message: 'Return request not found' });
+    }
+
+    // Enough of the order to link to it and say how it was paid. Null when the
+    // order has since gone, which should not take the return's page with it.
+    const order = await Order.findOne({ orderId: returnRequest.orderId })
+      .select('orderId status paymentMethod paymentStatus createdAt')
+      .lean();
+
+    res.json({ success: true, data: { return: returnRequest, order } });
+  } catch (error: any) {
+    console.error('Error fetching return details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching return details'
+    });
+  }
+};
 
 // Approve return request
 const approveReturn = async (req: Request, res: Response) => {
@@ -451,6 +484,7 @@ const exportReturns = async (req: Request, res: Response) => {
 
 export {
   getReturnsAPI,
+  getReturnDetailsAPI,
   approveReturn,
   approveOrderReturn,
   rejectReturn,

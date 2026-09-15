@@ -74,6 +74,29 @@ router.get('/export', returnController.exportReturns);
  */
 router.get('/api/filtered', returnController.getReturnsAPI);
 
+/**
+ * @swagger
+ * /admin/returns/api/{returnId}:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Fetch one return request
+ *     description: >
+ *       Accepts either the readable id (RET000042) or the document _id. Declared
+ *       after /api/filtered so that path is never read as an id. Carries a
+ *       summary of the order, or null when the order no longer exists.
+ *     security: [{ sessionCookie: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: returnId
+ *         required: true
+ *         schema: { type: string }
+ *         example: RET000042
+ *     responses:
+ *       200: { description: The return request, with its customer, product and order }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ */
+router.get('/api/:returnId', returnController.getReturnDetailsAPI);
+
 
 /**
  * @swagger
