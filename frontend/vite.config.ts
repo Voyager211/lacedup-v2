@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
+import { configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
@@ -86,6 +87,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Playwright owns e2e/; its *.spec.ts files would match Vitest's default glob.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     css: false,
     coverage: {
       provider: 'v8',

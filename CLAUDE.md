@@ -40,7 +40,7 @@ The goal is to catch bugs before they reach production.
 |---|---|---|
 | Backend unit + integration | Vitest + supertest + in-memory DB | `backend/src/**/__tests__/*.test.ts` |
 | Frontend unit + component | Vitest + Testing Library + MSW | `frontend/src/**/*.test.tsx` |
-| End-to-end | Playwright | `e2e/` (set up in Phase 0) |
+| End-to-end | Playwright | `frontend/e2e/` (`npm run e2e` in frontend/) |
 
 - Write tests for every feature, fix and endpoint. For a bug fix, **write a failing test that reproduces it first**, then fix it.
 - Run the affected suite after each section, and run the full backend + frontend suites before every push.
@@ -83,7 +83,7 @@ Check off tasks as they're done, in the same commit. Add new tasks and newly fou
 
 ### Phase 0 — Tooling the ground rules need
 
-- [ ] Install Playwright, add `playwright.config.ts` and an `e2e/` folder, and wire up the `e2e` script
+- [x] Install Playwright, add `playwright.config.ts` and an `e2e/` folder, and wire up the `e2e` script
 - [ ] Playwright setup that starts the backend and frontend against a dedicated test database
 - [ ] First e2e smoke test: landing → shop → product page loads with real data
 - [ ] Add `@faker-js/faker` and a seed runner (`npm run seed`, `npm run seed:reset`) with a guard against the production database
