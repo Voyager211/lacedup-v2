@@ -47,7 +47,7 @@ router.post('/api/profile/edit', requireAuth, profileController.updateProfileDat
  *     tags: [Profile]
  *     summary: Start an email change
  *     description: Sends an OTP to the current address; the change only applies once it is verified.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -70,7 +70,7 @@ router.post('/api/profile/email', requireAuth, profileController.updateEmail);
  *   post:
  *     tags: [Profile]
  *     summary: Verify the email-change OTP
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -93,7 +93,7 @@ router.post('/api/profile/verify-email-update-otp', requireAuth, profileControll
  *   post:
  *     tags: [Profile]
  *     summary: Resend the email-change OTP
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: OTP resent }
  *       401: { $ref: '#/components/responses/Unauthorized' }
@@ -116,7 +116,7 @@ router.get('/orders', requireAuth, orderController.getUserOrders);
  *     tags: [Profile]
  *     summary: Upload a profile photo
  *     description: Accepts one image up to 5 MB; it is resized before being stored.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -141,7 +141,7 @@ router.get('/orders', requireAuth, orderController.getUserOrders);
  *   delete:
  *     tags: [Profile]
  *     summary: Remove the profile photo
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Photo removed, content: { application/json: { schema: { $ref: '#/components/schemas/Success' } } } }
  *       401: { $ref: '#/components/responses/Unauthorized' }

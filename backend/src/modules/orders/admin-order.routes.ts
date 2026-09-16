@@ -14,7 +14,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: List orders
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: status
@@ -53,7 +53,7 @@ router.get('/api/filtered', orderController.getFilteredOrders);
  *   get:
  *     tags: [Admin]
  *     summary: System-wide order statistics
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200: { description: Aggregate order counts and revenue }
  */
@@ -65,7 +65,7 @@ router.get('/api/statistics', orderController.getSystemStatistics);
  *   get:
  *     tags: [Admin]
  *     summary: Order details as JSON
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -83,7 +83,7 @@ router.get('/api/:orderId', orderController.getOrderDetailsJSON);
  *   get:
  *     tags: [Admin]
  *     summary: Order details page
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -99,7 +99,7 @@ router.get('/api/:orderId', orderController.getOrderDetailsJSON);
  *       Passing `action=cancel` or `action=return` delegates to the cancel and
  *       return handlers. Otherwise the status transition is validated before
  *       being applied, and cascades to every item.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -131,7 +131,7 @@ router.patch('/:orderId', orderController.updateOrderStatus);
  *     description: >
  *       Note that Partially Delivered and Partially Returned currently have no
  *       outgoing transitions defined, so they return an empty list.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -156,7 +156,7 @@ router.get('/:orderId/transitions', orderController.getAllowedTransitions);
  *     tags: [Admin]
  *     summary: Cancel an entire order
  *     description: Prepaid orders are refunded to the customer's wallet.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -174,7 +174,7 @@ router.patch('/:orderId/cancel', orderController.cancelOrder);
  *   patch:
  *     tags: [Admin]
  *     summary: Raise a return for an entire order
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -192,7 +192,7 @@ router.patch('/:orderId/return', orderController.returnOrderRequest);
  *     tags: [Admin]
  *     summary: Update one item's status
  *     description: The order status is recalculated from all item statuses afterwards.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -224,7 +224,7 @@ router.patch('/:orderId/items/:itemId/status', orderController.updateItemStatus)
  *   patch:
  *     tags: [Admin]
  *     summary: Cancel one item
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -245,7 +245,7 @@ router.patch('/:orderId/items/:itemId/cancel', orderController.cancelItem);
  *   patch:
  *     tags: [Admin]
  *     summary: Raise a return for one item
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -271,7 +271,7 @@ router.patch('/:orderId/items/:itemId/return', orderController.returnItemRequest
  *       follow the order to Cancelled. Note the doubled `orders/` segment - the
  *       route is declared with a leading `orders/` inside a router already
  *       mounted at /admin/orders.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -291,7 +291,7 @@ router.patch('/orders/:orderId/fix-payment-status', orderController.fixCancelled
  *     description: >
  *       Shadowed by GET /admin/orders/{orderId}, which is declared earlier and
  *       matches `statistics` as an order id.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200: { description: Order statistics }
  */
@@ -306,7 +306,7 @@ router.get('/statistics', orderController.getOrderStatistics);
  *     description: >
  *       Shadowed by GET /admin/orders/{orderId} for the same reason as
  *       /statistics above.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200:
  *         description: Exported orders

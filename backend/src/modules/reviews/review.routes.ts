@@ -12,7 +12,7 @@ const router = express.Router();
  *     description: >
  *       Accepts up to five images alongside the review. One review per user per
  *       product is enforced by a unique index.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:

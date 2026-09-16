@@ -49,7 +49,7 @@ const requireAuthAPI = (req: Request, res: Response, next: NextFunction) => {
  *     description: >
  *       Renders the cart with every item revalidated against current stock,
  *       listing status and category/brand availability.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Cart page markup, content: { text/html: { schema: { type: string } } } }
  *       302: { description: Redirected to /login when not signed in }
@@ -63,7 +63,7 @@ router.get('/', requireAuth, cartController.loadCart);
  *   post:
  *     tags: [Cart]
  *     summary: Add an item to the cart
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -88,7 +88,7 @@ router.post('/add', requireAuthAPI, cartController.addToCart);
  *   post:
  *     tags: [Cart]
  *     summary: Change the quantity of a cart item
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -113,7 +113,7 @@ router.post('/update', requireAuthAPI, cartController.updateCartQuantity);
  *   post:
  *     tags: [Cart]
  *     summary: Remove an item from the cart
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -136,7 +136,7 @@ router.post('/remove', requireAuthAPI, cartController.removeFromCart);
  *   post:
  *     tags: [Cart]
  *     summary: Empty the cart
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Cart cleared, content: { application/json: { schema: { $ref: '#/components/schemas/Success' } } } }
  *       401: { $ref: '#/components/responses/Unauthorized' }
@@ -149,7 +149,7 @@ router.post('/clear', requireAuthAPI, cartController.clearCart);
  *   post:
  *     tags: [Cart]
  *     summary: Drop every out-of-stock item from the cart
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: Removed items, with the count
@@ -170,7 +170,7 @@ router.post('/remove-out-of-stock', requireAuthAPI, cartController.removeOutOfSt
  *   post:
  *     tags: [Cart]
  *     summary: Move a cart item to the wishlist
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -215,7 +215,7 @@ router.get('/count', cartController.getCartCount);
  *     tags: [Cart]
  *     summary: Revalidate every cart item against current stock
  *     description: Called before checkout to surface items that are no longer purchasable.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: Validation result
@@ -243,7 +243,7 @@ router.get('/validate-stock', requireAuthAPI, cartController.validateCartStock);
  *   post:
  *     tags: [Cart]
  *     summary: Clamp a cart item's quantity to the available stock
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:

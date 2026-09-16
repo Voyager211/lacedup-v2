@@ -13,7 +13,7 @@ const router = express.Router();
  *     description: >
  *       The user's referral code, shareable signup link, referral history and
  *       total rewards earned.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: Referrals page markup
@@ -35,7 +35,7 @@ router.get('/', isAuthenticated, referralController.getReferralsPage);
  *       existed - it was simply never mounted, so page 2 of the referrals list
  *       has never worked for anyone. Mounted here alongside the earnings
  *       paginator.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: page
@@ -63,7 +63,7 @@ router.get(
  *     tags: [Referrals]
  *     summary: A page of referral earnings
  *     description: The earnings counterpart of the paginator above, and equally unmounted until now.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: page

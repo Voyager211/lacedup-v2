@@ -23,7 +23,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
  *   get:
  *     tags: [Addresses]
  *     summary: List the user's addresses
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: All addresses for the user
@@ -45,7 +45,7 @@ router.get('/api/addresses', requireAuth, addressController.getAddresses);
  *   get:
  *     tags: [Addresses]
  *     summary: List addresses, paginated
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: page
@@ -73,7 +73,7 @@ router.get('/api/addresses/paginated', requireAuth, addressController.getAddress
  *   get:
  *     tags: [Addresses]
  *     summary: Fetch a single address
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: addressId
@@ -86,7 +86,7 @@ router.get('/api/addresses/paginated', requireAuth, addressController.getAddress
  *   put:
  *     tags: [Addresses]
  *     summary: Update an address
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: addressId
@@ -105,7 +105,7 @@ router.get('/api/addresses/paginated', requireAuth, addressController.getAddress
  *   delete:
  *     tags: [Addresses]
  *     summary: Delete an address
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: addressId
@@ -124,7 +124,7 @@ router.get('/api/address/:addressId', requireAuth, addressController.getAddress)
  *   post:
  *     tags: [Addresses]
  *     summary: Add an address
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -158,7 +158,7 @@ router.delete('/api/address/:addressId', requireAuth, addressController.deleteAd
  *   patch:
  *     tags: [Addresses]
  *     summary: Make an address the default
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: addressId

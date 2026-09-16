@@ -13,7 +13,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: Return statistics
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200:
  *         description: Counts by status and refund totals
@@ -35,7 +35,7 @@ router.get('/statistics', returnController.getReturnStatistics);
  *   get:
  *     tags: [Admin]
  *     summary: Export returns
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: startDate
@@ -58,7 +58,7 @@ router.get('/export', returnController.exportReturns);
  *   get:
  *     tags: [Admin]
  *     summary: List return requests
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: status
@@ -84,7 +84,7 @@ router.get('/api/filtered', returnController.getReturnsAPI);
  *       Accepts either the readable id (RET000042) or the document _id. Declared
  *       after /api/filtered so that path is never read as an id. Carries a
  *       summary of the order, or null when the order no longer exists.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: returnId
@@ -107,7 +107,7 @@ router.get('/api/:returnId', returnController.getReturnDetailsAPI);
  *     description: >
  *       Restores the product stock and credits the refund to the customer's
  *       wallet. An optional custom refund amount overrides the item total.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: returnId
@@ -134,7 +134,7 @@ router.patch('/:returnId/approve', returnController.approveReturn);
  *   patch:
  *     tags: [Admin]
  *     summary: Reject a return request
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: returnId
@@ -159,7 +159,7 @@ router.patch('/:returnId/reject', returnController.rejectReturn);
  *   patch:
  *     tags: [Admin]
  *     summary: Approve every return request on an order
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -177,7 +177,7 @@ router.patch('/orders/:orderId/approve', returnController.approveOrderReturn);
  *   patch:
  *     tags: [Admin]
  *     summary: Reject every return request on an order
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId

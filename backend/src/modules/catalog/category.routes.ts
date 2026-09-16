@@ -14,7 +14,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: List categories
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: q
@@ -36,7 +36,7 @@ router.get('/api', categoryController.apiCategories);
  *   get:
  *     tags: [Admin]
  *     summary: Fetch one category
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -52,7 +52,7 @@ router.get('/api', categoryController.apiCategories);
  *       Changing categoryOffer recalculates prices for every product in the
  *       category, since the largest of the category, brand, product and variant
  *       offers wins.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -74,7 +74,7 @@ router.get('/api', categoryController.apiCategories);
  *   delete:
  *     tags: [Admin]
  *     summary: Soft-delete a category
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -95,7 +95,7 @@ router.get('/api/:id', categoryController.apiGetCategory);
  *       Ten per page, deleted products left out. Each product carries its lowest
  *       and highest variant price after offers, since the category offer is one
  *       of the four that compete to set it.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -116,7 +116,7 @@ router.get('/api/:id/products', categoryController.apiCategoryProducts);
  *   post:
  *     tags: [Admin]
  *     summary: Create a category
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -146,7 +146,7 @@ router.put('/api/:id', categoryController.apiUpdateCategory);
  *     description: >
  *       Deactivating hides every product in the category from the storefront and
  *       makes their product pages return 404.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id

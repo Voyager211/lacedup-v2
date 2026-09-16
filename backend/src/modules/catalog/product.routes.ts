@@ -15,7 +15,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: List products
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: q
@@ -58,7 +58,7 @@ router.get('/api', productController.apiProducts);
  *       Base and variant SKUs are generated automatically from the brand code
  *       and product name. Every variant's basePrice must be below the product's
  *       regularPrice, which is enforced by a pre-save hook.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -89,7 +89,7 @@ router.post('/api/add', upload.none(), productController.apiSubmitNewProduct);
  *   patch:
  *     tags: [Admin]
  *     summary: Update a product
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -108,7 +108,7 @@ router.patch('/api/:id', upload.none(), productController.apiUpdateProduct);
  *   patch:
  *     tags: [Admin]
  *     summary: Soft-delete a product
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -125,7 +125,7 @@ router.patch('/api/:id/delete', productController.apiSoftDeleteProduct);
  *   patch:
  *     tags: [Admin]
  *     summary: List or unlist a product
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -144,7 +144,7 @@ router.patch('/api/:id/toggle', productController.apiToggleProductStatus);
  *   get:
  *     tags: [Admin]
  *     summary: Product detail page
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id

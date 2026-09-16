@@ -13,7 +13,7 @@ const router = express.Router();
  *     description: >
  *       Returns the wishlist with each product's price recomputed from the
  *       current category, brand, product and variant offers.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: The user's wishlist
@@ -35,7 +35,7 @@ router.get('/', ensureAuthenticated, wishlistController.getWishlist);
  *   post:
  *     tags: [Wishlist]
  *     summary: Add a product to the wishlist
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -58,7 +58,7 @@ router.post('/add', ensureAuthenticated, wishlistController.addToWishlist);
  *   delete:
  *     tags: [Wishlist]
  *     summary: Remove a product from the wishlist
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -77,7 +77,7 @@ router.delete('/remove/:productId', ensureAuthenticated, wishlistController.remo
  *   get:
  *     tags: [Wishlist]
  *     summary: Search within the wishlist
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: q

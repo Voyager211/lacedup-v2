@@ -28,7 +28,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
  *   get:
  *     tags: [Wallet]
  *     summary: Wallet page
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Wallet page markup, content: { text/html: { schema: { type: string } } } }
  *       302: { description: Redirected to /login when not signed in }
@@ -41,7 +41,7 @@ router.get('/', requireAuth, walletController.renderWalletPage);
  *   get:
  *     tags: [Wallet]
  *     summary: Current wallet balance
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: Balance
@@ -63,7 +63,7 @@ router.get('/balance', requireAuth, walletController.getWalletBalance);
  *     tags: [Wallet]
  *     summary: Wallet transactions, paginated
  *     description: Only completed transactions are returned, newest first.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: page
@@ -94,7 +94,7 @@ router.get('/transactions/paginated', requireAuth, walletController.getPaginated
  *   get:
  *     tags: [Wallet]
  *     summary: Wallet totals
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: Aggregate figures for the wallet page
@@ -118,7 +118,7 @@ router.get('/stats', requireAuth, walletController.getWalletStatsAPI);
  *   get:
  *     tags: [Wallet]
  *     summary: A single wallet transaction
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: transactionId
@@ -138,7 +138,7 @@ router.get('/transaction/:transactionId', requireAuth, walletController.getTrans
  *   post:
  *     tags: [Wallet]
  *     summary: Credit the wallet directly
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -164,7 +164,7 @@ router.post('/add-money', requireAuth, walletController.addMoney);
  *     description: >
  *       Creates the Razorpay order. The wallet is only credited once
  *       /wallet/topup/verify-razorpay confirms the signature.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -201,7 +201,7 @@ router.post('/topup/create-order', requireAuth, walletController.createRazorpayO
  *       The signature is an HMAC-SHA256 of `razorpayOrderId|razorpayPaymentId`
  *       keyed with the Razorpay secret, so a payment proof cannot be replayed
  *       against a different order.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -227,7 +227,7 @@ router.post('/topup/verify-razorpay', requireAuth, walletController.verifyRazorp
  *     tags: [Wallet]
  *     summary: Debit the wallet
  *     description: Used when paying for an order from wallet balance.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:

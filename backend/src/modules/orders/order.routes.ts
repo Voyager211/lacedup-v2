@@ -36,7 +36,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
  *   get:
  *     tags: [Orders]
  *     summary: Orders for the current user, filtered and paginated
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: page
@@ -77,7 +77,7 @@ router.get('/api/orders/filtered', requireAuth, orderController.getUserOrdersPag
  *   get:
  *     tags: [Orders]
  *     summary: Search the current user's orders
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: q
@@ -103,7 +103,7 @@ router.get('/api/orders/search', requireAuth, orderController.searchOrders);
  *   get:
  *     tags: [Orders]
  *     summary: Order history page
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Orders page markup, content: { text/html: { schema: { type: string } } } }
  *       302: { description: Redirected to /login when not signed in }
@@ -116,7 +116,7 @@ router.get('/api/orders', requireAuth, orderController.getUserOrders);
  *   get:
  *     tags: [Orders]
  *     summary: Order details
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -133,7 +133,7 @@ router.get('/api/orders', requireAuth, orderController.getUserOrders);
  *     description: >
  *       Cancels every still-cancellable item. Only orders in Pending or
  *       Processing can be cancelled. Prepaid orders are refunded to the wallet.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -170,7 +170,7 @@ router.patch('/api/orders/:orderId', requireAuth, orderController.cancelOrder);
  *       The order's own status is recalculated from the remaining items, so
  *       cancelling one line can move the order to Partially Delivered or
  *       Cancelled.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -204,7 +204,7 @@ router.patch('/api/orders/:orderId/items/:itemId', requireAuth, orderController.
  *     tags: [Orders]
  *     summary: Request a return for a whole order
  *     description: Only delivered orders can be returned. Creates a request for admin approval.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -232,7 +232,7 @@ router.post('/api/orders/:orderId/returns', requireAuth, orderController.request
  *   post:
  *     tags: [Orders]
  *     summary: Request a return for one item
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -264,7 +264,7 @@ router.post('/api/orders/:orderId/items/:itemId/returns', requireAuth, orderCont
  *   get:
  *     tags: [Orders]
  *     summary: Download the order invoice as a PDF
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId

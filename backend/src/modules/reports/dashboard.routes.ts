@@ -14,7 +14,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: Headline dashboard figures
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: period
@@ -40,7 +40,7 @@ router.get('/api/stats', dashboardController.getDashboardStats);
  *   get:
  *     tags: [Admin]
  *     summary: Sales series for the chart
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: period
@@ -56,7 +56,7 @@ router.get('/api/sales', dashboardController.getSalesData);
  *   get:
  *     tags: [Admin]
  *     summary: Revenue split by payment method
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200: { description: Revenue per payment method }
  */
@@ -68,7 +68,7 @@ router.get('/api/revenue-distribution', dashboardController.getRevenueDistributi
  *   get:
  *     tags: [Admin]
  *     summary: Best selling products
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: period
@@ -87,7 +87,7 @@ router.get('/api/best-selling-products', dashboardController.getBestSellingProdu
  *   get:
  *     tags: [Admin]
  *     summary: Best selling categories (top 10)
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200: { description: Ranked categories }
  */
@@ -99,7 +99,7 @@ router.get('/api/best-selling-categories', dashboardController.getBestSellingCat
  *   get:
  *     tags: [Admin]
  *     summary: Best selling brands (top 10)
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200: { description: Ranked brands }
  */
@@ -113,7 +113,7 @@ router.get('/api/best-selling-brands', dashboardController.getBestSellingBrands)
  *     summary: Top selling category (legacy)
  *     description: Kept for backwards compatibility - returns only the first entry of the list endpoint.
  *     deprecated: true
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200: { description: The single top category }
  */
@@ -126,7 +126,7 @@ router.get('/api/best-selling-category', dashboardController.getBestSellingCateg
  *     tags: [Admin]
  *     summary: Top selling brand (legacy)
  *     deprecated: true
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     responses:
  *       200: { description: The single top brand }
  */
@@ -138,7 +138,7 @@ router.get('/api/best-selling-brand', dashboardController.getBestSellingBrand);
  *   get:
  *     tags: [Admin]
  *     summary: Export the ledger report as a PDF
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: startDate

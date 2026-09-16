@@ -18,14 +18,10 @@ const options: Options = {
       version: '1.0.0',
       description:
         'REST API for the LacedUp storefront and admin panel.\n\n' +
-        'Routes are mounted twice during the React migration: on their historic ' +
-        'path (used by the EJS templates) and under `/api`. The `/api` mounts ' +
-        'are the ones documented here.'
+        'Every endpoint lives under `/api` and answers with JSON - never a redirect ' +
+        'or HTML - so any client can use it, the React SPA and a future mobile app alike.'
     },
-    servers: [
-      { url: '/api', description: 'API mount' },
-      { url: '/', description: 'Legacy mount used by the EJS views' }
-    ],
+    servers: [{ url: '/api', description: 'API mount' }],
     tags: [
       { name: 'Auth', description: 'Signup, login, OTP and password reset' },
       { name: 'Catalog', description: 'Products, categories and brands' },
@@ -45,13 +41,21 @@ const options: Options = {
     ],
     components: {
       securitySchemes: {
-        sessionCookie: {
+        userCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'user.sid',
+          name: 'user_at',
           description:
-            'Session cookie issued on login. Admin routes use `admin.sid` instead. ' +
-            'Replaced by a JWT cookie in a later phase.'
+            'Shopper access token, a signed JWT set as an httpOnly cookie by `POST /api/login`. ' +
+            'It is short-lived; `user_rt` alongside it renews the pair at `POST /api/refresh`.'
+        },
+        adminCookie: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'admin_at',
+          description:
+            'Admin access token, set by `POST /api/admin/login`. Kept under a separate cookie ' +
+            'name from the shopper token so a shopper session can never reach an admin route.'
         }
       },
       schemas: {
@@ -214,7 +218,7 @@ const options: Options = {
       },
       responses: {
         Unauthorized: {
-          description: 'Not authenticated. JSON clients get 401; browsers are redirected to /login.',
+          description: 'Not authenticated: the access-token cookie is missing, expired or invalid.',
           content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } }
         },
         NotFound: {

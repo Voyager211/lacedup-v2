@@ -14,7 +14,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: List users
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: q
@@ -58,7 +58,7 @@ router.get('/api', userController.apiUsers);
  *     description: >
  *       A blocked user is refused at login and forcibly logged out on their next
  *       request by the checkUserBlocked middleware.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -76,7 +76,7 @@ router.patch('/:id/block', userController.apiBlockUser);
  *   patch:
  *     tags: [Admin]
  *     summary: Unblock a user
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id

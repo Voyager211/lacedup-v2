@@ -14,7 +14,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: List brands
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: q
@@ -36,7 +36,7 @@ router.get('/api', brandController.apiBrands);
  *   get:
  *     tags: [Admin]
  *     summary: Fetch one brand
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -51,7 +51,7 @@ router.get('/api', brandController.apiBrands);
  *     description: >
  *       Changing brandOffer triggers a price recalculation across every product
  *       of that brand, since prices are derived from the largest active offer.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -74,7 +74,7 @@ router.get('/api', brandController.apiBrands);
  *   delete:
  *     tags: [Admin]
  *     summary: Soft-delete a brand
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -95,7 +95,7 @@ router.get('/api/:id', brandController.apiGetBrand);
  *       Ten per page, deleted products left out. Each product carries its lowest
  *       and highest variant price after offers, since the brand offer is one of
  *       the four that compete to set it.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -116,7 +116,7 @@ router.get('/api/:id/products', brandController.apiBrandProducts);
  *   post:
  *     tags: [Admin]
  *     summary: Create a brand
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -144,7 +144,7 @@ router.put('/api/:id', brandController.apiUpdateBrand);
  *     tags: [Admin]
  *     summary: Activate or deactivate a brand
  *     description: Deactivating hides every product of that brand from the storefront.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id

@@ -13,7 +13,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: Sales report
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: period
@@ -39,7 +39,7 @@ router.get('/', salesReportController.getSalesReport);
  *   get:
  *     tags: [Admin]
  *     summary: Export the sales report as a PDF
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: startDate
@@ -62,7 +62,7 @@ router.get('/export-pdf', salesReportController.exportPDF);
  *   get:
  *     tags: [Admin]
  *     summary: Export the sales report as an Excel workbook
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: startDate

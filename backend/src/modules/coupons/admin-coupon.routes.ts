@@ -15,7 +15,7 @@ router.use(isAdmin);
  *   get:
  *     tags: [Admin]
  *     summary: List coupons
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: query
  *         name: q
@@ -45,7 +45,7 @@ router.get('/api', couponController.getAllCouponsAPI);
  *   patch:
  *     tags: [Admin]
  *     summary: Activate or deactivate a coupon
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -63,7 +63,7 @@ router.patch('/api/:id/toggle', couponController.toggleCouponStatus);
  *   delete:
  *     tags: [Admin]
  *     summary: Delete a coupon
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -82,7 +82,7 @@ router.delete('/api/:id', couponController.deleteCoupon);
  *   get:
  *     tags: [Admin]
  *     summary: Fetch one coupon
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -94,7 +94,7 @@ router.delete('/api/:id', couponController.deleteCoupon);
  *   put:
  *     tags: [Admin]
  *     summary: Update a coupon
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: id
@@ -121,7 +121,7 @@ router.get('/:id', couponController.getCouponById);
  *       `usageLimit` caps total redemptions across all users; `userLimit` caps
  *       redemptions per user. `maximumDiscountAmount` only applies to
  *       percentage coupons.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ adminCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:

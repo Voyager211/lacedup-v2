@@ -41,7 +41,7 @@ const requireAuthAPI = (req: Request, res: Response, next: NextFunction) => {
  *   get:
  *     tags: [Checkout]
  *     summary: Checkout page
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Checkout markup, content: { text/html: { schema: { type: string } } } }
  *       302: { description: Redirected to /login when not signed in }
@@ -54,7 +54,7 @@ router.get('/', requireAuth, checkoutController.loadCheckout);
  *   get:
  *     tags: [Checkout]
  *     summary: Revalidate stock immediately before payment
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: Validation result
@@ -75,7 +75,7 @@ router.get('/validate-checkout-stock', requireAuthAPI, checkoutController.valida
  *   get:
  *     tags: [Checkout]
  *     summary: Addresses available at checkout
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200:
  *         description: The user's addresses
@@ -99,7 +99,7 @@ router.get('/api/addresses', requireAuthAPI, addressController.getAddresses);
  *       Validates the code against its date window, global and per-user usage
  *       limits, and the cart minimum. Rate limited to 10 attempts per 15
  *       minutes so codes cannot be enumerated.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -132,7 +132,7 @@ router.post('/apply-coupon', couponRateLimit, requireAuthAPI, couponController.a
  *   post:
  *     tags: [Checkout]
  *     summary: Remove the applied coupon
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Coupon removed with recalculated totals }
  *       401: { $ref: '#/components/responses/Unauthorized' }
@@ -148,7 +148,7 @@ router.post('/remove-coupon', requireAuthAPI, couponController.removeCoupon);
  *     description: >
  *       Revalidates stock, then creates the order. COD orders are placed
  *       immediately; card and wallet payments go through their own endpoints.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -192,7 +192,7 @@ router.post('/place-order', requireAuthAPI, checkoutController.placeOrderWithVal
  *       The snapshot is keyed on the Razorpay id rather than held in the
  *       session so that verification cannot fail because a session was lost -
  *       which previously left customers charged with no order.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -234,7 +234,7 @@ router.post('/create-razorpay-order', requireAuthAPI, checkoutController.createR
  *       Verifies an HMAC-SHA256 of `razorpayOrderId|razorpayPaymentId` keyed
  *       with the Razorpay secret. The order is only written once the signature
  *       checks out, so a payment proof cannot be replayed onto another order.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -260,7 +260,7 @@ router.post('/verify-razorpay-payment', requireAuthAPI, checkoutController.verif
  *     tags: [Checkout]
  *     summary: Record a failed payment
  *     description: Stores the failure in the session so the retry page can be rendered.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Failure recorded, with a transaction id for the retry flow }
  *       401: { $ref: '#/components/responses/Unauthorized' }
@@ -273,7 +273,7 @@ router.post('/payment-failure', requireAuthAPI, checkoutController.handlePayment
  *   post:
  *     tags: [Checkout]
  *     summary: Pay for the order from wallet balance
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -297,7 +297,7 @@ router.post('/process-wallet-payment', requireAuthAPI, checkoutController.handle
  *   get:
  *     tags: [Checkout]
  *     summary: Order confirmation page
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -315,7 +315,7 @@ router.get('/order-success/:orderId', requireAuth, checkoutController.loadOrderS
  *   get:
  *     tags: [Checkout]
  *     summary: Payment failure page
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: transactionId
@@ -333,7 +333,7 @@ router.get('/order-failure/:transactionId', requireAuth, checkoutController.load
  *     tags: [Checkout]
  *     summary: Retry a failed payment
  *     description: Rebuilds the attempted order from the session failure record.
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     parameters:
  *       - in: path
  *         name: transactionId
@@ -351,7 +351,7 @@ router.get('/retry-payment/:transactionId', requireAuth, checkoutController.load
  *   post:
  *     tags: [Checkout]
  *     summary: Create a Razorpay order for a retry
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Razorpay order created for the retry }
  *       401: { $ref: '#/components/responses/Unauthorized' }
@@ -364,7 +364,7 @@ router.post('/create-razorpay-order-retry', requireAuthAPI, checkoutController.c
  *   post:
  *     tags: [Checkout]
  *     summary: Verify a retried Razorpay payment
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -389,7 +389,7 @@ router.post('/verify-retry-razorpay-payment', requireAuthAPI, checkoutController
  *   post:
  *     tags: [Checkout]
  *     summary: Record a failed retry
- *     security: [{ sessionCookie: [] }]
+ *     security: [{ userCookie: [] }]
  *     responses:
  *       200: { description: Retry failure recorded }
  *       401: { $ref: '#/components/responses/Unauthorized' }
