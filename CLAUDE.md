@@ -43,7 +43,7 @@ The goal is to catch bugs before they reach production.
 | End-to-end | Playwright | `frontend/e2e/` (`npm run e2e` in frontend/) |
 
 - Write tests for every feature, fix and endpoint. For a bug fix, **write a failing test that reproduces it first**, then fix it.
-- Run the affected suite after each section, and run the full backend + frontend suites before every push.
+- Run the affected suite after each section, and run the full backend + frontend suites before every push. Run them one after the other, never at the same time: the backend suite is single-fork and its login tests fail on timing when the two compete for the machine.
 - Run the Playwright suite before any merge to `main`, and after changes to checkout, payments, auth or cart.
 - Never push with failing tests. If a failure isn't related to the change, report it to the user; don't skip or delete the test.
 - Tests never touch the production database.
@@ -91,7 +91,7 @@ Check off tasks as they're done, in the same commit. Add new tasks and newly fou
 
 - [x] Install Playwright, add `playwright.config.ts` and an `e2e/` folder, and wire up the `e2e` script
 - [x] Playwright setup that starts the backend and frontend against a dedicated test database
-- [ ] First e2e smoke test: landing → shop → product page loads with real data
+- [x] First e2e smoke test: landing → shop → product page loads with real data
 - [x] Add `@faker-js/faker` and a seed runner (`npm run seed`, `npm run seed:reset`) with a guard against the production database
 - [x] Seed the existing modules: users + admin, categories, brands, products + variants, addresses, carts, wishlists, coupons, orders, returns, reviews, wallets + transactions, referrals
 - [ ] Update the Swagger security scheme from the old `user.sid` session cookie to the JWT cookies
