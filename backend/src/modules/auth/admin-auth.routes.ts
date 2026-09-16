@@ -9,6 +9,32 @@ import { publicUser } from '../users/user.serializer';
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * /admin/login:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Sign in to the admin panel
+ *     description: >
+ *       Verifies the credentials and issues the admin cookie pair (`admin_at`
+ *       and `admin_rt`). A valid shopper account is refused here: only an
+ *       account with role `admin` may hold an admin session.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               password: { type: string, format: password }
+ *     responses:
+ *       200: { description: Signed in; admin cookies set, content: { application/json: { schema: { $ref: '#/components/schemas/Success' } } } }
+ *       401: { description: Invalid credentials }
+ *       403: { description: The account exists but is not an admin }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/login', authController.postLogin);
 
 

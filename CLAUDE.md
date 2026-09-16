@@ -95,7 +95,7 @@ Check off tasks as they're done, in the same commit. Add new tasks and newly fou
 - [x] Add `@faker-js/faker` and a seed runner (`npm run seed`, `npm run seed:reset`) with a guard against the production database
 - [x] Seed the existing modules: users + admin, categories, brands, products + variants, addresses, carts, wishlists, coupons, orders, returns, reviews, wallets + transactions, referrals
 - [x] Update the Swagger security scheme from the old `user.sid` session cookie to the JWT cookies
-- [ ] Audit Swagger coverage: list undocumented endpoints and document them
+- [x] Audit Swagger coverage: list undocumented endpoints and document them
 - [x] Confirm `/docs` works from a compiled build (`npm run build && npm start`), not just under `tsx`
 
 ### Phase 1 — Fix production bugs (checkout)

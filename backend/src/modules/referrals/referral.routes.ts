@@ -26,7 +26,7 @@ router.get('/', isAuthenticated, referralController.getReferralsPage);
 
 /**
  * @swagger
- * /referrals/api/referred-users:
+ * /referrals/referred-users:
  *   get:
  *     tags: [Referrals]
  *     summary: A page of people this user referred
@@ -58,7 +58,7 @@ router.get(
 
 /**
  * @swagger
- * /referrals/api/earnings:
+ * /referrals/earnings:
  *   get:
  *     tags: [Referrals]
  *     summary: A page of referral earnings

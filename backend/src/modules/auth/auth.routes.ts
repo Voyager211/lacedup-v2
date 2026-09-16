@@ -22,8 +22,77 @@ const router = express.Router();
  * call from React 404s. Same reasoning as the other root-mounted routers,
  * which already declare 47 of their own /api endpoints.
  */
+/**
+ * @swagger
+ * /signup:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Start a signup and send the OTP
+ *     description: >
+ *       Holds the details in a pending-signup record, hashed, and emails a
+ *       six-digit code. No account exists until POST /verify-otp accepts that
+ *       code. A referral code, if given, must belong to an existing user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password, confirmPassword]
+ *             properties:
+ *               name: { type: string, example: Aarav Sharma }
+ *               email: { type: string, format: email }
+ *               phone: { type: string, example: '9876543210' }
+ *               password: { type: string, format: password }
+ *               confirmPassword: { type: string, format: password }
+ *               referralCode: { type: string, example: 7F3A2B }
+ *     responses:
+ *       200:
+ *         description: OTP sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 redirect: { type: string, example: /verify-otp?email=someone%40example.com }
+ *       400: { description: A required field is missing, the passwords differ, or the referral code is unknown }
+ *       403: { description: Already signed in }
+ *       409: { description: That email already has an account }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ *       500: { description: The OTP email could not be sent }
+ */
 router.post('/api/signup', authLimiter, isGuest, authController.postSignup);
 
+/**
+ * @swagger
+ * /verify-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Finish the signup by verifying the OTP
+ *     description: >
+ *       Creates the account from the pending signup, gives it a referral code
+ *       and a wallet, and pays out the referral reward when the signup used
+ *       someone's code. An expired code discards the pending signup, so the
+ *       user has to sign up again.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               otp: { type: string, example: '123456' }
+ *     responses:
+ *       200: { description: Account created }
+ *       401: { description: Incorrect OTP }
+ *       403: { description: Already signed in }
+ *       410: { description: OTP expired; the pending signup was discarded }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/verify-otp', otpLimiter, isGuest, authController.postOtpVerification);
 
 /**
@@ -38,10 +107,102 @@ router.post('/api/verify-otp', otpLimiter, isGuest, authController.postOtpVerifi
  */
 router.post('/api/resend-otp', otpLimiter, isGuest, authController.resendOtp);
 
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Sign in
+ *     description: >
+ *       Issues the shopper cookie pair (`user_at` and `user_rt`) on success.
+ *       The tokens are httpOnly, so the response body carries nothing but a
+ *       success flag - call GET /api/auth/me to read who is signed in.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               password: { type: string, format: password }
+ *     responses:
+ *       200: { description: Signed in; cookies set, content: { application/json: { schema: { $ref: '#/components/schemas/Success' } } } }
+ *       401: { description: Invalid credentials, or the account is blocked }
+ *       403: { description: Already signed in }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/login', authLimiter, isGuest, authController.postLogin);
 
+/**
+ * @swagger
+ * /forgot-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Send a password-reset OTP
+ *     description: Emails a six-digit code to the account's address. The code lasts one minute.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string, format: email }
+ *     responses:
+ *       200:
+ *         description: OTP sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 redirect: { type: string, example: /reset-otp?email=someone%40example.com }
+ *       403: { description: Already signed in }
+ *       404: { description: No account with that email }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ *       500: { description: The OTP email could not be sent }
+ */
 router.post('/api/forgot-password', passwordResetLimiter, isGuest, authController.sendResetOtp);
 
+/**
+ * @swagger
+ * /reset-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify the password-reset OTP
+ *     description: Confirms the code before the new password is accepted at POST /reset-password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               otp: { type: string, example: '123456' }
+ *     responses:
+ *       200:
+ *         description: Code accepted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 redirect: { type: string, example: /reset-password?email=someone%40example.com }
+ *       400: { description: No reset is in progress for that address }
+ *       401: { description: Incorrect OTP }
+ *       403: { description: Already signed in }
+ *       410: { description: OTP expired }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/reset-otp', otpLimiter, isGuest, authController.verifyResetOtp);
 
 /**
@@ -56,6 +217,34 @@ router.post('/api/reset-otp', otpLimiter, isGuest, authController.verifyResetOtp
  */
 router.post('/api/resend-reset-otp', otpLimiter, isGuest, authController.resendResetOtp);
 
+/**
+ * @swagger
+ * /reset-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Set a new password
+ *     description: >
+ *       The last step of the reset flow. The new password cannot be the one
+ *       already on the account, and the stored OTP is cleared once it is set.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, newPassword, confirmPassword]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               newPassword: { type: string, format: password }
+ *               confirmPassword: { type: string, format: password }
+ *     responses:
+ *       200: { description: Password changed, content: { application/json: { schema: { $ref: '#/components/schemas/Success' } } } }
+ *       400: { description: The two passwords differ, or the new one matches the current password }
+ *       403: { description: Already signed in }
+ *       404: { description: No account with that email }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/reset-password', passwordResetLimiter, isGuest, authController.resetPassword);
 
 /**

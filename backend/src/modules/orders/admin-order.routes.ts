@@ -80,18 +80,6 @@ router.get('/api/:orderId', orderController.getOrderDetailsJSON);
 /**
  * @swagger
  * /admin/orders/{orderId}:
- *   get:
- *     tags: [Admin]
- *     summary: Order details page
- *     security: [{ adminCookie: [] }]
- *     parameters:
- *       - in: path
- *         name: orderId
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200: { description: Order detail markup, content: { text/html: { schema: { type: string } } } }
- *       404: { $ref: '#/components/responses/NotFound' }
  *   patch:
  *     tags: [Admin]
  *     summary: Update the order status

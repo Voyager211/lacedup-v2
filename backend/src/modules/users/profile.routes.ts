@@ -38,6 +38,51 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 };
 
 
+/**
+ * @swagger
+ * /profile/edit:
+ *   post:
+ *     tags: [Profile]
+ *     summary: Update the name and phone number
+ *     description: >
+ *       Email is deliberately not editable here - it goes through the OTP flow
+ *       below. Sending an empty `phone` clears the stored number.
+ *     security: [{ userCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [fullname]
+ *             properties:
+ *               fullname: { type: string, example: Aarav Sharma }
+ *               phone: { type: string, example: '9876543210' }
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string }
+ *                 user: { type: object, description: The updated user, without the password }
+ *       400:
+ *         description: Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: false }
+ *                 message: { type: string, example: Validation failed }
+ *                 errors: { type: object, additionalProperties: { type: string } }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/profile/edit', requireAuth, profileController.updateProfileData);
 
 /**
@@ -100,10 +145,123 @@ router.post('/api/profile/verify-email-update-otp', requireAuth, profileControll
  */
 router.post('/api/profile/resend-email-update-otp', requireAuth, profileController.resendEmailUpdateOtp);
 
+/**
+ * @swagger
+ * /profile/verify-current-email:
+ *   post:
+ *     tags: [Profile]
+ *     summary: Step 1 of changing the email - confirm the current address
+ *     description: >
+ *       Checks the address the user typed against the one on file and, if it
+ *       matches, emails a code to it. The code lasts 45 seconds.
+ *     security: [{ userCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentEmail]
+ *             properties:
+ *               currentEmail: { type: string, format: email }
+ *     responses:
+ *       200: { description: OTP sent to the current address }
+ *       400: { description: The address given is not the one on file }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       500: { description: The OTP email could not be sent }
+ */
 router.post('/api/profile/verify-current-email', requireAuth, profileController.verifyCurrentEmail);
+
+/**
+ * @swagger
+ * /profile/verify-email-otp:
+ *   post:
+ *     tags: [Profile]
+ *     summary: Step 2 of changing the email - verify the code
+ *     description: Marks the change as authorised, which POST /profile/change-email then requires.
+ *     security: [{ userCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [otp]
+ *             properties:
+ *               otp: { type: string, example: '123456' }
+ *     responses:
+ *       200: { description: Code accepted }
+ *       400: { description: No pending change, or the code is wrong or expired }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/profile/verify-email-otp', requireAuth, profileController.verifyEmailChangeOtp);
+
+/**
+ * @swagger
+ * /profile/change-email:
+ *   post:
+ *     tags: [Profile]
+ *     summary: Step 3 of changing the email - set the new address
+ *     description: Refused unless the code from step 2 has been accepted.
+ *     security: [{ userCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [newEmail]
+ *             properties:
+ *               newEmail: { type: string, format: email }
+ *     responses:
+ *       200:
+ *         description: Email updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string }
+ *                 user: { type: object, description: The updated user, without the password }
+ *       400: { description: Not authorised by OTP, the address is malformed, or it is already registered }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/profile/change-email', requireAuth, profileController.changeEmail);
 
+/**
+ * @swagger
+ * /profile/change-password:
+ *   post:
+ *     tags: [Profile]
+ *     summary: Change the password
+ *     description: >
+ *       The new password must be at least 8 characters and contain an
+ *       uppercase letter, a lowercase letter, a number and a special character,
+ *       with no spaces.
+ *     security: [{ userCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword, confirmPassword]
+ *             properties:
+ *               currentPassword: { type: string, format: password }
+ *               newPassword: { type: string, format: password }
+ *               confirmPassword: { type: string, format: password }
+ *     responses:
+ *       200: { description: Password updated, content: { application/json: { schema: { $ref: '#/components/schemas/Success' } } } }
+ *       400: { description: A field is missing, the two new passwords differ, the current password is wrong, or the new one is too weak }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       500: { $ref: '#/components/responses/ServerError' }
+ */
 router.post('/api/profile/change-password', requireAuth, profileController.updatePassword);
 
 

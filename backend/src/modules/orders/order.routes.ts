@@ -32,7 +32,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * @swagger
- * /orders/api/filtered:
+ * /orders/filtered:
  *   get:
  *     tags: [Orders]
  *     summary: Orders for the current user, filtered and paginated
@@ -73,7 +73,7 @@ router.get('/api/orders/filtered', requireAuth, orderController.getUserOrdersPag
 
 /**
  * @swagger
- * /orders/api/search:
+ * /orders/search:
  *   get:
  *     tags: [Orders]
  *     summary: Search the current user's orders
